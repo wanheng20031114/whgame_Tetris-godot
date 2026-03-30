@@ -17,11 +17,10 @@ func _ready() -> void:
 	if main_lobby:
 		main_lobby.start_marathon.connect(_start_marathon_mode)
 		
-	# 检查玩家是否已经输入过名字（充当简易的全局态存储以防刷新场景时重置）
-	var config = ConfigFile.new()
+	# 检查玩家是否已经在本次游玩中输入过名字
 	var saved_name = ""
-	if config.load("user://settings.cfg") == OK:
-		saved_name = config.get_value("Settings", "player_name", "")
+	if get_node_or_null("/root/GameState"):
+		saved_name = get_node("/root/GameState").player_name
 		
 	if saved_name != "":
 		# 若有记录，直接免等进入大厅
@@ -53,12 +52,9 @@ func show_lobby() -> void:
 func _on_login_successful(player_name: String) -> void:
 	print("[UIManager] 玩家登录: ", player_name)
 	
-	# 存入配置文件，防止跳转游戏重返时丢失大厅状态
-	var config = ConfigFile.new()
-	if config.load("user://settings.cfg") != OK:
-		pass
-	config.set_value("Settings", "player_name", player_name)
-	config.save("user://settings.cfg")
+	# 暂存入全局节点，防止跳转游戏重返时丢失大厅状态（只管本次进程，不污染硬盘）
+	if get_node_or_null("/root/GameState"):
+		get_node("/root/GameState").player_name = player_name
 	
 	if main_lobby and main_lobby.has_method("set_player_name"):
 		main_lobby.set_player_name(player_name)
