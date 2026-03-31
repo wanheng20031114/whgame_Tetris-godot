@@ -6,6 +6,11 @@
 
 ## 1. 核心架构原则
 
+> [!IMPORTANT]  
+> **👑 黄金准则**：  
+> **适当的解耦，尽可能的使用场景！哪怕动态性很强的东西，也要尽量用 GODOT 自带的功能创建为静态的预制体（`.tscn`），而避免在代码里生成拼装。**  
+> 必须尽量使用 `@export` 暴露参数，用引擎的原生机制去实现内容。如果在工作流中能够使用 MCP 代为操作建立（建节点、找属性等），就要尽可能去使用！
+
 | 类别 | 实现方式 | 理由 |
 |------|---------|------|
 | **可视节点** | 场景树 `.tscn` + `@onready` / `unique_name_in_owner` | 可在编辑器中可视化调整，低耦合 |
@@ -75,6 +80,7 @@ GameScene (Node2D) — 主引擎 game_scene.gd
 │       └── btn_restart / btn_return
 │
 ├── LockDelayTimer (Timer)              ← 缓冲地着床防倒数时钟
+├── GarbageBar (Control)                ← 单人模式环境压力槽（独立预制场景：scenes/ui/garbage_bar.tscn）
 └── BGM 与 各类 Sfx (AudioStreamPlayer) ← 按需唤起
 ```
 
