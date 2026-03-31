@@ -94,6 +94,15 @@ var last_kick_index: int = 0
 var next_displays: Array = []
 
 # ==============================================================================
+# 单人受击机制 (Garbage Queue)
+# ==============================================================================
+
+var garbage_bar: GarbageBar
+var single_player_attack_timer: float = 0.0
+var pending_attacks: Array = [] ## 存放字典 {"delay": 5.0, "amount": 1}
+var ready_garbage: int = 0
+
+# ==============================================================================
 # 生命周期
 # ==============================================================================
 
@@ -159,8 +168,27 @@ func _ready() -> void:
 	var hud = get_node_or_null("HUD")
 	if hud:
 		hud.add_child(game_over_panel)
+	# 挂载垃圾槽逻辑到外部静态节点（方便用户在引擎里自由拖拽位置和大小）
+	var gb_node = get_node_or_null("../GarbageBar")
+	if gb_node == null: gb_node = get_node_or_null("GarbageBar")
+	if gb_node == null: gb_node = get_node_or_null("HUD/GarbageBar")
+	
+	if gb_node and gb_node is GarbageBar:
+		# 用户自行在编辑器拖入了 scenes/ui/garbage_bar.tscn 作为子节点
+		garbage_bar = gb_node as GarbageBar
+		garbage_bar.max_lines = board.visible_rows
 	else:
-		add_child(game_over_panel)
+		# 防御性编程：如果你没删干净那个我之前建的空 Control (它没有 script 导致类型报错)
+		if gb_node and not (gb_node is GarbageBar):
+			gb_node.queue_free() # 自动帮你超度旧的错误空壳节点
+			
+		# 强制自动兜底实例化正确的场景
+		garbage_bar = preload("res://scenes/ui/garbage_bar.tscn").instantiate() as GarbageBar
+		$Board.add_child(garbage_bar)
+		# 让它的宽度和游戏网格一样粗（一格宽），在左侧偏移 1.5 格的距离防粘连
+		garbage_bar.position = Vector2(-board.cell_size * 1.5, 0)
+		garbage_bar.size = Vector2(board.cell_size, board.visible_rows * board.cell_size)
+		garbage_bar.max_lines = board.visible_rows
 			
 	_update_texts()
 
@@ -201,6 +229,7 @@ func _process(delta: float) -> void:
 	_update_lock_delay()
 	_update_ghost()
 	_update_hud()
+	_update_single_player_garbage(delta)
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_TRANSLATION_CHANGED and is_inside_tree():
@@ -299,6 +328,68 @@ func _update_gravity(delta: float) -> void:
 			break
 
 # ==============================================================================
+# 垃圾行生成与伤害计算
+# ==============================================================================
+
+func _calculate_garbage_damage(lines_cleared: int, is_spin: bool) -> int:
+	var dmg: int = 0
+	if is_spin:
+		if lines_cleared == 1: dmg = 2
+		elif lines_cleared == 2: dmg = 4
+		elif lines_cleared == 3: dmg = 6
+	else:
+		if lines_cleared == 2: dmg = 1
+		elif lines_cleared == 3: dmg = 2
+		elif lines_cleared >= 4: dmg = 4
+		
+	# B2B 乘区 (连续触发困难消行)
+	if scoring.b2b > 0 and (is_spin or lines_cleared >= 4):
+		dmg += 1
+		
+	# Combo 乘区加成（0,1连时不给外加行，2-3连给+1，依次加多）
+	var combo_score = [0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 4, 5]
+	var c_index = mini(scoring.combo, combo_score.size() - 1)
+	if c_index > 0:
+		dmg += combo_score[c_index]
+		
+	return dmg
+
+func _update_single_player_garbage(delta: float) -> void:
+	# 1. 1万分环境压力启动，10万分满转（2秒1行）
+	if scoring.score >= 10000:
+		single_player_attack_timer += delta
+		# 从 1万分 (0.0进度) 平滑加速到 10万分
+		var progress: float = clampf((scoring.score - 10000) / 90000.0, 0.0, 1.0)
+		var current_interval: float = lerpf(10.0, 2.0, progress)
+		
+		# 施加压力，攻击入队，并给予长达 12秒 的应对期限
+		if single_player_attack_timer >= current_interval:
+			single_player_attack_timer = 0.0
+			pending_attacks.append({"delay": 12.0, "amount": 1})
+			
+	# 2. 推进时间，划分为三个阶段：灰 (12~6s) -> 黄 (6~0s) -> 红 (实装)
+	var new_pending: Array = []
+	var grey_count: int = 0
+	var yellow_count: int = 0
+	
+	for attack in pending_attacks:
+		attack["delay"] -= delta
+		if attack["delay"] <= 0:
+			ready_garbage += attack["amount"] # 转化成红警
+		else:
+			new_pending.append(attack)
+			if attack["delay"] > 6.0:
+				grey_count += attack["amount"]
+			else:
+				yellow_count += attack["amount"]
+			
+	pending_attacks = new_pending
+	
+	# 3. 推送更新给左侧槽的三个阶段
+	if garbage_bar:
+		garbage_bar.update_bar(grey_count, yellow_count, ready_garbage)
+
+# ==============================================================================
 # 锁定延迟（Timer 节点驱动）
 # ==============================================================================
 
@@ -343,7 +434,7 @@ func _try_rotate(direction: int) -> bool:
 	var new_rot_state := new_rot as PieceData.RotationState
 	var kicks: Array
 	if direction == 2:
-		kicks = [Vector2(0,0), Vector2(0,1), Vector2(1,0), Vector2(-1,0), Vector2(0,-1)]
+		kicks = [Vector2(0, 0), Vector2(0, 1), Vector2(1, 0), Vector2(-1, 0), Vector2(0, -1)]
 	else:
 		kicks = PieceData.get_wall_kicks(cur_type, cur_rot as PieceData.RotationState, new_rot_state)
 
@@ -392,10 +483,31 @@ func _lock_piece() -> void:
 	var cleared: int = board.clear_lines()
 	if cleared > 0:
 		scoring.process_line_clear(cleared, is_spin, cur_type == PieceData.Type.T)
-		# 播放消行音效（Tetris/Spin → 特殊音效，其他 → 普通音效）
 		_play_clear_sfx(cleared, is_spin)
+		
+		# 核心护盾机制：将输出转化等价的护盾去抵挡
+		var block_amount: int = _calculate_garbage_damage(cleared, is_spin)
+		
+		# 先抵挡现有的红色实弹
+		var canceled_ready = mini(block_amount, ready_garbage)
+		ready_garbage -= canceled_ready
+		block_amount -= canceled_ready
+		
+		# 如果还有护盾余热，去抵消黄色队列里面的准备攻击
+		while block_amount > 0 and pending_attacks.size() > 0:
+			var target = pending_attacks[0]
+			var cancel = mini(block_amount, target["amount"])
+			target["amount"] -= cancel
+			block_amount -= cancel
+			if target["amount"] <= 0:
+				pending_attacks.pop_front()
 	else:
 		scoring.reset_combo()
+		
+		# 如果没有连击，且池底有红色炸药包倒计时结束，必须惩罚挤出
+		if ready_garbage > 0:
+			board.add_garbage_lines(ready_garbage)
+			ready_garbage = 0
 
 	board.queue_redraw()
 	hold_used = false
@@ -532,7 +644,7 @@ func _update_hud() -> void:
 	label_score.text = "%s\n%d" % [tr("TXT_SCORE"), scoring.score]
 	label_level.text = "%s\n%d" % [tr("TXT_LEVEL"), scoring.level]
 	label_lines.text = "%s\n%d" % [tr("TXT_LINES"), scoring.lines]
-
+	
 # ==============================================================================
 # 输入动作注册
 # ==============================================================================

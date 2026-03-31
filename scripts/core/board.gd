@@ -37,6 +37,7 @@ const BORDER_COLOR := Color("3a3a5c")     ## 棋盘边框：科技蓝灰
 # ==============================================================================
 
 var grid: Array = []
+var last_hole_col: int = -1 ## 用于记忆上一次受击缺口的列，以确保高概率对齐
 
 # ==============================================================================
 # 初始化
@@ -171,3 +172,34 @@ func _draw() -> void:
 
 	# 4. 棋盘外边框
 	draw_rect(Rect2(Vector2(-1, -1), Vector2(board_w + 2, board_h + 2)), BORDER_COLOR, false, 2.0)
+
+# ==============================================================================
+# 受击垃圾行分配 (Tetris 99 Style)
+# ==============================================================================
+
+## 增加指定数量的垃圾行（从底部上推）
+func add_garbage_lines(amount: int) -> void:
+	if amount <= 0:
+		return
+		
+	# 向上推移现有的方块网格（扔掉顶部挤爆的行，底部腾出空位）
+	for i in range(amount):
+		grid.pop_front()
+		
+	# 70% 的极高概率孔洞开在上一批或者上一行的位置
+	var hole_col: int = last_hole_col
+	if hole_col < 0 or randf() < 0.3:
+		hole_col = randi() % columns
+	last_hole_col = hole_col
+	
+	var garbage_color: Color = Color(0.45, 0.45, 0.45) # 灰色无属性废墟砖块
+	
+	for i in range(amount):
+		var new_row: Array = _create_empty_row()
+		for c in range(columns):
+			if c != hole_col:
+				new_row[c] = garbage_color
+		# 在队列最末尾（亦即物理图形的最底下）推送新受击行
+		grid.append(new_row)
+		
+	queue_redraw()
