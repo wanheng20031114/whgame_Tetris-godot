@@ -123,4 +123,5 @@ volume_db = -10.0
 [node name="SfxPlanting" type="AudioStreamPlayer" parent="."]
 [node name="SfxLineClear" type="AudioStreamPlayer" parent="."]
 [node name="SfxSuccess" type="AudioStreamPlayer" parent="."]
+[node name="SfxSpin" type="AudioStreamPlayer" parent="."]
 [node name="SfxDeath" type="AudioStreamPlayer" parent="."]

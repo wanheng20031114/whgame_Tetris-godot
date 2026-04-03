@@ -19,7 +19,7 @@ var _status_args: Array = []
 func _ready() -> void:
 	# 设置默认值
 	edit_ip.text = "127.0.0.1"
-	edit_port.text = "8080"
+	edit_port.text = "8998"
 	
 	# 如果 GameState 有保存的名字，自动填入
 	if get_node_or_null("/root/GameState"):

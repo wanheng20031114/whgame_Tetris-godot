@@ -1,7 +1,8 @@
 [gd_scene format=3 uid="uid://cm3j8p7v1k2l"]
 
-[ext_resource type="Script" path="res://scripts/ui/multiplayer_setup.gd" id="1_x1234"]
+[ext_resource type="Script" uid="uid://n1fscm2pj825" path="res://scripts/ui/multiplayer_setup.gd" id="1_x1234"]
 [ext_resource type="PackedScene" path="res://scenes/ui/settings_menu.tscn" id="2_stngs"]
+
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_glass"]
 bg_color = Color(0, 0, 0, 0.4)
 corner_radius_top_left = 12
@@ -15,7 +16,7 @@ expand_margin_bottom = 20.0
 shadow_color = Color(0, 0, 0, 0.3)
 shadow_size = 10
 
-[node name="MultiplayerSetup" type="Control"]
+[node name="MultiplayerSetup" type="Control" unique_id=1703361941]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -24,7 +25,7 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_x1234")
 
-[node name="Background" type="ColorRect" parent="."]
+[node name="Background" type="ColorRect" parent="." unique_id=164187723]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -33,7 +34,7 @@ grow_horizontal = 2
 grow_vertical = 2
 color = Color(0.0509804, 0.0509804, 0.0784314, 1)
 
-[node name="CenterContainer" type="CenterContainer" parent="."]
+[node name="CenterContainer" type="CenterContainer" parent="." unique_id=1860064889]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -41,80 +42,80 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="SetupPanel" type="PanelContainer" parent="CenterContainer"]
+[node name="SetupPanel" type="PanelContainer" parent="CenterContainer" unique_id=2074114291]
 custom_minimum_size = Vector2(400, 450)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_glass")
 
-[node name="VBox" type="VBoxContainer" parent="CenterContainer/SetupPanel"]
+[node name="VBox" type="VBoxContainer" parent="CenterContainer/SetupPanel" unique_id=1998902514]
 layout_mode = 2
 theme_override_constants/separation = 20
 
-[node name="TitleLabel" type="Label" parent="CenterContainer/SetupPanel/VBox"]
+[node name="TitleLabel" type="Label" parent="CenterContainer/SetupPanel/VBox" unique_id=556490239]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_font_sizes/font_size = 32
 text = "多 人 对 战"
 horizontal_alignment = 1
 
-[node name="HSeparator" type="HSeparator" parent="CenterContainer/SetupPanel/VBox"]
+[node name="HSeparator" type="HSeparator" parent="CenterContainer/SetupPanel/VBox" unique_id=1182552081]
 layout_mode = 2
 
-[node name="IPLabel" type="Label" parent="CenterContainer/SetupPanel/VBox"]
+[node name="IPLabel" type="Label" parent="CenterContainer/SetupPanel/VBox" unique_id=1492518177]
 unique_name_in_owner = true
 layout_mode = 2
 text = "服务器地址"
 
-[node name="IPEdit" type="LineEdit" parent="CenterContainer/SetupPanel/VBox"]
+[node name="IPEdit" type="LineEdit" parent="CenterContainer/SetupPanel/VBox" unique_id=409776674]
 unique_name_in_owner = true
 layout_mode = 2
 placeholder_text = "例如: 127.0.0.1"
 
-[node name="PortLabel" type="Label" parent="CenterContainer/SetupPanel/VBox"]
+[node name="PortLabel" type="Label" parent="CenterContainer/SetupPanel/VBox" unique_id=1778523942]
 unique_name_in_owner = true
 layout_mode = 2
 text = "端口"
 
-[node name="PortEdit" type="LineEdit" parent="CenterContainer/SetupPanel/VBox"]
+[node name="PortEdit" type="LineEdit" parent="CenterContainer/SetupPanel/VBox" unique_id=534156967]
 unique_name_in_owner = true
 layout_mode = 2
-placeholder_text = "默认: 8080"
+placeholder_text = "默认: 8998"
 
-[node name="NameLabel" type="Label" parent="CenterContainer/SetupPanel/VBox"]
+[node name="NameLabel" type="Label" parent="CenterContainer/SetupPanel/VBox" unique_id=249462778]
 unique_name_in_owner = true
 layout_mode = 2
 text = "登录用户名"
 
-[node name="NameEdit" type="LineEdit" parent="CenterContainer/SetupPanel/VBox"]
+[node name="NameEdit" type="LineEdit" parent="CenterContainer/SetupPanel/VBox" unique_id=102043589]
 unique_name_in_owner = true
 layout_mode = 2
 placeholder_text = "请输入你的昵称"
 
-[node name="Control" type="Control" parent="CenterContainer/SetupPanel/VBox"]
+[node name="Control" type="Control" parent="CenterContainer/SetupPanel/VBox" unique_id=1705134922]
 custom_minimum_size = Vector2(0, 10)
 layout_mode = 2
 
-[node name="ConnectButton" type="Button" parent="CenterContainer/SetupPanel/VBox"]
+[node name="ConnectButton" type="Button" parent="CenterContainer/SetupPanel/VBox" unique_id=138009270]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 50)
 layout_mode = 2
 text = "连 接 服 务 器"
 
-[node name="StatusLabel" type="Label" parent="CenterContainer/SetupPanel/VBox"]
+[node name="StatusLabel" type="Label" parent="CenterContainer/SetupPanel/VBox" unique_id=1692431065]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.7, 0.7, 1, 1)
 text = "准备就绪"
 horizontal_alignment = 1
 
-[node name="BackButton" type="Button" parent="CenterContainer/SetupPanel/VBox"]
+[node name="BackButton" type="Button" parent="CenterContainer/SetupPanel/VBox" unique_id=1364122512]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.8, 0.8, 0.8, 1)
 text = "返回主菜单"
 flat = true
 
-[node name="BtnSettings" parent="." instance=ExtResource("2_stngs")]
+[node name="BtnSettings" parent="." unique_id=300220906 instance=ExtResource("2_stngs")]
 layout_mode = 0
 offset_left = 1218.0
 offset_top = 16.0
