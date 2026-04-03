@@ -199,8 +199,12 @@ func _try_move(dx: int, dy: int) -> bool:
 		cur_col = new_col
 		cur_row = new_row
 		_sync_piece_position()
-		if dx != 0:
+		# 只要方块位置发生有效位移（左右或上下），都不再把“上一手动作”视为旋转。
+		# 这样可以避免“先旋转一次，再硬降到底”被误判为 Spin。
+		if dx != 0 or dy != 0:
 			last_was_rotation = false
+			last_kick_index = 0
+		if dx != 0:
 			_on_piece_manipulated()
 		return true
 	return false
@@ -242,6 +246,10 @@ func _hard_drop() -> void:
 	while board.is_valid_position(cur_type, cur_rot, cur_col, cur_row + 1):
 		cur_row += 1
 		cells += 1
+	# 硬降属于明显位移动作，落锁前必须清除“上一手是旋转”的状态。
+	if cells > 0:
+		last_was_rotation = false
+		last_kick_index = 0
 	scoring.add_hard_drop_score(cells)
 	score_changed.emit(scoring.score, scoring.level, scoring.lines)
 	_sync_piece_position()
@@ -276,7 +284,7 @@ func _lock_piece() -> void:
 	
 	# 检查特殊旋转
 	var is_spin: bool = false
-	if last_was_rotation:
+	if last_was_rotation and _is_spin_piece_type(cur_type):
 		is_spin = _check_immobile()
 
 	# 执行消行逻辑
@@ -296,13 +304,22 @@ func _lock_piece() -> void:
 	hold_used = false
 	_spawn_next_piece()
 
+## 限定可参与 Spin 判定的方块类型。
+## O 方块不具备有效旋转中心与踢墙特征，剔除可减少误判。
+func _is_spin_piece_type(piece_type: PieceData.Type) -> bool:
+	return piece_type != PieceData.Type.O
+
 func _check_immobile() -> bool:
+	# 使用四方向不可移动计数（左/右/上/下），满足 >= 3 视为“锁定在狭小空间”。
+	# 配合 last_was_rotation，可以更稳地识别真正由旋转导致的卡入。
 	var blocked: int = 0
 	if not board.is_valid_position(cur_type, cur_rot, cur_col - 1, cur_row):
 		blocked += 1
 	if not board.is_valid_position(cur_type, cur_rot, cur_col + 1, cur_row):
 		blocked += 1
 	if not board.is_valid_position(cur_type, cur_rot, cur_col, cur_row - 1):
+		blocked += 1
+	if not board.is_valid_position(cur_type, cur_rot, cur_col, cur_row + 1):
 		blocked += 1
 	return blocked >= 3
 

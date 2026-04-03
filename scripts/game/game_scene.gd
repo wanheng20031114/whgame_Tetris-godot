@@ -223,8 +223,10 @@ func _initialize_ui() -> void:
 	_layout_effect_labels()
 	if label_spin_text:
 		label_spin_text.visible = false
+		label_spin_text.z_index = 60
 	if label_combo_text:
 		label_combo_text.visible = false
+		label_combo_text.z_index = 50
 
 	# 结算面板（黑色遮罩 + 两个按钮）。
 	game_over_panel = PanelContainer.new()
@@ -311,9 +313,10 @@ func _layout_effect_labels() -> void:
 	if label_spin_text:
 		label_spin_text.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
 		label_spin_text.offset_left = board_center_x - 200.0
-		label_spin_text.offset_top = board.position.y + board_h * 0.45 - 40.0
+		# Spin 提示改为棋盘上方居中，避免被玩家忽略。
+		label_spin_text.offset_top = board.position.y - 92.0
 		label_spin_text.offset_right = board_center_x + 200.0
-		label_spin_text.offset_bottom = label_spin_text.offset_top + 80.0
+		label_spin_text.offset_bottom = label_spin_text.offset_top + 64.0
 
 	if label_combo_text:
 		label_combo_text.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
@@ -362,16 +365,16 @@ func _show_spin_text(content: String) -> void:
 	label_spin_text.text = content
 	label_spin_text.visible = true
 	label_spin_text.modulate = Color(1, 1, 1, 0)
-	label_spin_text.scale = Vector2(0.9, 0.9)
+	label_spin_text.scale = Vector2(0.96, 0.96)
 
 	spin_text_tween = create_tween()
 	spin_text_tween.set_parallel(true)
-	spin_text_tween.tween_property(label_spin_text, "modulate:a", 0.92, 0.08)
-	spin_text_tween.tween_property(label_spin_text, "scale", Vector2(1.04, 1.04), 0.08)
+	spin_text_tween.tween_property(label_spin_text, "modulate:a", 0.98, 0.12)
+	spin_text_tween.tween_property(label_spin_text, "scale", Vector2(1.06, 1.06), 0.12)
 	spin_text_tween.chain()
 	spin_text_tween.set_parallel(true)
-	spin_text_tween.tween_property(label_spin_text, "modulate:a", 0.0, 0.45)
-	spin_text_tween.tween_property(label_spin_text, "scale", Vector2(1.12, 1.12), 0.45)
+	spin_text_tween.tween_property(label_spin_text, "modulate:a", 0.0, 0.75)
+	spin_text_tween.tween_property(label_spin_text, "scale", Vector2(1.12, 1.12), 0.75)
 	spin_text_tween.finished.connect(func():
 		if label_spin_text:
 			label_spin_text.visible = false
