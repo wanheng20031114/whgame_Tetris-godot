@@ -41,6 +41,9 @@ var _status_args: Array = []
 var _result_msg_key: String = ""
 var _result_center: CenterContainer
 var _result_button: Button
+var _fx_layer: CanvasLayer
+var _label_action_text: Label
+var _action_text_tween: Tween
 
 # 受攻击条贴边间距，与单人保持一致。
 const GARBAGE_BAR_GAP: float = 6.0
@@ -53,6 +56,7 @@ func _ready() -> void:
 	super._ready()
 	_assign_audio_streams()
 	_initialize_garbage_bar_ui()
+	_initialize_action_text_ui()
 	_update_texts()
 	_set_status_key("TXT_BATTLE_IN_PROGRESS")
 
@@ -121,6 +125,100 @@ func _layout_player_garbage_bar() -> void:
 	player_garbage_bar.offset_right = bar_left + bar_w
 	player_garbage_bar.offset_bottom = bar_top + bar_h
 
+## 初始化多人模式的大字特效层（用于 SPIN / TETRIS 提示）。
+## 使用 CanvasLayer 保证在多人复杂 UI 结构上稳定可见。
+func _initialize_action_text_ui() -> void:
+	if _fx_layer == null:
+		_fx_layer = CanvasLayer.new()
+		_fx_layer.layer = 40
+		add_child(_fx_layer)
+
+	if _label_action_text == null:
+		_label_action_text = Label.new()
+		_label_action_text.visible = false
+		_label_action_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_label_action_text.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		_label_action_text.z_index = 200
+		_label_action_text.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_label_action_text.add_theme_font_size_override("font_size", 76)
+		_label_action_text.add_theme_color_override("font_color", Color(1.0, 0.96, 0.40, 1.0))
+		_label_action_text.add_theme_color_override("font_outline_color", Color(0.03, 0.06, 0.10, 1.0))
+		_label_action_text.add_theme_constant_override("outline_size", 8)
+		_label_action_text.modulate = Color(1, 1, 1, 1)
+		_fx_layer.add_child(_label_action_text)
+
+	_layout_action_text_ui()
+
+## 将多人特效文案定位到“本地棋盘上方居中”。
+func _layout_action_text_ui() -> void:
+	if _label_action_text == null or board == null:
+		return
+
+	var board_w: float = board.columns * board.cell_size
+	var board_center_x: float = board.global_position.x + board_w * 0.5
+	var top_y: float = maxf(18.0, board.global_position.y + 8.0)
+	_label_action_text.position = Vector2(board_center_x - 280.0, top_y)
+	_label_action_text.size = Vector2(560, 88)
+
+## 在多人模式下显示大字特效（SPIN / TETRIS）。
+func _show_action_text(content: String) -> void:
+	if _label_action_text == null:
+		return
+
+	# 每次显示前重新布局，避免窗口缩放或布局变化后偏移。
+	_layout_action_text_ui()
+
+	if _action_text_tween and _action_text_tween.is_running():
+		_action_text_tween.kill()
+
+	_label_action_text.text = content
+	_label_action_text.visible = true
+	_label_action_text.modulate = Color(1, 1, 1, 1)
+	_label_action_text.scale = Vector2(0.92, 0.92)
+
+	_action_text_tween = create_tween()
+	_action_text_tween.set_parallel(true)
+	_action_text_tween.tween_property(_label_action_text, "scale", Vector2(1.08, 1.08), 0.10)
+	_action_text_tween.chain()
+	_action_text_tween.tween_interval(0.28)
+	_action_text_tween.set_parallel(true)
+	_action_text_tween.tween_property(_label_action_text, "modulate", Color(1, 1, 1, 0), 0.95)
+	_action_text_tween.tween_property(_label_action_text, "scale", Vector2(1.14, 1.14), 0.95)
+	_action_text_tween.finished.connect(func():
+		if _label_action_text:
+			_label_action_text.visible = false
+			_label_action_text.modulate = Color(1, 1, 1, 1)
+	)
+
+## 构造 Spin 文案。
+func _build_spin_text(piece_type: int, is_t_spin: bool) -> String:
+	if is_t_spin:
+		return "T-SPIN!"
+	var piece_name: String = _piece_type_to_letter(piece_type)
+	if piece_name.is_empty():
+		return "SPIN!"
+	return "%s-SPIN!" % piece_name
+
+## 将方块类型映射为单字母。
+func _piece_type_to_letter(piece_type: int) -> String:
+	match piece_type:
+		PieceData.Type.I:
+			return "I"
+		PieceData.Type.O:
+			return "O"
+		PieceData.Type.T:
+			return "T"
+		PieceData.Type.S:
+			return "S"
+		PieceData.Type.Z:
+			return "Z"
+		PieceData.Type.J:
+			return "J"
+		PieceData.Type.L:
+			return "L"
+		_:
+			return ""
+
 
 # ------------------------------------------------------------------------------
 # 通用回调
@@ -185,9 +283,11 @@ func _on_local_lines_cleared(amount: int, is_spin: bool, is_t_spin: bool, damage
 	if is_spin or is_t_spin:
 		if sfx_spin:
 			sfx_spin.play()
+		_show_action_text(_build_spin_text(cur_type, is_t_spin))
 	elif amount == 4:
 		if sfx_tetris:
 			sfx_tetris.play()
+		_show_action_text("TETRIS!")
 	else:
 		if sfx_line_clear:
 			sfx_line_clear.play()

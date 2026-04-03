@@ -152,6 +152,8 @@ func _on_lines_cleared(amount: int, is_spin: bool, is_t_spin: bool, dmg: int) ->
 	elif amount == 4:
 		if sfx_tetris:
 			sfx_tetris.play()
+		# 四消（TETRIS）使用与 SPIN 相同的强可见大字提示效果。
+		_show_spin_text("TETRIS!")
 	else:
 		if sfx_line_clear:
 			sfx_line_clear.play()
@@ -224,6 +226,13 @@ func _initialize_ui() -> void:
 	if label_spin_text:
 		label_spin_text.visible = false
 		label_spin_text.z_index = 60
+		# 强可见配置：大字号 + 高对比颜色 + 粗描边，确保在任何背景下都能看清。
+		label_spin_text.add_theme_font_size_override("font_size", 76)
+		label_spin_text.add_theme_color_override("font_color", Color(1.0, 0.96, 0.40, 1.0))
+		label_spin_text.add_theme_color_override("font_outline_color", Color(0.03, 0.06, 0.10, 1.0))
+		label_spin_text.add_theme_constant_override("outline_size", 8)
+		# 初始化时强制恢复不透明，避免前一次动画残留 alpha=0 导致下一次不可见。
+		label_spin_text.modulate = Color(1, 1, 1, 1)
 	if label_combo_text:
 		label_combo_text.visible = false
 		label_combo_text.z_index = 50
@@ -312,11 +321,13 @@ func _layout_effect_labels() -> void:
 
 	if label_spin_text:
 		label_spin_text.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
-		label_spin_text.offset_left = board_center_x - 200.0
-		# Spin 提示改为棋盘上方居中，避免被玩家忽略。
-		label_spin_text.offset_top = board.position.y - 92.0
-		label_spin_text.offset_right = board_center_x + 200.0
-		label_spin_text.offset_bottom = label_spin_text.offset_top + 64.0
+		# 将提示放到棋盘上方“可视安全区域”内，避免 y 为负导致文本被裁掉看不见。
+		label_spin_text.offset_left = board_center_x - 280.0
+		label_spin_text.offset_top = maxf(18.0, board.position.y + 8.0)
+		label_spin_text.offset_right = board_center_x + 280.0
+		label_spin_text.offset_bottom = label_spin_text.offset_top + 88.0
+		# 明确设置尺寸，进一步避免布局在部分分辨率下异常。
+		label_spin_text.size = Vector2(560, 88)
 
 	if label_combo_text:
 		label_combo_text.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
@@ -364,20 +375,23 @@ func _show_spin_text(content: String) -> void:
 
 	label_spin_text.text = content
 	label_spin_text.visible = true
-	label_spin_text.modulate = Color(1, 1, 1, 0)
-	label_spin_text.scale = Vector2(0.96, 0.96)
+	# 先立即全亮显示，确保玩家“必定先看到”，再做淡出。
+	label_spin_text.modulate = Color(1, 1, 1, 1)
+	label_spin_text.scale = Vector2(0.92, 0.92)
 
 	spin_text_tween = create_tween()
 	spin_text_tween.set_parallel(true)
-	spin_text_tween.tween_property(label_spin_text, "modulate:a", 0.98, 0.12)
-	spin_text_tween.tween_property(label_spin_text, "scale", Vector2(1.06, 1.06), 0.12)
+	spin_text_tween.tween_property(label_spin_text, "scale", Vector2(1.08, 1.08), 0.10)
 	spin_text_tween.chain()
+	spin_text_tween.tween_interval(0.28)
 	spin_text_tween.set_parallel(true)
-	spin_text_tween.tween_property(label_spin_text, "modulate:a", 0.0, 0.75)
-	spin_text_tween.tween_property(label_spin_text, "scale", Vector2(1.12, 1.12), 0.75)
+	spin_text_tween.tween_property(label_spin_text, "modulate", Color(1, 1, 1, 0), 0.95)
+	spin_text_tween.tween_property(label_spin_text, "scale", Vector2(1.14, 1.14), 0.95)
 	spin_text_tween.finished.connect(func():
 		if label_spin_text:
 			label_spin_text.visible = false
+			# 收尾时恢复为不透明，避免下次显示前仍是透明状态。
+			label_spin_text.modulate = Color(1, 1, 1, 1)
 	)
 
 ## 根据连击数生成高饱和色，做成动态彩色 COMBO 文案。
