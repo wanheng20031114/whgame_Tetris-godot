@@ -91,6 +91,7 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(280, 400)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_card_normal")
+focus_mode = 2
 
 [node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MainContent/CardsHBox/CardMarathon" unique_id=553669273]
 layout_mode = 2
@@ -116,6 +117,7 @@ unique_name_in_owner = true
 custom_minimum_size = Vector2(280, 400)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_card_normal")
+focus_mode = 2
 
 [node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MainContent/CardsHBox/CardMultiplayer" unique_id=1310079491]
 layout_mode = 2
@@ -137,6 +139,7 @@ STEAM RELAY."
 horizontal_alignment = 1
 
 [node name="PlayerNameLabel" type="Label" parent="." unique_id=149902058]
+unique_name_in_owner = true
 layout_mode = 0
 offset_left = 974.0
 offset_top = 18.0

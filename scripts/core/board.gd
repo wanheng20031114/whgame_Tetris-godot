@@ -102,6 +102,7 @@ func lock_piece(type: PieceData.Type, rot_state: PieceData.RotationState,
 		var row: int = center_row + int(offset.y)
 		if row >= 0 and row < total_rows and col >= 0 and col < columns:
 			grid[row][col] = color
+	queue_redraw()
 
 # ==============================================================================
 # 消行逻辑
@@ -124,6 +125,7 @@ func clear_lines() -> int:
 		new_grid.insert(0, _create_empty_row())
 
 	grid = new_grid
+	queue_redraw()
 	return cleared
 
 ## 判断某一行是否满（所有列都被占据）

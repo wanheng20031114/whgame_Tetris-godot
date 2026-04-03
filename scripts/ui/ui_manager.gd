@@ -1,66 +1,132 @@
 class_name UIManager
 extends Control
 
-## UI管理器（挂载在 main.tscn 根节点）
-## 负责场景状态机的跳转，比如从登录界面切换到主大厅，再由主大厅跳转到 Marathon 模式的 game.tscn。
-## 使用 CanvasLayer 或者独立的 Control 作为外壳。
+## UI 管理器（挂在 main.tscn 根节点）
+##
+## 这版实现的核心目标：
+## 1) 登录页与大厅页不再“同时实例化 + 显隐切换”，改为“单实例热切换”。
+## 2) 任何时刻树里只保留一个活跃 UI 子场景，彻底避免 main/login 重复叠加。
+## 3) 与 GameState 协同，保留玩家名，实现返回大厅时免重复登录。
 
-@export_group("子界面引用")
-## 将我们在编辑器中组装好的子节点拖进来
-@export var login_screen: Control
-@export var main_lobby: Control
+@export_group("子场景资源")
+@export var login_screen_scene: PackedScene
+@export var main_lobby_scene: PackedScene
+
+# 当前活跃的 UI 场景节点（登录页或大厅页，二选一）
+var _active_screen: Control = null
+
+# 便于连接信号与调用方法的强类型引用（当前不活跃时保持 null）
+var _login_screen: LoginScreen = null
+var _main_lobby: MainLobby = null
+
+# 缓存玩家名，避免在切换过程中多次访问 AutoLoad
+var _cached_player_name: String = ""
+
 
 func _ready() -> void:
-	# 连接子界面的信号
-	if login_screen:
-		login_screen.login_successful.connect(_on_login_successful)
-	if main_lobby:
-		main_lobby.start_marathon.connect(_start_marathon_mode)
-		
-	# 检查玩家是否已经在本次游玩中输入过名字
-	var saved_name = ""
-	if get_node_or_null("/root/GameState"):
-		saved_name = get_node("/root/GameState").player_name
-		
-	if saved_name != "":
-		# 若有记录，直接免等进入大厅
-		if main_lobby and main_lobby.has_method("set_player_name"):
-			main_lobby.set_player_name(saved_name)
-		show_lobby()
+	_cached_player_name = _read_cached_player_name()
+
+	# 启动分流逻辑：
+	# - 没有名字：展示登录页
+	# - 已有名字：直接进大厅（返回大厅/重进场景时可无缝恢复）
+	if _cached_player_name.is_empty():
+		_show_login()
 	else:
-		# 初始状态：显示登录，隐藏主大厅
-		show_login()
+		_show_lobby(_cached_player_name)
 
-## ---------------------------------------------------------
-## 界面切换逻辑
-## ---------------------------------------------------------
 
-func show_login() -> void:
-	if login_screen: login_screen.show()
-	if main_lobby: main_lobby.hide()
+func _read_cached_player_name() -> String:
+	var state := get_node_or_null("/root/GameState")
+	if state == null:
+		return ""
+	return String(state.player_name).strip_edges()
 
-func show_lobby() -> void:
-	if login_screen: login_screen.hide()
-	if main_lobby:
-		main_lobby.show()
-		main_lobby.play_entrance_animation()
 
-## ---------------------------------------------------------
-## 信号回调
-## ---------------------------------------------------------
+func _save_cached_player_name(player_name: String) -> void:
+	var state := get_node_or_null("/root/GameState")
+	if state != null:
+		state.player_name = player_name
+
+
+func _clear_active_screen() -> void:
+	# 切场景前先安全清理旧节点，避免两个 UI 同时存在造成“界面重影/错觉切场景”。
+	if _active_screen and is_instance_valid(_active_screen):
+		_active_screen.queue_free()
+
+	_active_screen = null
+	_login_screen = null
+	_main_lobby = null
+
+
+func _instantiate_ui_screen(scene_res: PackedScene, scene_name: String) -> Control:
+	if scene_res == null:
+		push_error("[UIManager] %s 资源未配置。请检查 main.tscn 导出属性。" % scene_name)
+		return null
+
+	var inst := scene_res.instantiate()
+	if not (inst is Control):
+		push_error("[UIManager] %s 不是 Control 场景，无法作为 UI 根节点挂载。" % scene_name)
+		if inst:
+			inst.queue_free()
+		return null
+
+	var ui := inst as Control
+	ui.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	return ui
+
+
+func _show_login() -> void:
+	_clear_active_screen()
+
+	var screen := _instantiate_ui_screen(login_screen_scene, "LoginScreen")
+	if screen == null:
+		return
+
+	_active_screen = screen
+	add_child(_active_screen)
+
+	if _active_screen is LoginScreen:
+		_login_screen = _active_screen as LoginScreen
+		_login_screen.login_successful.connect(_on_login_successful)
+	else:
+		push_warning("[UIManager] LoginScreen 未使用 LoginScreen 脚本，登录信号不会生效。")
+
+
+func _show_lobby(player_name: String) -> void:
+	_clear_active_screen()
+
+	var screen := _instantiate_ui_screen(main_lobby_scene, "MainLobby")
+	if screen == null:
+		return
+
+	_active_screen = screen
+	add_child(_active_screen)
+
+	if _active_screen is MainLobby:
+		_main_lobby = _active_screen as MainLobby
+
+		# 把玩家名喂给大厅，用于欢迎语显示。
+		_main_lobby.set_player_name(player_name)
+
+		# 保留信号连接，避免未来逻辑回归时再次改动 UIManager。
+		_main_lobby.start_marathon.connect(_start_marathon_mode)
+		_main_lobby.start_multiplayer.connect(_start_multiplayer_mode)
+
+		# 大厅入场动画不影响逻辑，仅作为表现层增强。
+		_main_lobby.play_entrance_animation()
+	else:
+		push_warning("[UIManager] MainLobby 未使用 MainLobby 脚本，大厅交互信号不会生效。")
+
 
 func _on_login_successful(player_name: String) -> void:
-	print("[UIManager] 玩家登录: ", player_name)
-	
-	# 暂存入全局节点，防止跳转游戏重返时丢失大厅状态（只管本次进程，不污染硬盘）
-	if get_node_or_null("/root/GameState"):
-		get_node("/root/GameState").player_name = player_name
-	
-	if main_lobby and main_lobby.has_method("set_player_name"):
-		main_lobby.set_player_name(player_name)
-	show_lobby()
+	_cached_player_name = player_name.strip_edges()
+	_save_cached_player_name(_cached_player_name)
+	_show_lobby(_cached_player_name)
+
 
 func _start_marathon_mode() -> void:
-	print("[UIManager] 启动 Marathon 模式！切换场景...")
-	# 在这里离开 UI 领域，跳转进入游戏玩法场景（利用原生 get_tree().change_scene_to_file）
 	get_tree().change_scene_to_file("res://scenes/game.tscn")
+
+
+func _start_multiplayer_mode() -> void:
+	get_tree().change_scene_to_file("res://scenes/ui/multiplayer_setup.tscn")

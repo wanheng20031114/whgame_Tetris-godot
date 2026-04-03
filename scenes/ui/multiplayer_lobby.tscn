@@ -1,6 +1,8 @@
-[gd_scene load_steps=3 format=3 uid="uid://dm4k8p7v2l3m"]
+[gd_scene format=3 uid="uid://dm4k8p7v2l3m"]
 
-[ext_resource type="Script" path="res://scripts/ui/multiplayer_lobby.gd" id="1_x5678"]
+[ext_resource type="Script" uid="uid://8jiv3i6ssy8t" path="res://scripts/ui/multiplayer_lobby.gd" id="1_x5678"]
+[ext_resource type="PackedScene" path="res://scenes/ui/settings_menu.tscn" id="2_stngs"]
+
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_glass"]
 bg_color = Color(0, 0, 0, 0.4)
 corner_radius_top_left = 12
@@ -14,7 +16,7 @@ expand_margin_bottom = 20.0
 shadow_color = Color(0, 0, 0, 0.3)
 shadow_size = 10
 
-[node name="MultiplayerLobby" type="Control"]
+[node name="MultiplayerLobby" type="Control" unique_id=334003567]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -23,7 +25,7 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_x5678")
 
-[node name="Background" type="ColorRect" parent="."]
+[node name="Background" type="ColorRect" parent="." unique_id=910843477]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -32,7 +34,7 @@ grow_horizontal = 2
 grow_vertical = 2
 color = Color(0.0509804, 0.0509804, 0.0784314, 1)
 
-[node name="CenterContainer" type="CenterContainer" parent="."]
+[node name="CenterContainer" type="CenterContainer" parent="." unique_id=1985132838]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -40,64 +42,72 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="LobbyPanel" type="PanelContainer" parent="CenterContainer"]
+[node name="LobbyPanel" type="PanelContainer" parent="CenterContainer" unique_id=339951941]
 custom_minimum_size = Vector2(600, 550)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_glass")
 
-[node name="VBox" type="VBoxContainer" parent="CenterContainer/LobbyPanel"]
+[node name="VBox" type="VBoxContainer" parent="CenterContainer/LobbyPanel" unique_id=407456219]
 layout_mode = 2
 theme_override_constants/separation = 15
 
-[node name="Title" type="Label" parent="CenterContainer/LobbyPanel/VBox"]
+[node name="TitleLabel" type="Label" parent="CenterContainer/LobbyPanel/VBox" unique_id=399118620]
+unique_name_in_owner = true
 layout_mode = 2
 theme_override_font_sizes/font_size = 28
 text = "游 戏 大 厅"
 horizontal_alignment = 1
 
-[node name="HSeparator" type="HSeparator" parent="CenterContainer/LobbyPanel/VBox"]
+[node name="HSeparator" type="HSeparator" parent="CenterContainer/LobbyPanel/VBox" unique_id=1724953469]
 layout_mode = 2
 
-[node name="InfoLabel" type="Label" parent="CenterContainer/LobbyPanel/VBox"]
+[node name="InfoLabel" type="Label" parent="CenterContainer/LobbyPanel/VBox" unique_id=1475193330]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.7, 1, 0.7, 1)
-text = "正在获取房间列表..."
+text = "房间列表"
 horizontal_alignment = 1
 
-[node name="ScrollContainer" type="ScrollContainer" parent="CenterContainer/LobbyPanel/VBox"]
+[node name="ScrollContainer" type="ScrollContainer" parent="CenterContainer/LobbyPanel/VBox" unique_id=1873152687]
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="RoomList" type="VBoxContainer" parent="CenterContainer/LobbyPanel/VBox/ScrollContainer"]
+[node name="RoomList" type="VBoxContainer" parent="CenterContainer/LobbyPanel/VBox/ScrollContainer" unique_id=594983265]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 10
 
-[node name="HSeparator2" type="HSeparator" parent="CenterContainer/LobbyPanel/VBox"]
+[node name="HSeparator2" type="HSeparator" parent="CenterContainer/LobbyPanel/VBox" unique_id=1415751565]
 layout_mode = 2
 
-[node name="HBox" type="HBoxContainer" parent="CenterContainer/LobbyPanel/VBox"]
+[node name="HBox" type="HBoxContainer" parent="CenterContainer/LobbyPanel/VBox" unique_id=2080842179]
 layout_mode = 2
 theme_override_constants/separation = 20
 alignment = 1
 
-[node name="RefreshButton" type="Button" parent="CenterContainer/LobbyPanel/VBox/HBox"]
+[node name="RefreshButton" type="Button" parent="CenterContainer/LobbyPanel/VBox/HBox" unique_id=1062188707]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(180, 50)
 layout_mode = 2
-text = "刷 刷新 列表"
+text = "刷新列表"
 
-[node name="CreateButton" type="Button" parent="CenterContainer/LobbyPanel/VBox/HBox"]
+[node name="CreateButton" type="Button" parent="CenterContainer/LobbyPanel/VBox/HBox" unique_id=407982475]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(180, 50)
 layout_mode = 2
-text = "创 创建 房间"
+text = "创建房间"
 
-[node name="BackButton" type="Button" parent="CenterContainer/LobbyPanel/VBox"]
+[node name="BackButton" type="Button" parent="CenterContainer/LobbyPanel/VBox" unique_id=760364601]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.8, 0.8, 0.8, 1)
 text = "断开并返回"
 flat = true
+
+[node name="BtnSettings" parent="." instance=ExtResource("2_stngs")]
+layout_mode = 0
+offset_left = 1218.0
+offset_top = 16.0
+offset_right = 1258.0
+offset_bottom = 56.0

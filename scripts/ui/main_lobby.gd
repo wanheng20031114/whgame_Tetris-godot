@@ -23,10 +23,19 @@ func _ready() -> void:
 	card_marathon.mouse_exited.connect(_on_card_hover.bind(card_marathon, false))
 	card_multiplayer.mouse_entered.connect(_on_card_hover.bind(card_multiplayer, true))
 	card_multiplayer.mouse_exited.connect(_on_card_hover.bind(card_multiplayer, false))
+	card_marathon.focus_entered.connect(_on_card_hover.bind(card_marathon, true))
+	card_marathon.focus_exited.connect(_on_card_hover.bind(card_marathon, false))
+	card_multiplayer.focus_entered.connect(_on_card_hover.bind(card_multiplayer, true))
+	card_multiplayer.focus_exited.connect(_on_card_hover.bind(card_multiplayer, false))
 
 	# 确保透视点位于中心以实现缩放动画
 	card_marathon.pivot_offset = card_marathon.size / 2.0
 	card_multiplayer.pivot_offset = card_multiplayer.size / 2.0
+	card_marathon.focus_mode = Control.FOCUS_ALL
+	card_multiplayer.focus_mode = Control.FOCUS_ALL
+	card_marathon.focus_neighbor_right = card_multiplayer.get_path()
+	card_multiplayer.focus_neighbor_left = card_marathon.get_path()
+	call_deferred("_focus_default_card")
 			
 	# 强制保证背景节点永远在最底层并且拉伸全图
 	var custom_bg = get_node_or_null("CustomBackground")
@@ -45,6 +54,10 @@ var _current_pname: String = ""
 func set_player_name(pname: String) -> void:
 	_current_pname = pname
 	_update_texts()
+
+func _focus_default_card() -> void:
+	if card_marathon:
+		card_marathon.grab_focus()
 
 ## 动态响应语言更新
 func _notification(what: int) -> void:
@@ -87,16 +100,33 @@ func _on_card_hover(card: Control, is_hovering: bool) -> void:
 
 func _on_card_input(event: InputEvent, card: Control, mode: String) -> void:
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT:
-		# 点击特效
-		var tween = create_tween().set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
-		tween.tween_property(card, "scale", Vector2(0.95, 0.95), 0.1)
-		tween.tween_property(card, "scale", Vector2(1.0, 1.0), 0.1)
-		
-		# 判断模式
-		tween.finished.connect(func():
-			if mode == "marathon":
-				start_marathon.emit()
-			elif mode == "multiplayer":
-				print("[MainLobby] 进入多人设置界面...")
-				get_tree().change_scene_to_file("res://scenes/ui/multiplayer_setup.tscn")
-		)
+		_activate_mode(card, mode)
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("ui_left"):
+		card_marathon.grab_focus()
+		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed("ui_right"):
+		card_multiplayer.grab_focus()
+		get_viewport().set_input_as_handled()
+	elif event.is_action_pressed("ui_accept"):
+		if card_marathon.has_focus():
+			_activate_mode(card_marathon, "marathon")
+			get_viewport().set_input_as_handled()
+		elif card_multiplayer.has_focus():
+			_activate_mode(card_multiplayer, "multiplayer")
+			get_viewport().set_input_as_handled()
+
+func _activate_mode(card: Control, mode: String) -> void:
+	# 点击/确认特效
+	var tween = create_tween().set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+	tween.tween_property(card, "scale", Vector2(0.95, 0.95), 0.1)
+	tween.tween_property(card, "scale", Vector2(1.0, 1.0), 0.1)
+
+	tween.finished.connect(func():
+		if mode == "marathon":
+			start_marathon.emit()
+		elif mode == "multiplayer":
+			print("[MainLobby] 进入多人设置界面...")
+			start_multiplayer.emit()
+	)

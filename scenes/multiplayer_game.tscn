@@ -1,8 +1,9 @@
-[gd_scene load_steps=5 format=3 uid="uid://b2p7v3l1k5m6"]
+[gd_scene format=3 uid="uid://b2p7v3l1k5m6"]
 
 [ext_resource type="Script" path="res://scripts/game/multiplayer_game.gd" id="1_mpcore"]
 [ext_resource type="PackedScene" path="res://scenes/core/board.tscn" id="2_board"]
 [ext_resource type="PackedScene" path="res://scenes/core/piece.tscn" id="3_piece"]
+[ext_resource type="PackedScene" path="res://scenes/ui/garbage_bar.tscn" id="4_gbar"]
 
 [node name="MultiplayerGame" type="Node2D"]
 script = ExtResource("1_mpcore")
@@ -30,7 +31,8 @@ alignment = 1
 layout_mode = 2
 alignment = 1
 
-[node name="NameLabel" type="Label" parent="HBox/PlayerSide"]
+[node name="PlayerNameLabel" type="Label" parent="HBox/PlayerSide"]
+unique_name_in_owner = true
 layout_mode = 2
 theme_override_font_sizes/font_size = 24
 text = "你 (本地玩家)"
@@ -45,8 +47,10 @@ unique_name_in_owner = true
 position = Vector2(0, 0)
 
 [node name="CurrentPiece" parent="HBox/PlayerSide/BoardArea/Board" instance=ExtResource("3_piece")]
+unique_name_in_owner = true
 
 [node name="GhostPiece" parent="HBox/PlayerSide/BoardArea/Board" instance=ExtResource("3_piece")]
+unique_name_in_owner = true
 
 [node name="HUD" type="VBoxContainer" parent="HBox"]
 custom_minimum_size = Vector2(250, 0)
@@ -59,7 +63,7 @@ unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.8, 0, 1)
 theme_override_font_sizes/font_size = 32
-text = "对 战 中"
+text = "对战中"
 horizontal_alignment = 1
 
 [node name="VSLabel" type="Label" parent="HBox/HUD"]
@@ -76,7 +80,7 @@ alignment = 1
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_font_sizes/font_size = 24
-text = "等 待 连 接..."
+text = "等待连接..."
 horizontal_alignment = 1
 
 [node name="BoardArea" type="Control" parent="HBox/OpponentSide"]
@@ -87,11 +91,20 @@ layout_mode = 2
 unique_name_in_owner = true
 position = Vector2(0, 0)
 
+[node name="PlayerGarbageBar" parent="." instance=ExtResource("4_gbar")]
+unique_name_in_owner = true
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 30.0
+offset_bottom = 600.0
+
 [node name="HoldPiece" parent="." instance=ExtResource("3_piece")]
+unique_name_in_owner = true
 position = Vector2(-200, 0)
 visible = false
 
 [node name="NextPieces" type="Node2D" parent="."]
+unique_name_in_owner = true
 position = Vector2(-200, 100)
 visible = false
 
@@ -100,6 +113,7 @@ visible = false
 [node name="P3" parent="NextPieces" instance=ExtResource("3_piece")]
 
 [node name="LockDelayTimer" type="Timer" parent="."]
+unique_name_in_owner = true
 wait_time = 0.5
 one_shot = true
 

@@ -8,11 +8,52 @@ TXT_NEXT,下一个,NEXT,ネクスト
 TXT_SETTINGS,设置,SETTINGS,設定
 TXT_LANGUAGE,语言,LANGUAGE,言語
 TXT_INITIALIZE,初始化,INITIALIZE,初期化
-TXT_ENTER_NAME,输入代号,ENTER NAME,名前を入力
-TXT_CALLSIGN,代号：,CALLSIGN:,コールサイン：
+TXT_ENTER_NAME,输入用户名,ENTER NAME,名前を入力
+TXT_CALLSIGN,用户名：,NAME:,名前：
 TXT_CONNECTING,中继连接中...,CONNECTING TO RELAY...,リレーに接続中...
 TXT_WELCOME,欢迎,WELCOME,ようこそ
 TXT_MARATHON,马拉松模式,MARATHON,マラソンモード
 TXT_MULTIPLAYER,多人对战,MULTIPLAYER,マルチプレイヤー
-TXT_RESTART,重新开始 (A),RESTART (A),リスタート (A)
-TXT_RETURN_LOBBY,返回大厅 (B),RETURN LOBBY (B),ロビーへ戻る (B)
+TXT_RESTART,重新开始,RESTART,リスタート
+TXT_RETURN_LOBBY,返回大厅,RETURN LOBBY,ロビーへ戻る
+TXT_MARATHON_DESC,无限生存，消行越多速度越快,ENDLESS SURVIVAL. CLEAR LINES TO GO FASTER.,エンドレス生存。ラインを消すほどスピードアップ。
+TXT_MULTIPLAYER_DESC,与其他玩家在线对战,ONLINE BATTLE AGAINST OTHER PLAYERS,他プレイヤーとオンライン対戦
+TXT_OK,确定,OK,OK
+TXT_MP_SETUP_TITLE,多人对战,MULTIPLAYER,マルチプレイヤー
+TXT_SERVER_ADDRESS,服务器地址,SERVER ADDRESS,サーバーアドレス
+TXT_SERVER_PORT,端口,PORT,ポート
+TXT_LOGIN_NAME,登录用户名,PLAYER NAME,プレイヤー名
+TXT_IP_PLACEHOLDER,例如: 127.0.0.1,Example: 127.0.0.1,例: 127.0.0.1
+TXT_PORT_PLACEHOLDER,默认: 8080,Default: 8080,既定: 8080
+TXT_NAME_PLACEHOLDER,请输入你的昵称,Enter your nickname,ニックネームを入力
+TXT_CONNECT_SERVER,连接服务器,CONNECT SERVER,サーバー接続
+TXT_READY,准备就绪,READY,準備完了
+TXT_BACK_MAIN,返回主菜单,BACK TO MAIN,メインメニューへ戻る
+TXT_ENTER_USERNAME,请输入用户名,Please enter a name,名前を入力してください
+TXT_CONNECTING_SERVER,正在连接服务器...,Connecting to server...,サーバー接続中...
+TXT_CONNECTED_LOGGING_IN,连接成功，正在登录...,Connected. Logging in...,接続成功。ログイン中...
+TXT_DISCONNECTED,与服务器断开连接,Disconnected from server,サーバーから切断されました
+TXT_LOGIN_SUCCESS_ENTER_LOBBY,登录成功！正在进入大厅...,Login successful! Entering lobby...,ログイン成功。ロビーへ移動中...
+TXT_LOBBY_TITLE,游戏大厅,GAME LOBBY,ゲームロビー
+TXT_LOBBY_FETCHING_ROOMS,正在获取房间列表...,Fetching room list...,ルーム一覧を取得中...
+TXT_REFRESH_LIST,刷新列表,REFRESH LIST,一覧を更新
+TXT_CREATE_ROOM,创建房间,CREATE ROOM,ルーム作成
+TXT_DISCONNECT_BACK,断开并返回,DISCONNECT AND BACK,切断して戻る
+TXT_NO_ROOMS,当前没有房间，点击刷新或创建新房间,No rooms. Refresh or create a new room.,ルームがありません。更新または新規作成してください。
+TXT_FOUND_ROOMS,找到 %d 个房间,Found %d rooms,ルームが %d 件見つかりました
+TXT_ROOM_ENTRY,%s (%s) - 人数: %d/2,%s (%s) - Players: %d/2,%s (%s) - 人数: %d/2
+TXT_JOINING_ROOM,正在加入房间 %s...,Joining room %s...,ルーム %s に参加中...
+TXT_ROOM_CREATED_WAIT,房间创建成功: %s\n等待对手加入...,Room created: %s\nWaiting for opponent...,ルーム作成成功: %s\n対戦相手を待機中...
+TXT_ROOM_JOINED_PREP,成功加入房间: %s\n准备开始游戏...,Joined room: %s\nPreparing game...,ルーム参加成功: %s\nゲーム開始準備中...
+TXT_OPPONENT_FOUND_STARTING,找到对手: %s！游戏即将开始...,Opponent found: %s! Starting soon...,対戦相手: %s が見つかりました。まもなく開始...
+TXT_CREATING_ROOM,正在创建房间...,Creating room...,ルーム作成中...
+TXT_ROOM_NAME_TEMPLATE,%s 的房间,%s's room,%s のルーム
+TXT_PLAYER_LOCAL,你 (本地玩家),You (Local),あなた（ローカル）
+TXT_WAITING_CONNECT,等待连接...,Waiting for connection...,接続待ち...
+TXT_BATTLE_IN_PROGRESS,对战中...,Battle in progress...,対戦中...
+TXT_YOU_LOST,你输了！,You lost!,あなたの負けです！
+TXT_OPPONENT_DEFEATED,对手已阵亡，你赢了！,Opponent defeated. You win!,相手が倒れました。あなたの勝ちです！
+TXT_OPPONENT_LEFT,对手已断开连接,Opponent disconnected,対戦相手が切断しました
+TXT_CLICK_BACK_LOBBY,点击返回大厅,Click to return lobby,クリックしてロビーへ戻る
+TXT_VICTORY,胜利！,Victory!,勝利！
+TXT_OPPONENT_LEFT_TITLE,对手离开了,Opponent left,対戦相手が退出しました

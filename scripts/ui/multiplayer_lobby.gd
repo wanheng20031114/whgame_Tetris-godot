@@ -2,11 +2,16 @@ extends Control
 
 ## 多人模式游戏大厅脚本
 
+@onready var lbl_title: Label = %TitleLabel
 @onready var room_list_container: VBoxContainer = %RoomList
 @onready var btn_create: Button = %CreateButton
 @onready var btn_refresh: Button = %RefreshButton
 @onready var btn_back: Button = %BackButton
 @onready var lbl_info: Label = %InfoLabel
+
+var _rooms_cache: Array = []
+var _info_key: String = "TXT_LOBBY_FETCHING_ROOMS"
+var _info_args: Array = []
 
 func _ready() -> void:
 	btn_create.pressed.connect(_on_create_pressed)
@@ -18,55 +23,103 @@ func _ready() -> void:
 	NetworkManager.room_created.connect(_on_room_created)
 	NetworkManager.room_joined.connect(_on_room_joined)
 	NetworkManager.game_started.connect(_on_game_started)
-	
-	# 初始刷新
+
+	_update_texts()
 	_on_refresh_pressed()
+	call_deferred("_focus_default_button")
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_TRANSLATION_CHANGED and is_inside_tree() and is_node_ready():
+		_update_texts()
+
+func _focus_default_button() -> void:
+	if btn_refresh:
+		btn_refresh.grab_focus()
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("ui_cancel"):
+		_on_back_pressed()
+		get_viewport().set_input_as_handled()
+
+func _trf(key: String, args: Array = []) -> String:
+	var translated := tr(key)
+	if args.is_empty():
+		return translated
+	return translated % args
+
+func _set_info_key(key: String, args: Array = []) -> void:
+	_info_key = key
+	_info_args = args
+	if lbl_info:
+		lbl_info.text = _trf(_info_key, _info_args)
+
+func _update_texts() -> void:
+	if lbl_title:
+		lbl_title.text = tr("TXT_LOBBY_TITLE")
+	if btn_create:
+		btn_create.text = tr("TXT_CREATE_ROOM")
+	if btn_refresh:
+		btn_refresh.text = tr("TXT_REFRESH_LIST")
+	if btn_back:
+		btn_back.text = tr("TXT_DISCONNECT_BACK")
+	if lbl_info:
+		lbl_info.text = _trf(_info_key, _info_args)
+	if room_list_container:
+		_render_room_list()
 
 func _on_refresh_pressed() -> void:
-	lbl_info.text = "正在获取房间列表..."
-	# 清空现有显示
-	for child in room_list_container.get_children():
-		child.queue_free()
+	_rooms_cache.clear()
+	_set_info_key("TXT_LOBBY_FETCHING_ROOMS")
+	_render_room_list()
 	NetworkManager.request_room_list()
 
 func _on_create_pressed() -> void:
-	var room_name = NetworkManager.player_name + " 的房间"
+	var room_name = _trf("TXT_ROOM_NAME_TEMPLATE", [NetworkManager.player_name])
 	NetworkManager.create_room(room_name)
-	lbl_info.text = "正在创建房间..."
+	_set_info_key("TXT_CREATING_ROOM")
 
 func _on_back_pressed() -> void:
 	NetworkManager.socket.close() # 退出大厅就断开连接
 	get_tree().change_scene_to_file("res://scenes/ui/main.tscn")
 
 func _on_room_list_received(rooms: Array) -> void:
+	_rooms_cache = rooms.duplicate(true)
 	if rooms.is_empty():
-		lbl_info.text = "当前没有房间，点击刷新或创建新房间"
+		_set_info_key("TXT_NO_ROOMS")
 	else:
-		lbl_info.text = "找到 %d 个房间" % rooms.size()
-		
-	for room in rooms:
+		_set_info_key("TXT_FOUND_ROOMS", [rooms.size()])
+	_render_room_list()
+
+func _render_room_list() -> void:
+	if room_list_container == null:
+		return
+
+	for child in room_list_container.get_children():
+		child.queue_free()
+
+	for room in _rooms_cache:
 		var btn = Button.new()
-		btn.text = "%s (%s) - 人数: %d/2" % [room.name, room.id, room.playerCount]
+		btn.text = _trf("TXT_ROOM_ENTRY", [room.name, room.id, room.playerCount])
 		btn.custom_minimum_size = Vector2(0, 50)
 		btn.pressed.connect(_on_join_room_clicked.bind(room.id))
 		room_list_container.add_child(btn)
 
 func _on_join_room_clicked(room_id: String) -> void:
 	NetworkManager.join_room(room_id)
-	lbl_info.text = "正在加入房间 %s..." % room_id
+	_set_info_key("TXT_JOINING_ROOM", [room_id])
 
 func _on_room_created(room_id: String) -> void:
-	lbl_info.text = "房间创建成功: %s\n等待对手加入..." % room_id
+	_set_info_key("TXT_ROOM_CREATED_WAIT", [room_id])
 	btn_create.disabled = true
 	btn_refresh.disabled = true
 
 func _on_room_joined(room_id: String) -> void:
-	lbl_info.text = "成功加入房间: %s\n准备开始游戏..." % room_id
+	_set_info_key("TXT_ROOM_JOINED_PREP", [room_id])
 	btn_create.disabled = true
 	btn_refresh.disabled = true
 
 func _on_game_started(opponent_name: String) -> void:
-	lbl_info.text = "找到对手: %s！游戏即将开始..." % opponent_name
+	_set_info_key("TXT_OPPONENT_FOUND_STARTING", [opponent_name])
 	# 稍微延迟一下进入场景，让用户看清状态
 	await get_tree().create_timer(1.0).timeout
 	get_tree().change_scene_to_file("res://scenes/multiplayer_game.tscn")

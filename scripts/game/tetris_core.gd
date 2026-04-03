@@ -1,12 +1,10 @@
 class_name TetrisCore
 extends Node2D
 
-## 俄罗斯方块核心逻辑积累
-## 包含所有现代俄罗斯方块的通用规则：SRS 旋转、DAS/ARR、锁定延迟、得分与 Combo 等。
-## 该类不包含具体的单人或多人特化逻辑，通过信号与重写方法实现扩展。
-
+## 俄罗斯方块核心逻辑
+## 包含 SRS 旋转、DAS/ARR、锁定延迟、得分与 Combo 等通用规则。
 # ==============================================================================
-# 信号 (用于通知 UI 或网络同步)
+# 信号（用于通知 UI 或网络同步）
 # ==============================================================================
 
 signal score_changed(score: int, level: int, lines: int)
@@ -28,15 +26,15 @@ signal board_updated()
 @export var max_lock_resets: int = 15
 
 # ==============================================================================
-# 节点引用 (派生类所在的场景需要包含这些节点)
+# 节点引用（派生场景需要包含这些节点）
 # ==============================================================================
 
-@onready var board: Board = %Board
-@onready var current_piece: Piece = %CurrentPiece
-@onready var ghost_piece: Piece = %GhostPiece
-@onready var hold_piece: Piece = %HoldPiece
-@onready var next_container: Node2D = %NextPieces
-@onready var lock_timer: Timer = %LockDelayTimer
+@onready var board = get_node_or_null("%Board")
+@onready var current_piece = get_node_or_null("%CurrentPiece")
+@onready var ghost_piece = get_node_or_null("%GhostPiece")
+@onready var hold_piece = get_node_or_null("%HoldPiece")
+@onready var next_container = get_node_or_null("%NextPieces")
+@onready var lock_timer = get_node_or_null("%LockDelayTimer")
 
 # ==============================================================================
 # 逻辑组件
@@ -49,7 +47,6 @@ var scoring: Scoring
 # ==============================================================================
 # 运行状态
 # ==============================================================================
-
 var cur_type: PieceData.Type
 var cur_rot: PieceData.RotationState
 var cur_col: int = 0
@@ -71,6 +68,13 @@ var next_displays: Array = []
 # ==============================================================================
 
 func _ready() -> void:
+	_ensure_default_input_actions()
+
+	if board == null or current_piece == null or ghost_piece == null or hold_piece == null or next_container == null or lock_timer == null:
+		push_error("[TetrisCore] Required scene nodes are missing. Please verify unique_name_in_owner flags in scene.")
+		set_process(false)
+		return
+
 	# 初始化逻辑组件
 	bag = BagRandomizer.new()
 	das = DASHandler.new()
@@ -89,6 +93,30 @@ func _ready() -> void:
 	_update_hold_display()
 	_update_next_display()
 
+func _ensure_default_input_actions() -> void:
+	_ensure_action_with_default_keys("move_left", [KEY_LEFT, KEY_A])
+	_ensure_action_with_default_keys("move_right", [KEY_RIGHT, KEY_D])
+	_ensure_action_with_default_keys("soft_drop", [KEY_DOWN, KEY_S])
+	_ensure_action_with_default_keys("hard_drop", [KEY_SPACE])
+	_ensure_action_with_default_keys("rotate_cw", [KEY_UP, KEY_X])
+	_ensure_action_with_default_keys("rotate_ccw", [KEY_Z])
+	_ensure_action_with_default_keys("rotate_180", [KEY_Q])
+	_ensure_action_with_default_keys("hold", [KEY_C, KEY_SHIFT])
+	_ensure_action_with_default_keys("pause", [KEY_ESCAPE, KEY_P])
+
+func _ensure_action_with_default_keys(action_name: String, keycodes: Array) -> void:
+	if not InputMap.has_action(action_name):
+		InputMap.add_action(action_name)
+
+	var events: Array = InputMap.action_get_events(action_name)
+	if not events.is_empty():
+		return
+
+	for keycode in keycodes:
+		var ev := InputEventKey.new()
+		ev.keycode = keycode
+		InputMap.action_add_event(action_name, ev)
+
 # ==============================================================================
 # 核心循环
 # ==============================================================================
@@ -105,7 +133,6 @@ func process_logic(delta: float) -> void:
 # ==============================================================================
 # 输入与移动
 # ==============================================================================
-
 func _handle_core_input(delta: float) -> void:
 	if Input.is_action_just_pressed("rotate_cw"):
 		_try_rotate(1)
@@ -162,7 +189,7 @@ func _update_gravity(delta: float) -> void:
 			break
 
 # ==============================================================================
-# 移动/锁定 逻辑
+# 移动/锁定逻辑
 # ==============================================================================
 
 func _try_move(dx: int, dy: int) -> bool:
@@ -243,7 +270,6 @@ func _on_piece_manipulated() -> void:
 # ==============================================================================
 # 锁定与消行核心
 # ==============================================================================
-
 func _lock_piece() -> void:
 	lock_timer.stop()
 	board.lock_piece(cur_type, cur_rot, cur_col, cur_row, PieceData.COLORS[cur_type])
@@ -361,7 +387,7 @@ func _sync_piece_position() -> void:
 		cur_col * board.cell_size,
 		(cur_row - board.buffer_rows) * board.cell_size
 	)
-	board_updated.emit() # 用于同步幽灵活位
+	board_updated.emit() # 用于同步幽灵块等视觉表现
 
 func _update_ghost() -> void:
 	var ghost_row: int = cur_row

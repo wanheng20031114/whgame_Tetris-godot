@@ -1,6 +1,7 @@
-[gd_scene load_steps=3 format=3 uid="uid://cm3j8p7v1k2l"]
+[gd_scene format=3 uid="uid://cm3j8p7v1k2l"]
 
 [ext_resource type="Script" path="res://scripts/ui/multiplayer_setup.gd" id="1_x1234"]
+[ext_resource type="PackedScene" path="res://scenes/ui/settings_menu.tscn" id="2_stngs"]
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_glass"]
 bg_color = Color(0, 0, 0, 0.4)
 corner_radius_top_left = 12
@@ -49,7 +50,8 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_glass")
 layout_mode = 2
 theme_override_constants/separation = 20
 
-[node name="Title" type="Label" parent="CenterContainer/SetupPanel/VBox"]
+[node name="TitleLabel" type="Label" parent="CenterContainer/SetupPanel/VBox"]
+unique_name_in_owner = true
 layout_mode = 2
 theme_override_font_sizes/font_size = 32
 text = "多 人 对 战"
@@ -59,6 +61,7 @@ horizontal_alignment = 1
 layout_mode = 2
 
 [node name="IPLabel" type="Label" parent="CenterContainer/SetupPanel/VBox"]
+unique_name_in_owner = true
 layout_mode = 2
 text = "服务器地址"
 
@@ -68,6 +71,7 @@ layout_mode = 2
 placeholder_text = "例如: 127.0.0.1"
 
 [node name="PortLabel" type="Label" parent="CenterContainer/SetupPanel/VBox"]
+unique_name_in_owner = true
 layout_mode = 2
 text = "端口"
 
@@ -77,6 +81,7 @@ layout_mode = 2
 placeholder_text = "默认: 8080"
 
 [node name="NameLabel" type="Label" parent="CenterContainer/SetupPanel/VBox"]
+unique_name_in_owner = true
 layout_mode = 2
 text = "登录用户名"
 
@@ -108,3 +113,10 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.8, 0.8, 0.8, 1)
 text = "返回主菜单"
 flat = true
+
+[node name="BtnSettings" parent="." instance=ExtResource("2_stngs")]
+layout_mode = 0
+offset_left = 1218.0
+offset_top = 16.0
+offset_right = 1258.0
+offset_bottom = 56.0

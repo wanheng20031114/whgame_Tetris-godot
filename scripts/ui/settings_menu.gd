@@ -72,7 +72,7 @@ func _ready() -> void:
 	vbox.add_child(spacer)
 	
 	close_btn = Button.new()
-	close_btn.text = "OK"
+	close_btn.text = tr("TXT_OK")
 	close_btn.custom_minimum_size = Vector2(0, 40)
 	close_btn.pressed.connect(func(): hide_menu())
 	vbox.add_child(close_btn)
@@ -83,7 +83,7 @@ func _ready() -> void:
 	# 初始化不可见
 	canvas_layer.hide()
 	
-	# 绑定自身的点击事件
+	# 绑定自身点击事件
 	self.pressed.connect(_on_gear_pressed)
 	
 	_update_texts()
@@ -105,6 +105,7 @@ func _notification(what: int) -> void:
 func _update_texts() -> void:
 	if title_lbl: title_lbl.text = tr("TXT_SETTINGS")
 	if lang_lbl: lang_lbl.text = tr("TXT_LANGUAGE")
+	if close_btn: close_btn.text = tr("TXT_OK")
 
 func _on_language_selected(idx: int) -> void:
 	var loc = "en"
@@ -120,6 +121,8 @@ func _on_language_selected(idx: int) -> void:
 	config.save("user://settings.cfg")
 
 func _input(event: InputEvent) -> void:
+	if not InputMap.has_action("pause"):
+		return
 	if event.is_action_pressed("pause") and canvas_layer and canvas_layer.visible:
 		hide_menu()
 		get_viewport().set_input_as_handled()
