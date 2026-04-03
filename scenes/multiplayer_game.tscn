@@ -1,0 +1,112 @@
+[gd_scene load_steps=5 format=3 uid="uid://b2p7v3l1k5m6"]
+
+[ext_resource type="Script" path="res://scripts/game/multiplayer_game.gd" id="1_mpcore"]
+[ext_resource type="PackedScene" path="res://scenes/core/board.tscn" id="2_board"]
+[ext_resource type="PackedScene" path="res://scenes/core/piece.tscn" id="3_piece"]
+
+[node name="MultiplayerGame" type="Node2D"]
+script = ExtResource("1_mpcore")
+
+[node name="Background" type="CanvasLayer" parent="."]
+layer = -1
+
+[node name="ColorRect" type="ColorRect" parent="Background"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.05, 0.05, 0.08, 1)
+
+[node name="HBox" type="HBoxContainer" parent="."]
+offset_left = 60.0
+offset_top = 40.0
+offset_right = 1220.0
+offset_bottom = 680.0
+theme_override_constants/separation = 100
+alignment = 1
+
+[node name="PlayerSide" type="VBoxContainer" parent="HBox"]
+layout_mode = 2
+alignment = 1
+
+[node name="NameLabel" type="Label" parent="HBox/PlayerSide"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "你 (本地玩家)"
+horizontal_alignment = 1
+
+[node name="BoardArea" type="Control" parent="HBox/PlayerSide"]
+custom_minimum_size = Vector2(300, 600)
+layout_mode = 2
+
+[node name="Board" parent="HBox/PlayerSide/BoardArea" instance=ExtResource("2_board")]
+unique_name_in_owner = true
+position = Vector2(0, 0)
+
+[node name="CurrentPiece" parent="HBox/PlayerSide/BoardArea/Board" instance=ExtResource("3_piece")]
+
+[node name="GhostPiece" parent="HBox/PlayerSide/BoardArea/Board" instance=ExtResource("3_piece")]
+
+[node name="HUD" type="VBoxContainer" parent="HBox"]
+custom_minimum_size = Vector2(250, 0)
+layout_mode = 2
+theme_override_constants/separation = 30
+alignment = 1
+
+[node name="StatusLabel" type="Label" parent="HBox/HUD"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.8, 0, 1)
+theme_override_font_sizes/font_size = 32
+text = "对 战 中"
+horizontal_alignment = 1
+
+[node name="VSLabel" type="Label" parent="HBox/HUD"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 48
+text = "V S"
+horizontal_alignment = 1
+
+[node name="OpponentSide" type="VBoxContainer" parent="HBox"]
+layout_mode = 2
+alignment = 1
+
+[node name="OpponentNameLabel" type="Label" parent="HBox/OpponentSide"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 24
+text = "等 待 连 接..."
+horizontal_alignment = 1
+
+[node name="BoardArea" type="Control" parent="HBox/OpponentSide"]
+custom_minimum_size = Vector2(300, 600)
+layout_mode = 2
+
+[node name="OpponentBoard" parent="HBox/OpponentSide/BoardArea" instance=ExtResource("2_board")]
+unique_name_in_owner = true
+position = Vector2(0, 0)
+
+[node name="HoldPiece" parent="." instance=ExtResource("3_piece")]
+position = Vector2(-200, 0)
+visible = false
+
+[node name="NextPieces" type="Node2D" parent="."]
+position = Vector2(-200, 100)
+visible = false
+
+[node name="P1" parent="NextPieces" instance=ExtResource("3_piece")]
+[node name="P2" parent="NextPieces" instance=ExtResource("3_piece")]
+[node name="P3" parent="NextPieces" instance=ExtResource("3_piece")]
+
+[node name="LockDelayTimer" type="Timer" parent="."]
+wait_time = 0.5
+one_shot = true
+
+[node name="BGM" type="AudioStreamPlayer" parent="."]
+volume_db = -10.0
+
+[node name="SfxPlanting" type="AudioStreamPlayer" parent="."]
+[node name="SfxLineClear" type="AudioStreamPlayer" parent="."]
+[node name="SfxSuccess" type="AudioStreamPlayer" parent="."]
+[node name="SfxDeath" type="AudioStreamPlayer" parent="."]

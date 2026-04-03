@@ -1,0 +1,103 @@
+[gd_scene load_steps=3 format=3 uid="uid://dm4k8p7v2l3m"]
+
+[ext_resource type="Script" path="res://scripts/ui/multiplayer_lobby.gd" id="1_x5678"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_glass"]
+bg_color = Color(0, 0, 0, 0.4)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+expand_margin_left = 20.0
+expand_margin_top = 20.0
+expand_margin_right = 20.0
+expand_margin_bottom = 20.0
+shadow_color = Color(0, 0, 0, 0.3)
+shadow_size = 10
+
+[node name="MultiplayerLobby" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_x5678")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.0509804, 0.0509804, 0.0784314, 1)
+
+[node name="CenterContainer" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="LobbyPanel" type="PanelContainer" parent="CenterContainer"]
+custom_minimum_size = Vector2(600, 550)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_glass")
+
+[node name="VBox" type="VBoxContainer" parent="CenterContainer/LobbyPanel"]
+layout_mode = 2
+theme_override_constants/separation = 15
+
+[node name="Title" type="Label" parent="CenterContainer/LobbyPanel/VBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 28
+text = "游 戏 大 厅"
+horizontal_alignment = 1
+
+[node name="HSeparator" type="HSeparator" parent="CenterContainer/LobbyPanel/VBox"]
+layout_mode = 2
+
+[node name="InfoLabel" type="Label" parent="CenterContainer/LobbyPanel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.7, 1, 0.7, 1)
+text = "正在获取房间列表..."
+horizontal_alignment = 1
+
+[node name="ScrollContainer" type="ScrollContainer" parent="CenterContainer/LobbyPanel/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="RoomList" type="VBoxContainer" parent="CenterContainer/LobbyPanel/VBox/ScrollContainer"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 10
+
+[node name="HSeparator2" type="HSeparator" parent="CenterContainer/LobbyPanel/VBox"]
+layout_mode = 2
+
+[node name="HBox" type="HBoxContainer" parent="CenterContainer/LobbyPanel/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 20
+alignment = 1
+
+[node name="RefreshButton" type="Button" parent="CenterContainer/LobbyPanel/VBox/HBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(180, 50)
+layout_mode = 2
+text = "刷 刷新 列表"
+
+[node name="CreateButton" type="Button" parent="CenterContainer/LobbyPanel/VBox/HBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(180, 50)
+layout_mode = 2
+text = "创 创建 房间"
+
+[node name="BackButton" type="Button" parent="CenterContainer/LobbyPanel/VBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.8, 0.8, 0.8, 1)
+text = "断开并返回"
+flat = true

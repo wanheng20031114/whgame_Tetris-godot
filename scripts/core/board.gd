@@ -174,6 +174,55 @@ func _draw() -> void:
 	draw_rect(Rect2(Vector2(-1, -1), Vector2(board_w + 2, board_h + 2)), BORDER_COLOR, false, 2.0)
 
 # ==============================================================================
+# 棋盘数据同步（序列化与反序列化）
+# ==============================================================================
+
+## 获取当前棋盘的紧凑状态数据（通常用于网络传输）
+## 将 Color 数组转换为 PieceData.Type 枚举的整数数组，null 转换为 -1
+func get_grid_state() -> Array:
+	var state := []
+	# 我们只同步可见区域 (buffer_rows 到 total_rows) 即可
+	# 也可以同步全量，这里为了简单同步全量
+	for r in range(total_rows):
+		var row_data := []
+		for c in range(columns):
+			var cell_color = grid[r][c]
+			if cell_color == null:
+				row_data.append(-1)
+			else:
+				# 寻找该颜色对应的方块类型（反向查找）
+				var type_idx := -1
+				for t in PieceData.COLORS:
+					if PieceData.COLORS[t].is_equal_approx(cell_color):
+						type_idx = t
+						break
+				row_data.append(type_idx)
+		state.append(row_data)
+	return state
+
+## 根据外部状态数据还原棋盘网格
+## data: [ [col1, col2...], [row2...], ... ] 嵌套数组
+func set_grid_state(data: Array) -> void:
+	if data.size() != total_rows:
+		return
+		
+	for r in range(total_rows):
+		var row_data: Array = data[r]
+		for c in range(columns):
+			var type_idx: int = row_data[c]
+			if type_idx == -1:
+				grid[r][c] = null
+			else:
+				# 垃圾行颜色特殊处理（如果 type_idx 无效，默认给灰色）
+				if PieceData.COLORS.has(type_idx):
+					grid[r][c] = PieceData.COLORS[type_idx]
+				else:
+					grid[r][c] = Color(0.45, 0.45, 0.45) # 默认灰色
+	
+	queue_redraw()
+
+
+# ==============================================================================
 # 受击垃圾行分配 (Tetris 99 Style)
 # ==============================================================================
 

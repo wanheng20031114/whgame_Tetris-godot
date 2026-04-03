@@ -97,6 +97,6 @@ func _on_card_input(event: InputEvent, card: Control, mode: String) -> void:
 			if mode == "marathon":
 				start_marathon.emit()
 			elif mode == "multiplayer":
-				print("[MainLobby] Multiplayer mode not yet implemented.")
-				# start_multiplayer.emit()
+				print("[MainLobby] 进入多人设置界面...")
+				get_tree().change_scene_to_file("res://scenes/ui/multiplayer_setup.tscn")
 		)
