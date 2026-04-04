@@ -13,6 +13,7 @@ extends RefCounted
 
 ## 当前袋子中剩余的方块队列
 var _queue: Array = []
+var _rng: RandomNumberGenerator = RandomNumberGenerator.new()
 
 ## 全部 7 种方块类型的列表（用于生成新袋子）
 const ALL_TYPES: Array = [
@@ -31,6 +32,14 @@ const ALL_TYPES: Array = [
 
 ## 初始化：预填充足够多的方块到队列中（至少 2 袋 = 14 个）
 func _init() -> void:
+	_rng.randomize()
+	_fill_queue()
+	_fill_queue()
+
+## 使用指定种子重置随机序列（用于多人对战统一发牌）
+func reset_with_seed(seed_value: int) -> void:
+	_queue.clear()
+	_rng.seed = seed_value
 	_fill_queue()
 	_fill_queue()
 
@@ -57,7 +66,7 @@ func _fill_queue() -> void:
 	var bag = ALL_TYPES.duplicate()
 	# Fisher-Yates 洗牌算法，保证完全随机
 	for i in range(bag.size() - 1, 0, -1):
-		var j = randi() % (i + 1)
+		var j = _rng.randi_range(0, i)
 		var temp = bag[i]
 		bag[i] = bag[j]
 		bag[j] = temp

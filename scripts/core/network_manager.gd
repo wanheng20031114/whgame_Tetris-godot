@@ -14,7 +14,7 @@ signal login_success(id: String)
 signal room_list_received(rooms: Array)
 signal room_created(id: String)
 signal room_joined(id: String)
-signal game_started(opponent_name: String)
+signal game_started(opponent_name: String, seed: int)
 signal opponent_left()
 
 # 对战同步信号
@@ -31,6 +31,7 @@ var _is_server_connected := false
 var player_name := ""
 var my_id := ""
 var opponent_name := ""
+var match_seed: int = 0
 
 # ==============================================================================
 # 核心通信
@@ -100,7 +101,8 @@ func _handle_message(json_str: String) -> void:
 			room_joined.emit(payload.room_id)
 		"game_start":
 			opponent_name = payload.opponent_name
-			game_started.emit(opponent_name)
+			match_seed = int(payload.get("seed", 0))
+			game_started.emit(opponent_name, match_seed)
 		"opponent_left":
 			opponent_left.emit()
 		"board_update":

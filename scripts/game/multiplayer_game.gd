@@ -15,6 +15,8 @@ extends TetrisCore
 @onready var label_player_name: Label = %PlayerNameLabel
 @onready var label_status: Label = %StatusLabel
 @onready var label_opponent_name: Label = %OpponentNameLabel
+@onready var label_hold: Label = $HoldPanel/HoldLabel
+@onready var label_next: Label = $NextPanel/NextLabel
 @onready var bgm: AudioStreamPlayer = $BGM
 
 @onready var sfx_planting: AudioStreamPlayer = $SfxPlanting
@@ -44,9 +46,13 @@ var _result_button: Button
 var _fx_layer: CanvasLayer
 var _label_action_text: Label
 var _action_text_tween: Tween
+var pending_attacks: Array = []
+var ready_garbage: int = 0
 
 # 受攻击条贴边间距，与单人保持一致。
 const GARBAGE_BAR_GAP: float = 6.0
+const ATTACK_DELAY_SECONDS: float = 12.0
+const WARNING_STAGE_SECONDS: float = 6.0
 
 
 # ------------------------------------------------------------------------------
@@ -54,6 +60,7 @@ const GARBAGE_BAR_GAP: float = 6.0
 # ------------------------------------------------------------------------------
 func _ready() -> void:
 	super._ready()
+	_apply_match_seed()
 	_assign_audio_streams()
 	_initialize_garbage_bar_ui()
 	_initialize_action_text_ui()
@@ -73,6 +80,15 @@ func _ready() -> void:
 
 	_spawn_next_piece()
 	bgm.play()
+
+## 在开局时使用服务端分发的统一种子，确保双方方块序列一致。
+func _apply_match_seed() -> void:
+	if bag == null:
+		return
+
+	if NetworkManager.match_seed != 0:
+		bag.reset_with_seed(NetworkManager.match_seed)
+		_update_next_display()
 
 ## 显式设置多人场景的音频流，避免场景漏配时出现无声。
 func _assign_audio_streams() -> void:
@@ -242,6 +258,11 @@ func _set_status_key(key: String, args: Array = []) -> void:
 		label_status.text = _trf(_status_key, _status_args)
 
 func _update_texts() -> void:
+	if label_hold:
+		label_hold.text = tr("TXT_HOLD")
+	if label_next:
+		label_next.text = tr("TXT_NEXT")
+
 	if label_player_name:
 		label_player_name.text = tr("TXT_PLAYER_LOCAL")
 
@@ -259,6 +280,33 @@ func _update_result_button_text() -> void:
 
 func _process(delta: float) -> void:
 	process_logic(delta)
+	if not game_over and not paused:
+		_update_multiplayer_garbage(delta)
+
+func _update_multiplayer_garbage(delta: float) -> void:
+	var new_pending: Array = []
+	for attack in pending_attacks:
+		attack["delay"] -= delta
+		if attack["delay"] <= 0.0:
+			ready_garbage += int(attack["amount"])
+		else:
+			new_pending.append(attack)
+	pending_attacks = new_pending
+	_refresh_player_garbage_bar()
+
+func _refresh_player_garbage_bar() -> void:
+	if player_garbage_bar == null:
+		return
+
+	var grey_count: int = 0
+	var yellow_count: int = 0
+	for attack in pending_attacks:
+		if float(attack["delay"]) > WARNING_STAGE_SECONDS:
+			grey_count += int(attack["amount"])
+		else:
+			yellow_count += int(attack["amount"])
+
+	player_garbage_bar.update_bar(grey_count, yellow_count, ready_garbage)
 
 func _unhandled_input(event: InputEvent) -> void:
 	if _result_center == null or not is_instance_valid(_result_center):
@@ -292,8 +340,38 @@ func _on_local_lines_cleared(amount: int, is_spin: bool, is_t_spin: bool, damage
 		if sfx_line_clear:
 			sfx_line_clear.play()
 
-	if damage > 0:
-		NetworkManager.send_attack(damage)
+	if damage <= 0:
+		return
+
+	var block_amount: int = damage
+
+	var canceled_ready: int = mini(block_amount, ready_garbage)
+	ready_garbage -= canceled_ready
+	block_amount -= canceled_ready
+
+	while block_amount > 0 and pending_attacks.size() > 0:
+		var target = pending_attacks[0]
+		var cancel: int = mini(block_amount, int(target["amount"]))
+		target["amount"] = int(target["amount"]) - cancel
+		block_amount -= cancel
+		if int(target["amount"]) <= 0:
+			pending_attacks.pop_front()
+
+	if block_amount > 0:
+		NetworkManager.send_attack(block_amount)
+
+	_refresh_player_garbage_bar()
+
+func _lock_piece() -> void:
+	var will_receive_garbage: bool = (ready_garbage > 0)
+
+	super._lock_piece()
+
+	if will_receive_garbage and scoring.combo == 0 and board:
+		board.add_garbage_lines(ready_garbage)
+		ready_garbage = 0
+		_refresh_player_garbage_bar()
+		NetworkManager.sync_board(board.get_grid_state())
 
 func _on_local_game_over() -> void:
 	NetworkManager.send_game_over()
@@ -310,8 +388,13 @@ func _on_opponent_board_updated(grid_data: Array) -> void:
 		opponent_board.set_grid_state(grid_data)
 
 func _on_attack_received(amount: int) -> void:
-	if board:
-		board.add_garbage_lines(amount)
+	if amount <= 0:
+		return
+
+	for _i in range(amount):
+		pending_attacks.append({"delay": ATTACK_DELAY_SECONDS, "amount": 1})
+
+	_refresh_player_garbage_bar()
 
 func _on_opponent_game_over() -> void:
 	_set_status_key("TXT_OPPONENT_DEFEATED")

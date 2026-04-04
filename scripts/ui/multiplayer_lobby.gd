@@ -118,7 +118,7 @@ func _on_room_joined(room_id: String) -> void:
 	btn_create.disabled = true
 	btn_refresh.disabled = true
 
-func _on_game_started(opponent_name: String) -> void:
+func _on_game_started(opponent_name: String, _seed: int) -> void:
 	_set_info_key("TXT_OPPONENT_FOUND_STARTING", [opponent_name])
 	# 稍微延迟一下进入场景，让用户看清状态
 	await get_tree().create_timer(1.0).timeout

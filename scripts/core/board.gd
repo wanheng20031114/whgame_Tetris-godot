@@ -37,6 +37,7 @@ const BORDER_COLOR := Color("3a3a5c")     ## 棋盘边框：科技蓝灰
 # ==============================================================================
 
 var grid: Array = []
+const GARBAGE_CELL_TYPE: int = -2
 var last_hole_col: int = -1 ## 用于记忆上一次受击缺口的列，以确保高概率对齐
 
 # ==============================================================================
@@ -198,7 +199,10 @@ func get_grid_state() -> Array:
 					if PieceData.COLORS[t].is_equal_approx(cell_color):
 						type_idx = t
 						break
-				row_data.append(type_idx)
+				if type_idx == -1:
+					row_data.append(GARBAGE_CELL_TYPE)
+				else:
+					row_data.append(type_idx)
 		state.append(row_data)
 	return state
 
@@ -214,6 +218,8 @@ func set_grid_state(data: Array) -> void:
 			var type_idx: int = row_data[c]
 			if type_idx == -1:
 				grid[r][c] = null
+			elif type_idx == GARBAGE_CELL_TYPE:
+				grid[r][c] = Color(0.45, 0.45, 0.45)
 			else:
 				# 垃圾行颜色特殊处理（如果 type_idx 无效，默认给灰色）
 				if PieceData.COLORS.has(type_idx):

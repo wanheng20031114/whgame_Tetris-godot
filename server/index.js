@@ -61,7 +61,8 @@ function handleMessage(ws, data) {
                 id: roomId,
                 name: payload.name || `${client.name} 的房间`,
                 players: [ws],
-                status: 'waiting'
+                status: 'waiting',
+                seed: null
             };
             rooms.set(roomId, newRoom);
             client.room_id = roomId;
@@ -82,11 +83,12 @@ function handleMessage(ws, data) {
                 // 如果人满了，通知双方游戏开始
                 if (targetRoom.players.length === 2) {
                     targetRoom.status = 'playing';
+                    targetRoom.seed = Math.floor(Math.random() * 2147483647) + 1;
                     const p1 = clients.get(targetRoom.players[0]);
                     const p2 = clients.get(targetRoom.players[1]);
 
-                    send(targetRoom.players[0], 'game_start', { opponent_name: p2.name });
-                    send(targetRoom.players[1], 'game_start', { opponent_name: p1.name });
+                    send(targetRoom.players[0], 'game_start', { opponent_name: p2.name, seed: targetRoom.seed });
+                    send(targetRoom.players[1], 'game_start', { opponent_name: p1.name, seed: targetRoom.seed });
                 }
             } else {
                 send(ws, 'error', { message: '无法加入房间（已满或不存在）' });
