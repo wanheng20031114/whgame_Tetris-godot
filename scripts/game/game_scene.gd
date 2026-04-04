@@ -182,6 +182,7 @@ func _on_lines_cleared(amount: int, is_spin: bool, is_t_spin: bool, dmg: int) ->
 # 当方块锁定时，如果本次没消行且有红色压力，就在此刻结算受击。
 func _lock_piece() -> void:
 	var will_receive_garbage: bool = (ready_garbage > 0)
+	var lines_before_lock: int = scoring.lines
 
 	# 先走基类锁定逻辑（包括清行、计分、出块）。
 	super._lock_piece()
@@ -189,8 +190,9 @@ func _lock_piece() -> void:
 	# 每次锁定都播放落地音效。
 	sfx_planting.play()
 
-	# 若本次没有连消（combo 会被基类重置），则吃掉已就绪垃圾。
-	if will_receive_garbage and scoring.combo == 0:
+	# 若本次没有消行，则吃掉已就绪垃圾。
+	var did_clear_lines: bool = scoring.lines > lines_before_lock
+	if will_receive_garbage and not did_clear_lines:
 		board.add_garbage_lines(ready_garbage)
 		ready_garbage = 0
 

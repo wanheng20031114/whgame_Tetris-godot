@@ -278,7 +278,7 @@ func _update_result_button_text() -> void:
 	var msg := tr(_result_msg_key)
 	_result_button.text = "%s - %s" % [msg, tr("TXT_CLICK_BACK_LOBBY")]
 
-func _process(delta: float) -> void:
+func _physics_process(delta: float) -> void:
 	process_logic(delta)
 	if not game_over and not paused:
 		_update_multiplayer_garbage(delta)
@@ -364,10 +364,12 @@ func _on_local_lines_cleared(amount: int, is_spin: bool, is_t_spin: bool, damage
 
 func _lock_piece() -> void:
 	var will_receive_garbage: bool = (ready_garbage > 0)
+	var lines_before_lock: int = scoring.lines
 
 	super._lock_piece()
 
-	if will_receive_garbage and scoring.combo == 0 and board:
+	var did_clear_lines: bool = scoring.lines > lines_before_lock
+	if will_receive_garbage and not did_clear_lines and board:
 		board.add_garbage_lines(ready_garbage)
 		ready_garbage = 0
 		_refresh_player_garbage_bar()
