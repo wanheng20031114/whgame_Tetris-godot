@@ -1,17 +1,29 @@
 [gd_scene format=3 uid="uid://b2p7v3l1k5m6"]
 
-[ext_resource type="Script" path="res://scripts/game/multiplayer_game.gd" id="1_mpcore"]
+[ext_resource type="Script" uid="uid://bimohyvl3nuo7" path="res://scripts/game/multiplayer_game.gd" id="1_mpcore"]
 [ext_resource type="PackedScene" path="res://scenes/core/board.tscn" id="2_board"]
 [ext_resource type="PackedScene" path="res://scenes/core/piece.tscn" id="3_piece"]
 [ext_resource type="PackedScene" path="res://scenes/ui/garbage_bar.tscn" id="4_gbar"]
 
-[node name="MultiplayerGame" type="Node2D"]
+[sub_resource type="StyleBoxFlat" id="SubResource_panel"]
+bg_color = Color(0.051, 0.051, 0.078, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.227, 0.227, 0.361, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[node name="MultiplayerGame" type="Node2D" unique_id=184268838]
 script = ExtResource("1_mpcore")
 
-[node name="Background" type="CanvasLayer" parent="."]
+[node name="Background" type="CanvasLayer" parent="." unique_id=2035971787]
 layer = -1
 
-[node name="ColorRect" type="ColorRect" parent="Background"]
+[node name="ColorRect" type="ColorRect" parent="Background" unique_id=952132031]
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
@@ -19,7 +31,7 @@ grow_horizontal = 2
 grow_vertical = 2
 color = Color(0.05, 0.05, 0.08, 1)
 
-[node name="HBox" type="HBoxContainer" parent="."]
+[node name="HBox" type="HBoxContainer" parent="." unique_id=689765058]
 offset_left = 60.0
 offset_top = 40.0
 offset_right = 1220.0
@@ -27,38 +39,37 @@ offset_bottom = 680.0
 theme_override_constants/separation = 100
 alignment = 1
 
-[node name="PlayerSide" type="VBoxContainer" parent="HBox"]
+[node name="PlayerSide" type="VBoxContainer" parent="HBox" unique_id=2091124495]
 layout_mode = 2
 alignment = 1
 
-[node name="PlayerNameLabel" type="Label" parent="HBox/PlayerSide"]
+[node name="PlayerNameLabel" type="Label" parent="HBox/PlayerSide" unique_id=563688540]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_font_sizes/font_size = 24
 text = "你 (本地玩家)"
 horizontal_alignment = 1
 
-[node name="BoardArea" type="Control" parent="HBox/PlayerSide"]
+[node name="BoardArea" type="Control" parent="HBox/PlayerSide" unique_id=1038537583]
 custom_minimum_size = Vector2(300, 600)
 layout_mode = 2
 
-[node name="Board" parent="HBox/PlayerSide/BoardArea" instance=ExtResource("2_board")]
-unique_name_in_owner = true
-position = Vector2(0, 0)
-
-[node name="CurrentPiece" parent="HBox/PlayerSide/BoardArea/Board" instance=ExtResource("3_piece")]
+[node name="Board" parent="HBox/PlayerSide/BoardArea" unique_id=1942312580 instance=ExtResource("2_board")]
 unique_name_in_owner = true
 
-[node name="GhostPiece" parent="HBox/PlayerSide/BoardArea/Board" instance=ExtResource("3_piece")]
+[node name="CurrentPiece" parent="HBox/PlayerSide/BoardArea/Board" unique_id=237738877 instance=ExtResource("3_piece")]
 unique_name_in_owner = true
 
-[node name="HUD" type="VBoxContainer" parent="HBox"]
+[node name="GhostPiece" parent="HBox/PlayerSide/BoardArea/Board" unique_id=765790715 instance=ExtResource("3_piece")]
+unique_name_in_owner = true
+
+[node name="HUD" type="VBoxContainer" parent="HBox" unique_id=1486605281]
 custom_minimum_size = Vector2(250, 0)
 layout_mode = 2
 theme_override_constants/separation = 30
 alignment = 1
 
-[node name="StatusLabel" type="Label" parent="HBox/HUD"]
+[node name="StatusLabel" type="Label" parent="HBox/HUD" unique_id=975736861]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.8, 0, 1)
@@ -66,62 +77,95 @@ theme_override_font_sizes/font_size = 32
 text = "对战中"
 horizontal_alignment = 1
 
-[node name="VSLabel" type="Label" parent="HBox/HUD"]
+[node name="VSLabel" type="Label" parent="HBox/HUD" unique_id=688284022]
 layout_mode = 2
 theme_override_font_sizes/font_size = 48
 text = "V S"
 horizontal_alignment = 1
 
-[node name="OpponentSide" type="VBoxContainer" parent="HBox"]
+[node name="OpponentSide" type="VBoxContainer" parent="HBox" unique_id=422575315]
 layout_mode = 2
 alignment = 1
 
-[node name="OpponentNameLabel" type="Label" parent="HBox/OpponentSide"]
+[node name="OpponentNameLabel" type="Label" parent="HBox/OpponentSide" unique_id=1851064837]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_font_sizes/font_size = 24
 text = "等待连接..."
 horizontal_alignment = 1
 
-[node name="BoardArea" type="Control" parent="HBox/OpponentSide"]
+[node name="BoardArea" type="Control" parent="HBox/OpponentSide" unique_id=1190387547]
 custom_minimum_size = Vector2(300, 600)
 layout_mode = 2
 
-[node name="OpponentBoard" parent="HBox/OpponentSide/BoardArea" instance=ExtResource("2_board")]
+[node name="OpponentBoard" parent="HBox/OpponentSide/BoardArea" unique_id=908733715 instance=ExtResource("2_board")]
 unique_name_in_owner = true
-position = Vector2(0, 0)
 
-[node name="PlayerGarbageBar" parent="." instance=ExtResource("4_gbar")]
+[node name="PlayerGarbageBar" parent="." unique_id=1315742237 instance=ExtResource("4_gbar")]
 unique_name_in_owner = true
-offset_left = 0.0
-offset_top = 0.0
 offset_right = 30.0
-offset_bottom = 600.0
 
-[node name="HoldPiece" parent="." instance=ExtResource("3_piece")]
+[node name="HoldPiece" parent="." unique_id=1349367057 instance=ExtResource("3_piece")]
 unique_name_in_owner = true
+visible = false
 position = Vector2(-200, 0)
-visible = false
 
-[node name="NextPieces" type="Node2D" parent="."]
+[node name="NextPanel" type="Panel" parent="." unique_id=305796386]
+offset_left = 430.0
+offset_top = 82.0
+offset_right = 570.0
+offset_bottom = 492.0
+theme_override_styles/panel = SubResource("SubResource_panel")
+metadata/_edit_group_ = true
+
+[node name="NextLabel" type="Label" parent="NextPanel" unique_id=2120261123]
+layout_mode = 0
+offset_left = 10.0
+offset_top = 5.0
+offset_right = 51.0
+offset_bottom = 28.0
+theme_override_colors/font_color = Color(0.533, 0.533, 0.667, 1)
+theme_override_font_sizes/font_size = 16
+text = "NEXT"
+
+[node name="NextPieces" type="Node2D" parent="." unique_id=1970256760]
 unique_name_in_owner = true
-position = Vector2(-200, 100)
-visible = false
+position = Vector2(477, 146)
+metadata/_edit_group_ = true
 
-[node name="P1" parent="NextPieces" instance=ExtResource("3_piece")]
-[node name="P2" parent="NextPieces" instance=ExtResource("3_piece")]
-[node name="P3" parent="NextPieces" instance=ExtResource("3_piece")]
+[node name="Next0" parent="NextPieces" unique_id=4438424 instance=ExtResource("3_piece")]
+cell_size = 21.0
 
-[node name="LockDelayTimer" type="Timer" parent="."]
+[node name="Next1" parent="NextPieces" unique_id=1824956665 instance=ExtResource("3_piece")]
+position = Vector2(0, 75)
+cell_size = 21.0
+
+[node name="Next2" parent="NextPieces" unique_id=639138723 instance=ExtResource("3_piece")]
+position = Vector2(0, 150)
+cell_size = 21.0
+
+[node name="Next3" parent="NextPieces" unique_id=1796608289 instance=ExtResource("3_piece")]
+position = Vector2(0, 225)
+cell_size = 21.0
+
+[node name="Next4" parent="NextPieces" unique_id=1597930846 instance=ExtResource("3_piece")]
+position = Vector2(0, 300)
+cell_size = 21.0
+
+[node name="LockDelayTimer" type="Timer" parent="." unique_id=375409371]
 unique_name_in_owner = true
 wait_time = 0.5
 one_shot = true
 
-[node name="BGM" type="AudioStreamPlayer" parent="."]
+[node name="BGM" type="AudioStreamPlayer" parent="." unique_id=533508076]
 volume_db = -10.0
 
-[node name="SfxPlanting" type="AudioStreamPlayer" parent="."]
-[node name="SfxLineClear" type="AudioStreamPlayer" parent="."]
-[node name="SfxSuccess" type="AudioStreamPlayer" parent="."]
-[node name="SfxSpin" type="AudioStreamPlayer" parent="."]
-[node name="SfxDeath" type="AudioStreamPlayer" parent="."]
+[node name="SfxPlanting" type="AudioStreamPlayer" parent="." unique_id=700264706]
+
+[node name="SfxLineClear" type="AudioStreamPlayer" parent="." unique_id=1425880785]
+
+[node name="SfxSuccess" type="AudioStreamPlayer" parent="." unique_id=528249329]
+
+[node name="SfxSpin" type="AudioStreamPlayer" parent="." unique_id=1947973064]
+
+[node name="SfxDeath" type="AudioStreamPlayer" parent="." unique_id=37470689]

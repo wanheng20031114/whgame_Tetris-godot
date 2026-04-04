@@ -94,15 +94,7 @@ func _ready() -> void:
 	_update_next_display()
 
 func _ensure_default_input_actions() -> void:
-	_ensure_action_with_default_keys("move_left", [KEY_LEFT, KEY_A])
-	_ensure_action_with_default_keys("move_right", [KEY_RIGHT, KEY_D])
-	_ensure_action_with_default_keys("soft_drop", [KEY_DOWN, KEY_S])
-	_ensure_action_with_default_keys("hard_drop", [KEY_SPACE])
-	_ensure_action_with_default_keys("rotate_cw", [KEY_UP, KEY_X])
-	_ensure_action_with_default_keys("rotate_ccw", [KEY_Z])
-	_ensure_action_with_default_keys("rotate_180", [KEY_Q])
-	_ensure_action_with_default_keys("hold", [KEY_C, KEY_SHIFT])
-	_ensure_action_with_default_keys("pause", [KEY_ESCAPE, KEY_P])
+	pass
 
 func _ensure_action_with_default_keys(action_name: String, keycodes: Array) -> void:
 	if not InputMap.has_action(action_name):

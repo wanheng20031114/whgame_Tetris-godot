@@ -1,7 +1,7 @@
 const WebSocket = require('ws');
 const http = require('http');
 
-const PORT = 8080;
+const PORT = 8998;
 const server = http.createServer();
 const wss = new WebSocket.Server({ server });
 
@@ -35,10 +35,10 @@ function handleMessage(ws, data) {
     switch (type) {
         case 'login':
             // 登录并保存用户名
-            clients.set(ws, { 
-                id: Math.random().toString(36).substr(2, 9), 
+            clients.set(ws, {
+                id: Math.random().toString(36).substr(2, 9),
                 name: payload.name || '无名大侠',
-                room_id: null 
+                room_id: null
             });
             send(ws, 'login_success', { id: clients.get(ws).id });
             break;
@@ -55,7 +55,7 @@ function handleMessage(ws, data) {
             // 创建新房间
             const client = clients.get(ws);
             if (!client) return;
-            
+
             const roomId = Math.random().toString(36).substr(2, 6).toUpperCase();
             const newRoom = {
                 id: roomId,
@@ -72,19 +72,19 @@ function handleMessage(ws, data) {
             // 加入房间
             const joinClient = clients.get(ws);
             const targetRoom = rooms.get(payload.room_id);
-            
+
             if (targetRoom && targetRoom.players.length < 2) {
                 targetRoom.players.push(ws);
                 joinClient.room_id = payload.room_id;
-                
+
                 send(ws, 'room_joined', { room_id: payload.room_id });
-                
+
                 // 如果人满了，通知双方游戏开始
                 if (targetRoom.players.length === 2) {
                     targetRoom.status = 'playing';
                     const p1 = clients.get(targetRoom.players[0]);
                     const p2 = clients.get(targetRoom.players[1]);
-                    
+
                     send(targetRoom.players[0], 'game_start', { opponent_name: p2.name });
                     send(targetRoom.players[1], 'game_start', { opponent_name: p1.name });
                 }
@@ -105,10 +105,10 @@ function handleMessage(ws, data) {
 function forwardToOpponent(ws, type, payload) {
     const client = clients.get(ws);
     if (!client || !client.room_id) return;
-    
+
     const room = rooms.get(client.room_id);
     if (!room) return;
-    
+
     const opponent = room.players.find(p => p !== ws);
     if (opponent && opponent.readyState === WebSocket.OPEN) {
         send(opponent, type, payload);
