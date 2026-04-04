@@ -378,6 +378,8 @@ func _lock_piece() -> void:
 func _on_local_game_over() -> void:
 	NetworkManager.send_game_over()
 	_set_status_key("TXT_YOU_LOST")
+	if bgm:
+		bgm.stop()
 	sfx_death.play()
 	_show_back_to_lobby_confirm("TXT_GAME_OVER")
 
@@ -401,11 +403,15 @@ func _on_attack_received(amount: int) -> void:
 func _on_opponent_game_over() -> void:
 	_set_status_key("TXT_OPPONENT_DEFEATED")
 	game_over = true
+	if bgm:
+		bgm.stop()
 	_show_back_to_lobby_confirm("TXT_VICTORY")
 
 func _on_opponent_left() -> void:
 	_set_status_key("TXT_OPPONENT_LEFT")
 	game_over = true
+	if bgm:
+		bgm.stop()
 	_show_back_to_lobby_confirm("TXT_OPPONENT_LEFT_TITLE")
 
 
