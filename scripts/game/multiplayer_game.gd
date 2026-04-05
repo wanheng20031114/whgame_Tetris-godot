@@ -46,6 +46,8 @@ var _result_button: Button
 var _fx_layer: CanvasLayer
 var _label_action_text: Label
 var _action_text_tween: Tween
+var _label_combo_text: Label
+var _combo_text_tween: Tween
 var pending_attacks: Array = []
 var ready_garbage: int = 0
 
@@ -62,6 +64,7 @@ func _ready() -> void:
 	super._ready()
 	_apply_match_seed()
 	_assign_audio_streams()
+	_setup_bgm_loop()
 	_initialize_garbage_bar_ui()
 	_initialize_action_text_ui()
 	_update_texts()
@@ -80,6 +83,25 @@ func _ready() -> void:
 
 	_spawn_next_piece()
 	bgm.play()
+
+func _setup_bgm_loop() -> void:
+	if bgm == null:
+		return
+
+	# 双保险：底层流启用 loop + finished 信号兜底重播。
+	if bgm.stream is AudioStreamOggVorbis:
+		var ogg := bgm.stream as AudioStreamOggVorbis
+		ogg.loop = true
+	elif bgm.stream is AudioStreamWAV:
+		var wav := bgm.stream as AudioStreamWAV
+		wav.loop_mode = AudioStreamWAV.LOOP_FORWARD
+
+	if not bgm.finished.is_connected(_on_bgm_finished):
+		bgm.finished.connect(_on_bgm_finished)
+
+func _on_bgm_finished() -> void:
+	if bgm and not game_over:
+		bgm.play()
 
 ## 在开局时使用服务端分发的统一种子，确保双方方块序列一致。
 func _apply_match_seed() -> void:
@@ -163,6 +185,19 @@ func _initialize_action_text_ui() -> void:
 		_label_action_text.modulate = Color(1, 1, 1, 1)
 		_fx_layer.add_child(_label_action_text)
 
+	if _label_combo_text == null:
+		_label_combo_text = Label.new()
+		_label_combo_text.visible = false
+		_label_combo_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_label_combo_text.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		_label_combo_text.z_index = 190
+		_label_combo_text.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_label_combo_text.add_theme_font_size_override("font_size", 52)
+		_label_combo_text.add_theme_color_override("font_outline_color", Color(0.03, 0.06, 0.10, 1.0))
+		_label_combo_text.add_theme_constant_override("outline_size", 6)
+		_label_combo_text.modulate = Color(1, 1, 1, 1)
+		_fx_layer.add_child(_label_combo_text)
+
 	_layout_action_text_ui()
 
 ## 将多人特效文案定位到“本地棋盘上方居中”。
@@ -170,11 +205,16 @@ func _layout_action_text_ui() -> void:
 	if _label_action_text == null or board == null:
 		return
 
+	# 在多人场景中 Board 嵌在 Control 容器内，使用带 Canvas 的全局坐标更稳定。
+	var board_top_left_screen: Vector2 = board.get_global_transform_with_canvas().origin
 	var board_w: float = board.columns * board.cell_size
-	var board_center_x: float = board.global_position.x + board_w * 0.5
-	var top_y: float = maxf(18.0, board.global_position.y + 8.0)
+	var board_center_x: float = board_top_left_screen.x + board_w * 0.5
+	var top_y: float = maxf(18.0, board_top_left_screen.y + 8.0)
 	_label_action_text.position = Vector2(board_center_x - 280.0, top_y)
 	_label_action_text.size = Vector2(560, 88)
+	if _label_combo_text:
+		_label_combo_text.position = Vector2(board_center_x - 260.0, maxf(108.0, board_top_left_screen.y + 72.0))
+		_label_combo_text.size = Vector2(520, 72)
 
 ## 在多人模式下显示大字特效（SPIN / TETRIS）。
 func _show_action_text(content: String) -> void:
@@ -204,6 +244,38 @@ func _show_action_text(content: String) -> void:
 		if _label_action_text:
 			_label_action_text.visible = false
 			_label_action_text.modulate = Color(1, 1, 1, 1)
+	)
+
+func _combo_color(combo_count: int) -> Color:
+	var hue: float = fmod(float(combo_count) * 0.12, 1.0)
+	return Color.from_hsv(hue, 0.88, 1.0, 1.0)
+
+func _show_combo_text(combo_count: int) -> void:
+	if _label_combo_text == null:
+		return
+
+	_layout_action_text_ui()
+
+	if _combo_text_tween and _combo_text_tween.is_running():
+		_combo_text_tween.kill()
+
+	_label_combo_text.text = "COMBO %d" % combo_count
+	_label_combo_text.visible = true
+	_label_combo_text.modulate = _combo_color(combo_count)
+	_label_combo_text.modulate.a = 1.0
+
+	var base_y: float = _label_combo_text.position.y
+	_label_combo_text.position.y = base_y + 8.0
+
+	_combo_text_tween = create_tween()
+	_combo_text_tween.set_parallel(true)
+	_combo_text_tween.tween_property(_label_combo_text, "position:y", base_y, 0.10)
+	_combo_text_tween.chain()
+	_combo_text_tween.tween_interval(0.20)
+	_combo_text_tween.tween_property(_label_combo_text, "modulate:a", 0.0, 0.45)
+	_combo_text_tween.finished.connect(func():
+		if _label_combo_text:
+			_label_combo_text.visible = false
 	)
 
 ## 构造 Spin 文案。
@@ -339,6 +411,9 @@ func _on_local_lines_cleared(amount: int, is_spin: bool, is_t_spin: bool, damage
 	else:
 		if sfx_line_clear:
 			sfx_line_clear.play()
+
+	if scoring.combo > 0:
+		_show_combo_text(scoring.combo)
 
 	if damage <= 0:
 		return

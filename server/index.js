@@ -2,6 +2,7 @@ const WebSocket = require('ws');
 const http = require('http');
 
 const PORT = 8998;
+const LIST_ROOMS_COOLDOWN_MS = 500;
 const server = http.createServer();
 const wss = new WebSocket.Server({ server });
 
@@ -38,12 +39,26 @@ function handleMessage(ws, data) {
             clients.set(ws, {
                 id: Math.random().toString(36).substr(2, 9),
                 name: payload.name || '无名大侠',
-                room_id: null
+                room_id: null,
+                last_list_rooms_at: 0
             });
             send(ws, 'login_success', { id: clients.get(ws).id });
             break;
 
         case 'list_rooms':
+            const listClient = clients.get(ws);
+            if (!listClient) return;
+
+            const now = Date.now();
+            const elapsed = now - (listClient.last_list_rooms_at || 0);
+            if (elapsed < LIST_ROOMS_COOLDOWN_MS) {
+                send(ws, 'error', {
+                    message: 'refresh_too_fast',
+                    retry_after_ms: LIST_ROOMS_COOLDOWN_MS - elapsed
+                });
+                return;
+            }
+            listClient.last_list_rooms_at = now;
             // 返回可加入的房间列表
             const roomList = Array.from(rooms.values())
                 .filter(r => r.status === 'waiting')

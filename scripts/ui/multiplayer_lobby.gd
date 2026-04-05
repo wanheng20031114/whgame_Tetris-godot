@@ -79,7 +79,7 @@ func _on_create_pressed() -> void:
 	_set_info_key("TXT_CREATING_ROOM")
 
 func _on_back_pressed() -> void:
-	NetworkManager.socket.close() # 退出大厅就断开连接
+	NetworkManager.disconnect_from_server() # 退出大厅就断开连接
 	get_tree().change_scene_to_file("res://scenes/ui/main.tscn")
 
 func _on_room_list_received(rooms: Array) -> void:
@@ -118,8 +118,9 @@ func _on_room_joined(room_id: String) -> void:
 	btn_create.disabled = true
 	btn_refresh.disabled = true
 
+
 func _on_game_started(opponent_name: String, _seed: int) -> void:
 	_set_info_key("TXT_OPPONENT_FOUND_STARTING", [opponent_name])
-	# 稍微延迟一下进入场景，让用户看清状态
+	# Delay a bit before entering the match scene.
 	await get_tree().create_timer(1.0).timeout
 	get_tree().change_scene_to_file("res://scenes/multiplayer_game.tscn")
