@@ -13,6 +13,9 @@ signal board_update_received(data: Array)
 signal attack_received(amount: int)
 signal game_over_received()
 
+# 重开相关信号
+signal rematch_status_received(my_status: String, opponent_status: String)
+
 var socket: WebSocketPeer = WebSocketPeer.new()
 var _is_server_connected := false
 var player_name := ""
@@ -105,6 +108,11 @@ func _handle_message(json_str: String) -> void:
 			attack_received.emit(payload.amount)
 		"game_over":
 			game_over_received.emit()
+		"rematch_status":
+			# 收到双方 rematch 状态更新
+			var my_status: String = payload.get("my_status", "none")
+			var opponent_status: String = payload.get("opponent_status", "none")
+			rematch_status_received.emit(my_status, opponent_status)
 
 func login(pname: String) -> void:
 	player_name = pname
@@ -127,3 +135,11 @@ func send_attack(amount: int) -> void:
 
 func send_game_over() -> void:
 	send_message("game_over", {})
+
+## 请求再来一局
+func request_rematch() -> void:
+	send_message("rematch_request", {})
+
+## 拒绝再来一局（返回大厅）
+func decline_rematch() -> void:
+	send_message("rematch_decline", {})

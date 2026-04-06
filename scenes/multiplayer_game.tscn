@@ -5,6 +5,7 @@
 [ext_resource type="Texture2D" uid="uid://c3lad1jxw7f2p" path="res://assets/images/bg_multiplayer.jpg" id="2_jxfkk"]
 [ext_resource type="PackedScene" path="res://scenes/core/piece.tscn" id="3_piece"]
 [ext_resource type="PackedScene" path="res://scenes/ui/garbage_bar.tscn" id="4_gbar"]
+[ext_resource type="PackedScene" uid="uid://drnwu2mscsah3" path="res://scenes/ui/game_over_panel.tscn" id="5_gopanel"]
 
 [sub_resource type="StyleBoxFlat" id="SubResource_panel"]
 bg_color = Color(0.051, 0.051, 0.078, 1)
@@ -195,4 +196,10 @@ unique_name_in_owner = true
 unique_name_in_owner = true
 
 [node name="GhostPiece" parent="PlayerSide/BoardArea/Board" unique_id=765790715 instance=ExtResource("3_piece")]
+unique_name_in_owner = true
+
+[node name="UIOverlay" type="CanvasLayer" parent="." unique_id=1695462255]
+layer = 100
+
+[node name="GameOverPanel" parent="UIOverlay" unique_id=390667055 instance=ExtResource("5_gopanel")]
 unique_name_in_owner = true

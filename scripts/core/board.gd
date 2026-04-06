@@ -1,4 +1,4 @@
-﻿class_name Board
+class_name Board
 extends Node2D
 
 @export_group("Board")
@@ -66,12 +66,24 @@ func lock_piece(type: PieceData.Type, rot_state: PieceData.RotationState, center
 	queue_redraw()
 
 func clear_lines() -> int:
+	var result: Dictionary = clear_lines_with_data()
+	return result["cleared"]
+
+## 执行消行并返回详细数据，用于粒子特效等视觉反馈。
+## 返回: { "cleared": int, "rows_data": Array[{ "row_index": int, "colors": Array }] }
+func clear_lines_with_data() -> Dictionary:
 	var new_grid: Array = []
 	var cleared: int = 0
+	var rows_data: Array = []
 
 	for row in range(total_rows):
 		if _is_row_full(row):
 			cleared += 1
+			# 记录被消除行的颜色信息（在移除前）
+			var colors: Array = []
+			for col in range(columns):
+				colors.append(grid[row][col])
+			rows_data.append({"row_index": row, "colors": colors})
 		else:
 			new_grid.append(grid[row])
 
@@ -80,7 +92,7 @@ func clear_lines() -> int:
 
 	grid = new_grid
 	queue_redraw()
-	return cleared
+	return {"cleared": cleared, "rows_data": rows_data}
 
 func _is_row_full(row: int) -> bool:
 	for col in range(columns):

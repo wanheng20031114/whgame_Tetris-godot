@@ -1,6 +1,7 @@
 [gd_scene format=3 uid="uid://dm4k8p7v2l3m"]
 
 [ext_resource type="Script" uid="uid://8jiv3i6ssy8t" path="res://scripts/ui/multiplayer_lobby.gd" id="1_x5678"]
+[ext_resource type="Texture2D" uid="uid://cry1vfotodsqf" path="res://assets/images/bg_server_lobby.png" id="2_6qqbu"]
 [ext_resource type="PackedScene" path="res://scenes/ui/settings_menu.tscn" id="2_stngs"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_glass"]
@@ -25,14 +26,16 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_x5678")
 
-[node name="Background" type="ColorRect" parent="." unique_id=910843477]
+[node name="Background" type="TextureRect" parent="." unique_id=910843477]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.0509804, 0.0509804, 0.0784314, 1)
+texture = ExtResource("2_6qqbu")
+expand_mode = 1
+stretch_mode = 6
 
 [node name="CenterContainer" type="CenterContainer" parent="." unique_id=1985132838]
 layout_mode = 1
@@ -105,7 +108,7 @@ theme_override_colors/font_color = Color(0.8, 0.8, 0.8, 1)
 text = "断开并返回"
 flat = true
 
-[node name="BtnSettings" parent="." instance=ExtResource("2_stngs")]
+[node name="BtnSettings" parent="." unique_id=64885342 instance=ExtResource("2_stngs")]
 layout_mode = 0
 offset_left = 1218.0
 offset_top = 16.0

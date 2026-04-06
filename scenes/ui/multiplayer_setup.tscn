@@ -2,6 +2,7 @@
 
 [ext_resource type="Script" uid="uid://n1fscm2pj825" path="res://scripts/ui/multiplayer_setup.gd" id="1_x1234"]
 [ext_resource type="PackedScene" path="res://scenes/ui/settings_menu.tscn" id="2_stngs"]
+[ext_resource type="Texture2D" uid="uid://5honv4nlxv7a" path="res://assets/images/bg_server_connect.jpg" id="3_bg_conn"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_glass"]
 bg_color = Color(0, 0, 0, 0.4)
@@ -25,14 +26,18 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_x1234")
 
-[node name="Background" type="ColorRect" parent="." unique_id=164187723]
+[node name="Background" type="TextureRect" parent="." unique_id=164187723]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+offset_top = -79.0
+offset_bottom = 481.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.0509804, 0.0509804, 0.0784314, 1)
+texture = ExtResource("3_bg_conn")
+expand_mode = 1
+stretch_mode = 6
 
 [node name="CenterContainer" type="CenterContainer" parent="." unique_id=1860064889]
 layout_mode = 1

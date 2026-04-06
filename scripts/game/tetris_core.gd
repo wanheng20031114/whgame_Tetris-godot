@@ -10,6 +10,7 @@ extends Node2D
 signal score_changed(score: int, level: int, lines: int)
 signal piece_locked(type: int, grid_state: Array)
 signal lines_cleared(amount: int, is_spin: bool, is_t_spin: bool, damage: int)
+signal rows_cleared(rows_data: Array)  # 传递被消行的详细数据，用于粒子效果
 signal game_over_triggered()
 signal board_updated()
 
@@ -285,14 +286,17 @@ func _lock_piece() -> void:
 	if last_was_rotation and _is_spin_piece_type(cur_type):
 		is_spin = _check_immobile()
 
-	# 执行消行逻辑
-	var cleared: int = board.clear_lines()
+	# 执行消行逻辑（使用含数据版本，用于生成粒子效果）
+	var clear_result: Dictionary = board.clear_lines_with_data()
+	var cleared: int = clear_result["cleared"]
+	var cleared_rows_data: Array = clear_result["rows_data"]
 	var dmg: int = 0
 	if cleared > 0:
 		var is_t_spin = (cur_type == PieceData.Type.T and is_spin)
 		scoring.process_line_clear(cleared, is_spin, is_t_spin)
 		dmg = _calculate_damage(cleared, is_spin)
 		lines_cleared.emit(cleared, is_spin, is_t_spin, dmg)
+		rows_cleared.emit(cleared_rows_data)
 	else:
 		scoring.reset_combo()
 	

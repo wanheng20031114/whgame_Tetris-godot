@@ -4,7 +4,7 @@ extends TetrisCore
 ## 重点职责：
 ## 1) 本地棋盘逻辑（继承 TetrisCore）；
 ## 2) 网络同步（棋盘状态、攻击、结算）；
-## 3) 对战 UI（状态文本、返回大厅按钮）；
+## 3) 对战 UI（状态文本、结算面板）；
 ## 4) 本地音效反馈（普通消行 / 四消 / Spin 消除）。
 
 # ------------------------------------------------------------------------------
@@ -18,6 +18,7 @@ extends TetrisCore
 @onready var label_hold: Label = $HoldPanel/HoldLabel
 @onready var label_next: Label = $NextPanel/NextLabel
 @onready var bgm: AudioStreamPlayer = $BGM
+@onready var game_over_panel = %GameOverPanel
 
 @onready var sfx_planting: AudioStreamPlayer = $SfxPlanting
 @onready var sfx_line_clear: AudioStreamPlayer = $SfxLineClear
@@ -40,9 +41,6 @@ const SFX_DEATH_STREAM: AudioStream = preload("res://audio/death.ogg")
 # ------------------------------------------------------------------------------
 var _status_key: String = "TXT_BATTLE_IN_PROGRESS"
 var _status_args: Array = []
-var _result_msg_key: String = ""
-var _result_center: CenterContainer
-var _result_button: Button
 var _fx_layer: CanvasLayer
 var _label_action_text: Label
 var _action_text_tween: Tween
@@ -70,15 +68,21 @@ func _ready() -> void:
 	_update_texts()
 	_set_status_key("TXT_BATTLE_IN_PROGRESS")
 
+	# 确保结算面板初始隐藏。
+	if game_over_panel:
+		game_over_panel.hide_panel()
+
 	# 连接网络信号。
 	NetworkManager.board_update_received.connect(_on_opponent_board_updated)
 	NetworkManager.attack_received.connect(_on_attack_received)
 	NetworkManager.game_over_received.connect(_on_opponent_game_over)
 	NetworkManager.opponent_left.connect(_on_opponent_left)
+	NetworkManager.game_started.connect(_on_rematch_game_started)
 
 	# 本地核心信号 -> 网络发送。
 	piece_locked.connect(_on_local_piece_locked)
 	lines_cleared.connect(_on_local_lines_cleared)
+	rows_cleared.connect(_on_rows_cleared)
 	game_over_triggered.connect(_on_local_game_over)
 
 	_spawn_next_piece()
@@ -200,7 +204,7 @@ func _initialize_action_text_ui() -> void:
 
 	_layout_action_text_ui()
 
-## 将多人特效文案定位到“本地棋盘上方居中”。
+## 将多人特效文案定位到"本地棋盘上方居中"。
 func _layout_action_text_ui() -> void:
 	if _label_action_text == null or board == null:
 		return
@@ -315,7 +319,6 @@ func _notification(what: int) -> void:
 	if what == NOTIFICATION_TRANSLATION_CHANGED and is_inside_tree() and is_node_ready():
 		_update_texts()
 		_set_status_key(_status_key, _status_args)
-		_update_result_button_text()
 
 func _trf(key: String, args: Array = []) -> String:
 	var translated := tr(key)
@@ -343,12 +346,6 @@ func _update_texts() -> void:
 			label_opponent_name.text = tr("TXT_WAITING_CONNECT")
 		else:
 			label_opponent_name.text = NetworkManager.opponent_name
-
-func _update_result_button_text() -> void:
-	if not _result_button:
-		return
-	var msg := tr(_result_msg_key)
-	_result_button.text = "%s - %s" % [msg, tr("TXT_CLICK_BACK_LOBBY")]
 
 func _physics_process(delta: float) -> void:
 	process_logic(delta)
@@ -381,14 +378,14 @@ func _refresh_player_garbage_bar() -> void:
 	player_garbage_bar.update_bar(grey_count, yellow_count, ready_garbage)
 
 func _unhandled_input(event: InputEvent) -> void:
-	if _result_center == null or not is_instance_valid(_result_center):
-		return
-
-	if event.is_action_pressed("ui_cancel"):
-		get_tree().change_scene_to_file("res://scenes/ui/multiplayer_lobby.tscn")
-		var vp := get_viewport()
-		if vp:
-			vp.set_input_as_handled()
+	# 游戏结束后 ESC 等同于返回大厅。
+	if game_over and game_over_panel and game_over_panel.visible:
+		if event.is_action_pressed("ui_cancel"):
+			NetworkManager.decline_rematch()
+			get_tree().change_scene_to_file("res://scenes/ui/multiplayer_lobby.tscn")
+			var vp := get_viewport()
+			if vp:
+				vp.set_input_as_handled()
 
 
 # ------------------------------------------------------------------------------
@@ -456,7 +453,7 @@ func _on_local_game_over() -> void:
 	if bgm:
 		bgm.stop()
 	sfx_death.play()
-	_show_back_to_lobby_confirm("TXT_GAME_OVER")
+	_show_game_over_panel("TXT_GAME_OVER")
 
 
 # ------------------------------------------------------------------------------
@@ -480,33 +477,37 @@ func _on_opponent_game_over() -> void:
 	game_over = true
 	if bgm:
 		bgm.stop()
-	_show_back_to_lobby_confirm("TXT_VICTORY")
+	_show_game_over_panel("TXT_VICTORY")
 
 func _on_opponent_left() -> void:
 	_set_status_key("TXT_OPPONENT_LEFT")
 	game_over = true
 	if bgm:
 		bgm.stop()
-	_show_back_to_lobby_confirm("TXT_OPPONENT_LEFT_TITLE")
+	_show_game_over_panel("TXT_OPPONENT_LEFT_TITLE")
+
+## 双方都确认重开后，服务器会再次发送 game_start，重载当前场景。
+func _on_rematch_game_started(_opp_name: String, _seed: int) -> void:
+	# 重新加载当前场景，相当于重新开始一局。
+	get_tree().reload_current_scene()
 
 
 # ------------------------------------------------------------------------------
-# 结果 UI
+# 结算面板 UI
 # ------------------------------------------------------------------------------
-func _show_back_to_lobby_confirm(msg_key: String) -> void:
-	_result_msg_key = msg_key
+## 显示静态结算面板，传入结果翻译 key。
+func _show_game_over_panel(msg_key: String) -> void:
+	if game_over_panel:
+		game_over_panel.show_result(msg_key, NetworkManager.opponent_name)
 
-	if _result_center:
-		_result_center.queue_free()
 
-	_result_button = Button.new()
-	_result_button.custom_minimum_size = Vector2(300, 60)
-	_result_button.focus_mode = Control.FOCUS_ALL
-	_result_button.pressed.connect(func(): get_tree().change_scene_to_file("res://scenes/ui/multiplayer_lobby.tscn"))
-	_update_result_button_text()
+# ------------------------------------------------------------------------------
+# 消行粒子效果
+# ------------------------------------------------------------------------------
+func _on_rows_cleared(rows_data: Array) -> void:
+	if board == null or rows_data.is_empty():
+		return
 
-	_result_center = CenterContainer.new()
-	_result_center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	_result_center.add_child(_result_button)
-	add_child(_result_center)
-	_result_button.grab_focus()
+	var effect := LineClearEffect.new()
+	board.add_child(effect)
+	effect.setup(rows_data, board.cell_size, board.buffer_rows)

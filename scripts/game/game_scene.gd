@@ -66,6 +66,7 @@ func _ready() -> void:
 	# 连接单人场景关心的通用信号。
 	score_changed.connect(_on_score_changed)
 	lines_cleared.connect(_on_lines_cleared)
+	rows_cleared.connect(_on_rows_cleared)
 	game_over_triggered.connect(_on_game_over)
 
 	# 开局生成第一块并播放 BGM。
@@ -428,3 +429,15 @@ func _setup_input_actions() -> void:
 	# InputMap 是全局对象；当前项目里动作已在其他入口配置。
 	# 这里保留接口，后续如果要做单人专属按键可直接补在此处。
 	pass
+
+
+# ------------------------------------------------------------------------------
+# 消行粒子效果
+# ------------------------------------------------------------------------------
+func _on_rows_cleared(rows_data: Array) -> void:
+	if board == null or rows_data.is_empty():
+		return
+
+	var effect := LineClearEffect.new()
+	board.add_child(effect)
+	effect.setup(rows_data, board.cell_size, board.buffer_rows)
