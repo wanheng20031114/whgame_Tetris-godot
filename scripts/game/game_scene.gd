@@ -48,6 +48,18 @@ var combo_text_tween: Tween
 # 受攻击条固定贴边间距：保证和主战斗棋盘视觉上紧贴但不重叠。
 const GARBAGE_BAR_GAP: float = 6.0
 
+# ------------------------------------------------------------------------------
+# 数据采集器
+# ------------------------------------------------------------------------------
+var _data_collector: PlayerDataCollector
+## 本块方块的消行/伤害缓存（在 _lock_piece 中记录，在快照中使用）
+var _last_lines_cleared_this_lock: int = 0
+var _last_damage_this_lock: int = 0
+var _last_is_spin: bool = false
+var _last_is_t_spin: bool = false
+## 本块方块是否使用了 hold
+var _hold_used_this_piece: bool = false
+
 
 # ------------------------------------------------------------------------------
 # 生命周期
@@ -73,6 +85,14 @@ func _ready() -> void:
 	_spawn_next_piece()
 	bgm.play()
 
+	# 初始化数据采集器
+	_data_collector = PlayerDataCollector.new()
+	var state := get_node_or_null("/root/GameState")
+	var pname: String = ""
+	if state:
+		pname = str(state.player_name).strip_edges()
+	_data_collector.start_session(pname if not pname.is_empty() else "Player")
+
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_TRANSLATION_CHANGED and is_inside_tree() and is_node_ready():
 		_update_texts()
@@ -80,6 +100,10 @@ func _notification(what: int) -> void:
 func _process(delta: float) -> void:
 	# 每帧执行核心逻辑（移动、旋转、重力、锁定等）。
 	process_logic(delta)
+
+	# 按键计数：统计本块方块的操作按键次数（用于 KPP 计算）
+	if _data_collector and _data_collector.is_active() and not game_over and not paused:
+		_count_key_presses()
 
 	# 单人受攻击条计时和入场逻辑。
 	if not game_over and not paused:
@@ -141,6 +165,12 @@ func _on_score_changed(s: int, l: int, ln: int) -> void:
 	label_lines.text = "%s\n%d" % [tr("TXT_LINES"), ln]
 
 func _on_lines_cleared(amount: int, is_spin: bool, is_t_spin: bool, dmg: int) -> void:
+	# 缓存本次落锁的消行数据（供快照采集使用）
+	_last_lines_cleared_this_lock = amount
+	_last_damage_this_lock = dmg
+	_last_is_spin = is_spin
+	_last_is_t_spin = is_t_spin
+
 	# 音效规则：
 	# 1) Spin 消除 -> spin.ogg
 	# 2) 非 Spin 且四消 -> tetris.ogg
@@ -185,6 +215,12 @@ func _lock_piece() -> void:
 	var will_receive_garbage: bool = (ready_garbage > 0)
 	var lines_before_lock: int = scoring.lines
 
+	# 重置本次落锁的消行/伤害缓存
+	_last_lines_cleared_this_lock = 0
+	_last_damage_this_lock = 0
+	_last_is_spin = false
+	_last_is_t_spin = false
+
 	# 先走基类锁定逻辑（包括清行、计分、出块）。
 	super._lock_piece()
 
@@ -197,6 +233,9 @@ func _lock_piece() -> void:
 		board.add_garbage_lines(ready_garbage)
 		ready_garbage = 0
 
+	# ── 数据采集：记录落块快照 ──
+	_record_piece_snapshot()
+
 func _on_game_over() -> void:
 	if label_game_over:
 		label_game_over.text = tr("TXT_GAME_OVER")
@@ -206,6 +245,9 @@ func _on_game_over() -> void:
 		btn_restart.grab_focus()
 	bgm.stop()
 	sfx_death.play()
+
+	# 游戏结束时保存数据
+	_save_and_cleanup_data()
 
 
 # ------------------------------------------------------------------------------
@@ -256,12 +298,18 @@ func _initialize_ui() -> void:
 	btn_restart = Button.new()
 	btn_restart.custom_minimum_size = Vector2(240, 50)
 	btn_restart.focus_mode = Control.FOCUS_ALL
-	btn_restart.pressed.connect(func(): get_tree().reload_current_scene())
+	btn_restart.pressed.connect(func():
+		_save_and_cleanup_data()  # 重新开始前保存当前数据
+		get_tree().reload_current_scene()
+	)
 
 	btn_return = Button.new()
 	btn_return.custom_minimum_size = Vector2(240, 50)
 	btn_return.focus_mode = Control.FOCUS_ALL
-	btn_return.pressed.connect(func(): get_tree().change_scene_to_file("res://scenes/ui/main.tscn"))
+	btn_return.pressed.connect(func():
+		_save_and_cleanup_data()  # 返回大厅前保存当前数据
+		get_tree().change_scene_to_file("res://scenes/ui/main.tscn")
+	)
 
 	go_vbox.add_child(btn_restart)
 	go_vbox.add_child(btn_return)
@@ -441,3 +489,70 @@ func _on_rows_cleared(rows_data: Array) -> void:
 	var effect := LineClearEffect.new()
 	board.add_child(effect)
 	effect.setup(rows_data, board.cell_size, board.buffer_rows)
+
+
+# ------------------------------------------------------------------------------
+# 数据采集辅助方法
+# ------------------------------------------------------------------------------
+
+## 每帧统计按键次数（用于 KPP 计算）。
+## 只统计游戏操作相关的按键，不包含 UI 辅助键。
+func _count_key_presses() -> void:
+	if _data_collector == null:
+		return
+	# 统计本帧发生的游戏操作按键
+	var actions: Array = [
+		"move_left", "move_right", "soft_drop", "hard_drop",
+		"rotate_cw", "rotate_ccw", "rotate_180", "hold"
+	]
+	for action in actions:
+		if Input.is_action_just_pressed(action):
+			_data_collector.key_presses_this_piece += 1
+
+
+## 记录一次落块快照（仅写内存）。
+func _record_piece_snapshot() -> void:
+	if _data_collector == null or not _data_collector.is_active():
+		return
+	if board == null or bag == null:
+		return
+
+	# 获取可见区域的棋盘状态（10x20）
+	var full_grid: Array = board.get_grid_state()
+	var visible_grid: Array = []
+	for r in range(board.buffer_rows, board.total_rows):
+		if r < full_grid.size():
+			visible_grid.append(full_grid[r])
+
+	# 获取接下来 5 个方块
+	var next_pieces: Array = bag.peek(5)
+
+	_data_collector.record_piece_drop(
+		cur_type,
+		cur_rot,
+		cur_col,
+		cur_row,
+		visible_grid,
+		next_pieces,
+		scoring.score,
+		scoring.level,
+		scoring.lines,
+		scoring.combo,
+		scoring.b2b,
+		_last_is_spin,
+		_last_is_t_spin,
+		_last_lines_cleared_this_lock,
+		_last_damage_this_lock,
+		_hold_used_this_piece
+	)
+
+	# 重置 hold 使用标记
+	_hold_used_this_piece = false
+
+
+## 保存采集数据并清理采集器。
+## 在 game_over / 重新开始 / 返回大厅时调用。
+func _save_and_cleanup_data() -> void:
+	if _data_collector == null or not _data_collector.is_active():
+		return
+	_data_collector.end_session(scoring.score, scoring.level, scoring.lines)

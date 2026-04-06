@@ -2,6 +2,7 @@ extends Node
 
 signal connected()
 signal disconnected()
+signal connection_failed(reason: String)
 signal login_success(id: String)
 signal room_list_received(rooms: Array)
 signal room_created(id: String)
@@ -18,6 +19,8 @@ signal rematch_status_received(my_status: String, opponent_status: String)
 
 var socket: WebSocketPeer = WebSocketPeer.new()
 var _is_server_connected := false
+var _is_connecting := false
+var _last_connect_error := ""
 var player_name := ""
 var my_id := ""
 var opponent_name := ""
@@ -32,6 +35,7 @@ func _process(_delta: float) -> void:
 
 	if state == WebSocketPeer.STATE_OPEN:
 		if not _is_server_connected:
+			_is_connecting = false
 			_is_server_connected = true
 			connected.emit()
 			print("[Network] Connected to server")
@@ -42,14 +46,20 @@ func _process(_delta: float) -> void:
 			_handle_message(msg)
 
 	elif state == WebSocketPeer.STATE_CLOSED:
+		if _is_connecting:
+			_is_connecting = false
+			_last_connect_error = "Connection closed before handshake."
+			connection_failed.emit(_last_connect_error)
 		if _is_server_connected:
 			_is_server_connected = false
 			disconnected.emit()
 			print("[Network] Disconnected from server")
 
-func connect_to_server(ip: String, port: int) -> void:
+func connect_to_server(ip: String, port: int) -> int:
 	_recreate_socket()
 	_is_server_connected = false
+	_is_connecting = false
+	_last_connect_error = ""
 	opponent_name = ""
 	match_seed = 0
 
@@ -58,11 +68,17 @@ func connect_to_server(ip: String, port: int) -> void:
 	var err: int = socket.connect_to_url(url)
 	if err != OK:
 		print("[Network] Connect failed, code:", err)
+		_last_connect_error = error_string(err)
 		_recreate_socket()
+		connection_failed.emit(_last_connect_error)
+		return err
+	_is_connecting = true
+	return OK
 
 func disconnect_from_server() -> void:
 	if socket == null:
 		return
+	_is_connecting = false
 	if socket.get_ready_state() != WebSocketPeer.STATE_CLOSED:
 		socket.close()
 
@@ -70,6 +86,9 @@ func _recreate_socket() -> void:
 	if socket != null and socket.get_ready_state() != WebSocketPeer.STATE_CLOSED:
 		socket.close()
 	socket = WebSocketPeer.new()
+
+func get_last_connect_error() -> String:
+	return _last_connect_error
 
 func send_message(type: String, payload: Dictionary) -> void:
 	if socket.get_ready_state() != WebSocketPeer.STATE_OPEN:

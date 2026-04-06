@@ -2,6 +2,7 @@
 
 [ext_resource type="Script" uid="uid://ba3a7lvhlsd15" path="res://scripts/ui/main_lobby.gd" id="1_lobby"]
 [ext_resource type="Texture2D" uid="uid://4wscemrs1yx4" path="res://assets/images/bg_lobby.jpg" id="2_g5nql"]
+[ext_resource type="Texture2D" uid="uid://bdno2l6dijik8" path="res://assets/ui/icon_userdata.png" id="3_qkqkv"]
 [ext_resource type="PackedScene" path="res://scenes/ui/settings_menu.tscn" id="3_stngs"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_navbar"]
@@ -22,6 +23,30 @@ corner_radius_bottom_right = 12
 corner_radius_bottom_left = 12
 shadow_color = Color(0, 0, 0, 0.3)
 shadow_size = 10
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn_stats"]
+bg_color = Color(0.12, 0.12, 0.16, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.25, 0.25, 0.35, 1)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn_stats_hover"]
+bg_color = Color(0.18, 0.18, 0.24, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.35, 0.65, 1, 0.8)
+corner_radius_top_left = 6
+corner_radius_top_right = 6
+corner_radius_bottom_right = 6
+corner_radius_bottom_left = 6
 
 [node name="MainLobby" type="Control" unique_id=2071081088]
 layout_mode = 3
@@ -90,8 +115,8 @@ theme_override_constants/separation = 40
 unique_name_in_owner = true
 custom_minimum_size = Vector2(280, 400)
 layout_mode = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_card_normal")
 focus_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_card_normal")
 
 [node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MainContent/CardsHBox/CardMarathon" unique_id=553669273]
 layout_mode = 2
@@ -116,8 +141,8 @@ horizontal_alignment = 1
 unique_name_in_owner = true
 custom_minimum_size = Vector2(280, 400)
 layout_mode = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_card_normal")
 focus_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_card_normal")
 
 [node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MainContent/CardsHBox/CardMultiplayer" unique_id=1310079491]
 layout_mode = 2
@@ -141,18 +166,34 @@ horizontal_alignment = 1
 [node name="PlayerNameLabel" type="Label" parent="." unique_id=149902058]
 unique_name_in_owner = true
 layout_mode = 0
-offset_left = 974.0
+offset_left = 900.0
 offset_top = 18.0
-offset_right = 1192.0
+offset_right = 1118.0
 offset_bottom = 52.0
 theme_override_colors/font_color = Color(0.6, 0.8, 1, 1)
 theme_override_font_sizes/font_size = 24
 text = "WELCOME, PLAYER"
 
+[node name="BtnStats" type="Button" parent="." unique_id=888777666]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(40, 40)
+layout_mode = 0
+offset_left = 1173.0
+offset_top = 15.0
+offset_right = 1213.0
+offset_bottom = 55.0
+tooltip_text = "Player Stats"
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn_stats")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_btn_stats_hover")
+theme_override_styles/hover = SubResource("StyleBoxFlat_btn_stats_hover")
+theme_override_styles/focus = SubResource("StyleBoxFlat_btn_stats_hover")
+icon = ExtResource("3_qkqkv")
+expand_icon = true
+
 [node name="BtnSettings" parent="." unique_id=1127632104 instance=ExtResource("3_stngs")]
 unique_name_in_owner = true
 layout_mode = 0
-offset_left = 1215.0
+offset_left = 1230.0
 offset_top = 15.0
-offset_right = 1255.0
+offset_right = 1270.0
 offset_bottom = 55.0

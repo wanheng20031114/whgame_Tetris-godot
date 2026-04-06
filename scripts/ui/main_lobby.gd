@@ -9,10 +9,12 @@ extends Control
 
 signal start_marathon()
 signal start_multiplayer()
+signal open_player_stats()
 
 @onready var lbl_player_name: Label = %PlayerNameLabel
 @onready var card_marathon: PanelContainer = %CardMarathon
 @onready var card_multiplayer: PanelContainer = %CardMultiplayer
+@onready var btn_stats: Button = %BtnStats
 
 var _current_pname: String = ""
 
@@ -73,6 +75,10 @@ func _ready() -> void:
 		custom_bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 		custom_bg.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 
+	# 数据按钮交互
+	if btn_stats:
+		btn_stats.pressed.connect(_on_stats_pressed)
+
 	_update_texts()
 	_refresh_card_visuals()
 
@@ -117,6 +123,10 @@ func _update_texts() -> void:
 
 	if lbl_player_name and not _current_pname.is_empty():
 		lbl_player_name.text = "%s, %s" % [tr("TXT_WELCOME"), _current_pname]
+
+	# 右上角数据按钮的tooltip跟随语言切换
+	if btn_stats:
+		btn_stats.tooltip_text = tr("TXT_PLAYER_STATS")
 
 
 ## UIManager 切入大厅时调用，做一个淡入
@@ -229,3 +239,8 @@ func _activate_mode(card: Control, mode: String) -> void:
 		elif mode == "multiplayer":
 			start_multiplayer.emit()
 	)
+
+
+## 数据按钮点击回调：发出 open_player_stats 信号。
+func _on_stats_pressed() -> void:
+	open_player_stats.emit()

@@ -59,3 +59,22 @@ TXT_VICTORY,胜利！,Victory!,勝利！
 TXT_OPPONENT_LEFT_TITLE,对手离开了,Opponent left,対戦相手が退出しました
 TXT_REMATCH,再来一局,REMATCH,再戦
 TXT_YOU,你,You,あなた
+TXT_PLAYER_STATS,玩家数据,PLAYER STATS,プレイヤーデータ
+TXT_STATS_BUTTON,数据,DATA,データ
+TXT_STATS_DESC,查看你的游戏统计与能力雷达,View your game stats and ability radar,ゲーム統計と能力レーダーを見る
+TXT_BACK,返回,BACK,戻る
+TXT_RADAR_SPEED,攻速,SPEED,速度
+TXT_RADAR_ATTACK,火力,ATTACK,火力
+TXT_RADAR_EFFICIENCY,效率,EFFICIENCY,効率
+TXT_RADAR_TOPOLOGY,拓扑,TOPOLOGY,トポロジー
+TXT_RADAR_HOLES,空洞,HOLES,ホール
+TXT_RADAR_VISION,视野,VISION,ビジョン
+TXT_STAT_PPS,每秒落块 (PPS),Pieces Per Second (PPS),秒間ピース数 (PPS)
+TXT_STAT_APM,每分钟攻击 (APM),Attack Per Minute (APM),分間攻撃数 (APM)
+TXT_STAT_APP,每块攻击 (APP),Attack Per Piece (APP),ピースあたり攻撃 (APP)
+TXT_STAT_KPP,每块按键 (KPP),Keys Per Piece (KPP),ピースあたりのキー (KPP)
+TXT_TOTAL_GAMES,总游戏数,TOTAL GAMES,総ゲーム数
+TXT_TOTAL_TIME,累计时长,TOTAL TIME,累計時間
+TXT_BEST_SCORE,最高分数,BEST SCORE,ハイスコア
+TXT_RECENT_HISTORY,最近记录,RECENT HISTORY,最近の記録
+TXT_NO_DATA,暂无数据，先去玩一局吧！,No data yet. Play a game first!,データがありません。まずプレイしてください！

@@ -111,6 +111,7 @@ func _show_lobby(player_name: String) -> void:
 		# 保留信号连接，避免未来逻辑回归时再次改动 UIManager。
 		_main_lobby.start_marathon.connect(_start_marathon_mode)
 		_main_lobby.start_multiplayer.connect(_start_multiplayer_mode)
+		_main_lobby.open_player_stats.connect(_open_player_stats)
 
 		# 大厅入场动画不影响逻辑，仅作为表现层增强。
 		_main_lobby.play_entrance_animation()
@@ -130,3 +131,8 @@ func _start_marathon_mode() -> void:
 
 func _start_multiplayer_mode() -> void:
 	get_tree().change_scene_to_file("res://scenes/ui/multiplayer_setup.tscn")
+
+
+## 打开玩家数据界面
+func _open_player_stats() -> void:
+	get_tree().change_scene_to_file("res://scenes/ui/player_stats_screen.tscn")
