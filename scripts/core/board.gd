@@ -243,9 +243,9 @@ func add_garbage_lines(amount: int) -> void:
 	for i in range(amount):
 		grid.pop_front()
 		
-	# 70% 的极高概率孔洞开在上一批或者上一行的位置
+	# 50% 保持上一列；另外 50% 重新随机（10 列时额外 5% 会再次命中同列）
 	var hole_col: int = last_hole_col
-	if hole_col < 0 or randf() < 0.3:
+	if hole_col < 0 or randf() < 0.5:
 		hole_col = randi() % columns
 	last_hole_col = hole_col
 	

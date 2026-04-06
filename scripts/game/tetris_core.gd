@@ -126,6 +126,8 @@ func process_logic(delta: float) -> void:
 # 输入与移动
 # ==============================================================================
 func _handle_core_input(delta: float) -> void:
+	var hold_just_pressed: bool = Input.is_action_just_pressed("hold")
+
 	if Input.is_action_just_pressed("rotate_cw"):
 		_try_rotate(1)
 	if Input.is_action_just_pressed("rotate_ccw"):
@@ -135,9 +137,12 @@ func _handle_core_input(delta: float) -> void:
 
 	if Input.is_action_just_pressed("hard_drop"):
 		_hard_drop()
+		# 当硬降和 Hold 在同一帧触发时，不要吞掉 Hold 输入。
+		if hold_just_pressed and not game_over and not paused:
+			_try_hold()
 		return
 
-	if Input.is_action_just_pressed("hold"):
+	if hold_just_pressed:
 		_try_hold()
 
 	if Input.is_action_just_pressed("move_left"):
