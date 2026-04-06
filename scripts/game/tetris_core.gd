@@ -121,6 +121,7 @@ func process_logic(delta: float) -> void:
 	_update_gravity(delta)
 	_update_lock_delay()
 	_update_ghost()
+	_update_danger_warning_state()
 
 # ==============================================================================
 # 输入与移动
@@ -375,14 +376,21 @@ func _spawn_next_piece() -> void:
 	cur_row = board.buffer_rows
 	_reset_piece_state()
 
+	# 顶部 1 行容错：若默认出生位被阻挡，允许上移 1 行再尝试一次。
 	if not board.is_valid_position(cur_type, cur_rot, cur_col, cur_row):
-		game_over = true
-		game_over_triggered.emit()
-		return
+		var fallback_row: int = cur_row - 1
+		if board.is_valid_position(cur_type, cur_rot, cur_col, fallback_row):
+			cur_row = fallback_row
+		else:
+			game_over = true
+			board.set_danger_warning(false)
+			game_over_triggered.emit()
+			return
 
 	current_piece.initialize(cur_type)
 	_sync_piece_position()
 	_update_next_display()
+	_update_danger_warning_state()
 
 func _reset_piece_state() -> void:
 	gravity_timer = 0.0
@@ -426,3 +434,8 @@ func _update_next_display() -> void:
 	var upcoming: Array = bag.peek(next_displays.size())
 	for i in range(mini(upcoming.size(), next_displays.size())):
 		next_displays[i].initialize(upcoming[i])
+
+func _update_danger_warning_state() -> void:
+	# 仅当“已锁定堆叠”触达可见区最上方两行时触发警告。
+	var in_danger: bool = board.has_blocks_near_visible_top(2)
+	board.set_danger_warning(in_danger)

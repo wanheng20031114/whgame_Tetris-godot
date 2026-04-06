@@ -1,102 +1,62 @@
-class_name Board
+﻿class_name Board
 extends Node2D
 
-## 棋盘网格系统
-##
-## 俄罗斯方块的"竞技场"。管理 10×40 的二维网格数据（上方 20 行隐藏缓冲区 + 下方 20 行可见区域）。
-## 负责碰撞检测、方块锁定写入、满行消除、以及整个棋盘的程序化绘制。
-## 列数参数化设计，为将来 WIDE 模式动态修改列宽留出接口。
-
-# ==============================================================================
-# 棋盘尺寸配置（参数化，支持未来 WIDE 模式扩展）
-# ==============================================================================
-
-@export_group("棋盘尺寸")
-## 列数（标准 10，将来可在检查器里改为更宽试试 WIDE 模式）
+@export_group("Board")
 @export var columns: int = 10
-## 可见行数
 @export var visible_rows: int = 20
-## 隐藏缓冲行数（方块在此生成，玩家看不到）
 var buffer_rows: int = 20
-## 总行数 = 可见 + 缓冲
 var total_rows: int:
 	get: return visible_rows + buffer_rows
-## 单个格子像素尺寸
 @export var cell_size: float = 30.0
 
-# ==============================================================================
-# 视觉配色
-# ==============================================================================
-
-const BG_COLOR := Color("0d0d14")         ## 棋盘背景：极深炭黑
-const GRID_LINE_COLOR := Color("1a1a2e")  ## 网格线：若隐若现的暗线
-const BORDER_COLOR := Color("3a3a5c")     ## 棋盘边框：科技蓝灰
-
-# ==============================================================================
-# 网格数据：grid[row][col]，值为 null（空）或 Color（已占据）
-# ==============================================================================
+const BG_COLOR := Color("0d0d14")
+const GRID_LINE_COLOR := Color("1a1a2e")
+const BORDER_COLOR := Color("3a3a5c")
 
 var grid: Array = []
 const GARBAGE_CELL_TYPE: int = -2
-var last_hole_col: int = -1 ## 用于记忆上一次受击缺口的列，以确保高概率对齐
+var last_hole_col: int = -1
 
-# ==============================================================================
-# 初始化
-# ==============================================================================
+var danger_warning_active: bool = false
+var _danger_pulse_time: float = 0.0
 
 func _ready() -> void:
 	_init_grid()
+	set_process(false)
 
-## 清空整个棋盘网格
+func _process(delta: float) -> void:
+	if not danger_warning_active:
+		return
+	_danger_pulse_time += delta
+	queue_redraw()
+
 func _init_grid() -> void:
 	grid.clear()
-	for row in range(total_rows):
+	for _r in range(total_rows):
 		grid.append(_create_empty_row())
 
-## 创建一个全空的行
 func _create_empty_row() -> Array:
 	var row: Array = []
 	row.resize(columns)
 	row.fill(null)
 	return row
 
-# ==============================================================================
-# 碰撞检测（核心中的核心）
-# ==============================================================================
-
-## 判断指定方块在指定位置是否合法（不越界、不与已锁定格子重叠）
-## type: 方块类型枚举
-## rotation: 旋转状态
-## center_col: 方块中心所在列
-## center_row: 方块中心所在行
-## 返回 true = 位置合法，可以放置
-func is_valid_position(type: PieceData.Type, rot_state: PieceData.RotationState,
-		center_col: int, center_row: int) -> bool:
+func is_valid_position(type: PieceData.Type, rot_state: PieceData.RotationState, center_col: int, center_row: int) -> bool:
 	var shape = PieceData.SHAPES[type][rot_state]
 	for offset in shape:
 		var col: int = center_col + int(offset.x)
 		var row: int = center_row + int(offset.y)
-		# 检查左右边界
 		if col < 0 or col >= columns:
 			return false
-		# 检查底部边界（允许方块在顶部缓冲区之上）
 		if row >= total_rows:
 			return false
-		# 跳过在棋盘上方的格子（允许方块部分超出顶部）
 		if row < 0:
 			continue
-		# 检查是否与已锁定方块重叠
 		if grid[row][col] != null:
 			return false
 	return true
 
-# ==============================================================================
-# 方块锁定（将活动方块永久写入网格）
-# ==============================================================================
-
-## 将方块的 4 个格子写入网格数组
-func lock_piece(type: PieceData.Type, rot_state: PieceData.RotationState,
-		center_col: int, center_row: int, color: Color) -> void:
+func lock_piece(type: PieceData.Type, rot_state: PieceData.RotationState, center_col: int, center_row: int, color: Color) -> void:
 	var shape = PieceData.SHAPES[type][rot_state]
 	for offset in shape:
 		var col: int = center_col + int(offset.x)
@@ -105,49 +65,35 @@ func lock_piece(type: PieceData.Type, rot_state: PieceData.RotationState,
 			grid[row][col] = color
 	queue_redraw()
 
-# ==============================================================================
-# 消行逻辑
-# ==============================================================================
-
-## 检查并清除所有满行，返回清除的行数
 func clear_lines() -> int:
 	var new_grid: Array = []
 	var cleared: int = 0
 
-	# 从上到下遍历，保留未满的行
 	for row in range(total_rows):
 		if _is_row_full(row):
 			cleared += 1
 		else:
 			new_grid.append(grid[row])
 
-	# 在顶部补充空行（补回被消除的行数）
-	for i in range(cleared):
+	for _i in range(cleared):
 		new_grid.insert(0, _create_empty_row())
 
 	grid = new_grid
 	queue_redraw()
 	return cleared
 
-## 判断某一行是否满（所有列都被占据）
 func _is_row_full(row: int) -> bool:
 	for col in range(columns):
 		if grid[row][col] == null:
 			return false
 	return true
 
-# ==============================================================================
-# 棋盘程序化绘制
-# ==============================================================================
-
 func _draw() -> void:
 	var board_w: float = columns * cell_size
 	var board_h: float = visible_rows * cell_size
 
-	# 1. 背景填充
 	draw_rect(Rect2(Vector2.ZERO, Vector2(board_w, board_h)), BG_COLOR)
 
-	# 2. 网格线（极淡的参考线）
 	for col in range(columns + 1):
 		var x: float = col * cell_size
 		draw_line(Vector2(x, 0), Vector2(x, board_h), GRID_LINE_COLOR, 1.0)
@@ -155,37 +101,27 @@ func _draw() -> void:
 		var y: float = row * cell_size
 		draw_line(Vector2(0, y), Vector2(board_w, y), GRID_LINE_COLOR, 1.0)
 
-	# 3. 已锁定的格子（仅绘制可见区域）
 	for row in range(buffer_rows, total_rows):
 		for col in range(columns):
 			var color = grid[row][col]
 			if color != null:
 				var vis_row: int = row - buffer_rows
-				var rect := Rect2(
-					Vector2(col * cell_size, vis_row * cell_size),
-					Vector2(cell_size, cell_size)
-				)
-				# 主体填色
+				var rect := Rect2(Vector2(col * cell_size, vis_row * cell_size), Vector2(cell_size, cell_size))
 				draw_rect(rect, color)
-				# 深色外框（立体阴影感）
 				draw_rect(rect, color.darkened(0.3), false, 2.0)
-				# 亮色内框（发光晶体质感）
 				var inner := rect.grow(-4.0)
 				draw_rect(inner, color.lightened(0.4), false, 1.0)
 
-	# 4. 棋盘外边框
 	draw_rect(Rect2(Vector2(-1, -1), Vector2(board_w + 2, board_h + 2)), BORDER_COLOR, false, 2.0)
+	if danger_warning_active:
+		var pulse := 0.5 + 0.5 * sin(_danger_pulse_time * 4.0)
+		var outer_color := Color(1.0, 0.10, 0.10, lerpf(0.30, 0.85, pulse))
+		draw_rect(Rect2(Vector2(-3, -3), Vector2(board_w + 6, board_h + 6)), outer_color, false, 8.0)
+		var inner_color := Color(1.0, 0.22, 0.22, lerpf(0.18, 0.50, pulse))
+		draw_rect(Rect2(Vector2(1, 1), Vector2(board_w - 2, board_h - 2)), inner_color, false, 4.0)
 
-# ==============================================================================
-# 棋盘数据同步（序列化与反序列化）
-# ==============================================================================
-
-## 获取当前棋盘的紧凑状态数据（通常用于网络传输）
-## 将 Color 数组转换为 PieceData.Type 枚举的整数数组，null 转换为 -1
 func get_grid_state() -> Array:
 	var state := []
-	# 我们只同步可见区域 (buffer_rows 到 total_rows) 即可
-	# 也可以同步全量，这里为了简单同步全量
 	for r in range(total_rows):
 		var row_data := []
 		for c in range(columns):
@@ -193,7 +129,6 @@ func get_grid_state() -> Array:
 			if cell_color == null:
 				row_data.append(-1)
 			else:
-				# 寻找该颜色对应的方块类型（反向查找）
 				var type_idx := -1
 				for t in PieceData.COLORS:
 					if PieceData.COLORS[t].is_equal_approx(cell_color):
@@ -206,12 +141,10 @@ func get_grid_state() -> Array:
 		state.append(row_data)
 	return state
 
-## 根据外部状态数据还原棋盘网格
-## data: [ [col1, col2...], [row2...], ... ] 嵌套数组
 func set_grid_state(data: Array) -> void:
 	if data.size() != total_rows:
 		return
-		
+
 	for r in range(total_rows):
 		var row_data: Array = data[r]
 		for c in range(columns):
@@ -221,42 +154,63 @@ func set_grid_state(data: Array) -> void:
 			elif type_idx == GARBAGE_CELL_TYPE:
 				grid[r][c] = Color(0.45, 0.45, 0.45)
 			else:
-				# 垃圾行颜色特殊处理（如果 type_idx 无效，默认给灰色）
 				if PieceData.COLORS.has(type_idx):
 					grid[r][c] = PieceData.COLORS[type_idx]
 				else:
-					grid[r][c] = Color(0.45, 0.45, 0.45) # 默认灰色
-	
+					grid[r][c] = Color(0.45, 0.45, 0.45)
+
 	queue_redraw()
 
-
-# ==============================================================================
-# 受击垃圾行分配 (Tetris 99 Style)
-# ==============================================================================
-
-## 增加指定数量的垃圾行（从底部上推）
 func add_garbage_lines(amount: int) -> void:
 	if amount <= 0:
 		return
-		
-	# 向上推移现有的方块网格（扔掉顶部挤爆的行，底部腾出空位）
-	for i in range(amount):
+
+	for _i in range(amount):
 		grid.pop_front()
-		
-	# 50% 保持上一列；另外 50% 重新随机（10 列时额外 5% 会再次命中同列）
+
+	# 50% keep previous hole, 50% reroll (10 columns => +5% same column from reroll)
 	var hole_col: int = last_hole_col
 	if hole_col < 0 or randf() < 0.5:
 		hole_col = randi() % columns
 	last_hole_col = hole_col
-	
-	var garbage_color: Color = Color(0.45, 0.45, 0.45) # 灰色无属性废墟砖块
-	
-	for i in range(amount):
+
+	var garbage_color: Color = Color(0.45, 0.45, 0.45)
+	for _j in range(amount):
 		var new_row: Array = _create_empty_row()
 		for c in range(columns):
 			if c != hole_col:
 				new_row[c] = garbage_color
-		# 在队列最末尾（亦即物理图形的最底下）推送新受击行
 		grid.append(new_row)
-		
+
+	queue_redraw()
+
+func has_blocks_in_top_rows(row_count: int) -> bool:
+	if row_count <= 0:
+		return false
+	var check_rows: int = mini(row_count, total_rows)
+	for r in range(check_rows):
+		for c in range(columns):
+			if grid[r][c] != null:
+				return true
+	return false
+
+func has_blocks_near_visible_top(row_count: int) -> bool:
+	if row_count <= 0:
+		return false
+	var check_rows: int = mini(row_count, visible_rows)
+	var start_row: int = buffer_rows
+	var end_row: int = mini(buffer_rows + check_rows, total_rows)
+	for r in range(start_row, end_row):
+		for c in range(columns):
+			if grid[r][c] != null:
+				return true
+	return false
+
+func set_danger_warning(active: bool) -> void:
+	if danger_warning_active == active:
+		return
+	danger_warning_active = active
+	if danger_warning_active:
+		_danger_pulse_time = 0.0
+	set_process(danger_warning_active)
 	queue_redraw()
