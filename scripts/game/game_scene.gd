@@ -1,16 +1,10 @@
 class_name GameScene
 extends TetrisCore
 
-## 单人游戏场景控制脚本。
-## 这里在通用 TetrisCore 之上补充了：
-## 1) 单人受攻击条逻辑；
-## 2) 单人 HUD 文本更新；
-## 3) 音效分流（普通消行 / 四消 / Spin 消行）；
-## 4) 中央 SPIN 提示与顶部 COMBO 提示。
+# 单人对局场景：
+# - 继承 TetrisCore 承担基础俄罗斯方块逻辑
+# - 补充单人受攻击条、UI 动效、数据采集与拓扑评分接入
 
-# ------------------------------------------------------------------------------
-# HUD 节点引用
-# ------------------------------------------------------------------------------
 @onready var label_score: Label = $HUD/ScoreLabel
 @onready var label_level: Label = $HUD/LevelLabel
 @onready var label_lines: Label = $HUD/LinesLabel
@@ -18,9 +12,6 @@ extends TetrisCore
 @onready var label_spin_text: Label = $HUD/SpinTextLabel
 @onready var label_combo_text: Label = $HUD/ComboTextLabel
 
-# ------------------------------------------------------------------------------
-# 音效节点引用
-# ------------------------------------------------------------------------------
 @onready var bgm: AudioStreamPlayer = $BGM
 @onready var sfx_planting: AudioStreamPlayer = $SfxPlanting
 @onready var sfx_line_clear: AudioStreamPlayer = $SfxLineClear
@@ -28,65 +19,50 @@ extends TetrisCore
 @onready var sfx_spin: AudioStreamPlayer = $SfxSpin
 @onready var sfx_death: AudioStreamPlayer = $SfxDeath
 
-# ------------------------------------------------------------------------------
-# 单人模式状态
-# ------------------------------------------------------------------------------
 var garbage_bar: GarbageBar
 var single_player_attack_timer: float = 0.0
 var pending_attacks: Array = []
 var ready_garbage: int = 0
 
-# 结算面板节点
 var game_over_panel: PanelContainer
 var btn_restart: Button
 var btn_return: Button
 
-# HUD 动效用 Tween，切换提示时会主动 kill，避免叠动画。
 var spin_text_tween: Tween
 var combo_text_tween: Tween
 
-# 受攻击条固定贴边间距：保证和主战斗棋盘视觉上紧贴但不重叠。
 const GARBAGE_BAR_GAP: float = 6.0
 
-# ------------------------------------------------------------------------------
-# 数据采集器
-# ------------------------------------------------------------------------------
+# 单局数据采集与拓扑评分缓存。
 var _data_collector: PlayerDataCollector
-## 本块方块的消行/伤害缓存（在 _lock_piece 中记录，在快照中使用）
+var _topology_evaluator: Node
 var _last_lines_cleared_this_lock: int = 0
 var _last_damage_this_lock: int = 0
 var _last_is_spin: bool = false
 var _last_is_t_spin: bool = false
-## 本块方块是否使用了 hold
+var _last_topology_score: float = 0.0
+var _last_holes_score: float = 0.0
 var _hold_used_this_piece: bool = false
 
 
-# ------------------------------------------------------------------------------
-# 生命周期
-# ------------------------------------------------------------------------------
 func _ready() -> void:
-	# 先初始化通用俄罗斯方块逻辑。
 	super._ready()
 
-	# 注册输入动作（保留占位结构，便于后续继续扩展）。
 	_setup_input_actions()
 
-	# 初始化 UI（受攻击条、结算面板、提示文本位置）。
 	_initialize_ui()
 	_update_texts()
 
-	# 连接单人场景关心的通用信号。
 	score_changed.connect(_on_score_changed)
 	lines_cleared.connect(_on_lines_cleared)
 	rows_cleared.connect(_on_rows_cleared)
 	game_over_triggered.connect(_on_game_over)
 
-	# 开局生成第一块并播放 BGM。
 	_spawn_next_piece()
 	bgm.play()
 
-	# 初始化数据采集器
 	_data_collector = PlayerDataCollector.new()
+	_topology_evaluator = get_node_or_null("TopologyEvaluator")
 	var state := get_node_or_null("/root/GameState")
 	var pname: String = ""
 	if state:
@@ -94,38 +70,35 @@ func _ready() -> void:
 	_data_collector.start_session(pname if not pname.is_empty() else "Player")
 
 func _notification(what: int) -> void:
+	# 多语言切换时刷新 UI 文案。
 	if what == NOTIFICATION_TRANSLATION_CHANGED and is_inside_tree() and is_node_ready():
 		_update_texts()
 
 func _process(delta: float) -> void:
-	# 每帧执行核心逻辑（移动、旋转、重力、锁定等）。
+	# 先跑核心逻辑（移动/重力/锁定等）。
 	process_logic(delta)
 
-	# 按键计数：统计本块方块的操作按键次数（用于 KPP 计算）
+	# 统计本块按键次数（用于 KPP）。
 	if _data_collector and _data_collector.is_active() and not game_over and not paused:
 		_count_key_presses()
 
-	# 单人受攻击条计时和入场逻辑。
+	# 更新单人受攻击条与入场计时。
 	if not game_over and not paused:
 		_update_single_player_garbage(delta)
 
 func _unhandled_input(event: InputEvent) -> void:
-	# 仅在结算面板可见时拦截额外输入。
+	# 仅在结算面板显示时拦截取消键，避免误退出。
 	if game_over_panel == null or not game_over_panel.visible:
 		return
 
-	# 设计要求：结算界面里 B（ui_cancel）无效，只允许 A（ui_accept）确认当前按钮。
 	if event.is_action_pressed("ui_cancel"):
 		var vp := get_viewport()
 		if vp:
 			vp.set_input_as_handled()
 
 
-# ------------------------------------------------------------------------------
-# 单人模式受攻击条逻辑
-# ------------------------------------------------------------------------------
 func _update_single_player_garbage(delta: float) -> void:
-	# 分数达到阈值后开始周期性生成压力包。
+	# 分数达到阈值后，按间隔生成待入场垃圾。
 	if scoring.score >= 10000:
 		single_player_attack_timer += delta
 		var progress: float = clampf((scoring.score - 10000) / 90000.0, 0.0, 1.0)
@@ -139,7 +112,7 @@ func _update_single_player_garbage(delta: float) -> void:
 	var grey_count: int = 0
 	var yellow_count: int = 0
 
-	# 更新每个攻击包倒计时，并拆分成灰/黄/红三个阶段用于受攻击条展示。
+	# 更新攻击包倒计时：到时进入 ready_garbage，否则保留在队列。
 	for attack in pending_attacks:
 		attack["delay"] -= delta
 		if attack["delay"] <= 0:
@@ -156,25 +129,20 @@ func _update_single_player_garbage(delta: float) -> void:
 		garbage_bar.update_bar(grey_count, yellow_count, ready_garbage)
 
 
-# ------------------------------------------------------------------------------
-# 信号回调
-# ------------------------------------------------------------------------------
 func _on_score_changed(s: int, l: int, ln: int) -> void:
+	# HUD 分数区刷新。
 	label_score.text = "%s\n%d" % [tr("TXT_SCORE"), s]
 	label_level.text = "%s\n%d" % [tr("TXT_LEVEL"), l]
 	label_lines.text = "%s\n%d" % [tr("TXT_LINES"), ln]
 
 func _on_lines_cleared(amount: int, is_spin: bool, is_t_spin: bool, dmg: int) -> void:
-	# 缓存本次落锁的消行数据（供快照采集使用）
+	# 缓存本次锁定结果，供快照采集使用。
 	_last_lines_cleared_this_lock = amount
 	_last_damage_this_lock = dmg
 	_last_is_spin = is_spin
 	_last_is_t_spin = is_t_spin
 
-	# 音效规则：
-	# 1) Spin 消除 -> spin.ogg
-	# 2) 非 Spin 且四消 -> tetris.ogg
-	# 3) 其余消行 -> line_clear.ogg
+	# 音效分流：Spin > Tetris > 普通消行。
 	var did_spin_clear: bool = (is_spin or is_t_spin)
 	if did_spin_clear:
 		if sfx_spin:
@@ -188,20 +156,17 @@ func _on_lines_cleared(amount: int, is_spin: bool, is_t_spin: bool, dmg: int) ->
 		if sfx_line_clear:
 			sfx_line_clear.play()
 
-	# 连续消行时显示彩色 COMBO n（n 为当前连击值）。
-	# scoring.combo 在第一次有效消行后为 0，从第二次连续消行开始为 1、2、3...
+	# 连击提示。
 	if scoring.combo > 0:
 		_show_combo_text(scoring.combo)
 
-	# 单人模式：将本次输出伤害用于抵消即将到来的垃圾。
+	# 本次输出用于抵消已排队垃圾。
 	var block_amount: int = dmg
 
-	# 先抵消已经就绪（红色）的垃圾。
 	var canceled_ready: int = mini(block_amount, ready_garbage)
 	ready_garbage -= canceled_ready
 	block_amount -= canceled_ready
 
-	# 再抵消排队中的灰/黄垃圾。
 	while block_amount > 0 and pending_attacks.size() > 0:
 		var target = pending_attacks[0]
 		var cancel: int = mini(block_amount, target["amount"])
@@ -210,30 +175,26 @@ func _on_lines_cleared(amount: int, is_spin: bool, is_t_spin: bool, dmg: int) ->
 		if target["amount"] <= 0:
 			pending_attacks.pop_front()
 
-# 当方块锁定时，如果本次没消行且有红色压力，就在此刻结算受击。
 func _lock_piece() -> void:
+	# 锁定前记录状态，用于判断是否“无消行吃垃圾”。
 	var will_receive_garbage: bool = (ready_garbage > 0)
 	var lines_before_lock: int = scoring.lines
 
-	# 重置本次落锁的消行/伤害缓存
 	_last_lines_cleared_this_lock = 0
 	_last_damage_this_lock = 0
 	_last_is_spin = false
 	_last_is_t_spin = false
 
-	# 先走基类锁定逻辑（包括清行、计分、出块）。
 	super._lock_piece()
 
-	# 每次锁定都播放落地音效。
 	sfx_planting.play()
 
-	# 若本次没有消行，则吃掉已就绪垃圾。
 	var did_clear_lines: bool = scoring.lines > lines_before_lock
 	if will_receive_garbage and not did_clear_lines:
 		board.add_garbage_lines(ready_garbage)
 		ready_garbage = 0
 
-	# ── 数据采集：记录落块快照 ──
+	# 每次锁定后记录一次快照。
 	_record_piece_snapshot()
 
 func _on_game_over() -> void:
@@ -246,15 +207,11 @@ func _on_game_over() -> void:
 	bgm.stop()
 	sfx_death.play()
 
-	# 游戏结束时保存数据
 	_save_and_cleanup_data()
 
 
-# ------------------------------------------------------------------------------
-# UI 初始化与文本刷新
-# ------------------------------------------------------------------------------
 func _initialize_ui() -> void:
-	# 动态查找受攻击条，避免节点名变更导致绑定失效。
+	# 动态查找 GarbageBar，避免节点层级变动导致硬引用失效。
 	var bars: Array[Node] = find_children("*", "GarbageBar", true, false)
 	if bars.size() > 0 and bars[0] is GarbageBar:
 		garbage_bar = bars[0] as GarbageBar
@@ -263,14 +220,13 @@ func _initialize_ui() -> void:
 		garbage_bar.update_bar(0, 0, 0)
 		_layout_garbage_bar()
 	else:
-		push_warning("未找到 GarbageBar 节点，单人受攻击条将不会显示。")
+		push_warning("GarbageBar node not found; single-player garbage bar will not be shown.")
 
-	# 初始化提示文字布局（SPIN 在中间，COMBO 在棋盘上方中间）。
+	# 初始化提示文本样式与位置。
 	_layout_effect_labels()
 	if label_spin_text:
 		label_spin_text.visible = false
 		label_spin_text.z_index = 60
-		# 强可见样式，避免在复杂背景上“看不见”。
 		label_spin_text.add_theme_font_size_override("font_size", 76)
 		label_spin_text.add_theme_color_override("font_color", Color(1.0, 0.96, 0.40, 1.0))
 		label_spin_text.add_theme_color_override("font_outline_color", Color(0.03, 0.06, 0.10, 1.0))
@@ -283,7 +239,6 @@ func _initialize_ui() -> void:
 		label_combo_text.add_theme_color_override("font_outline_color", Color(0.03, 0.06, 0.10, 1.0))
 		label_combo_text.add_theme_constant_override("outline_size", 6)
 
-	# 结算面板（黑色遮罩 + 两个按钮）。
 	game_over_panel = PanelContainer.new()
 	var sb_go := StyleBoxFlat.new()
 	sb_go.bg_color = Color(0, 0, 0, 0.85)
@@ -299,7 +254,7 @@ func _initialize_ui() -> void:
 	btn_restart.custom_minimum_size = Vector2(240, 50)
 	btn_restart.focus_mode = Control.FOCUS_ALL
 	btn_restart.pressed.connect(func():
-		_save_and_cleanup_data()  # 重新开始前保存当前数据
+		_save_and_cleanup_data()
 		get_tree().reload_current_scene()
 	)
 
@@ -307,7 +262,7 @@ func _initialize_ui() -> void:
 	btn_return.custom_minimum_size = Vector2(240, 50)
 	btn_return.focus_mode = Control.FOCUS_ALL
 	btn_return.pressed.connect(func():
-		_save_and_cleanup_data()  # 返回大厅前保存当前数据
+		_save_and_cleanup_data()
 		get_tree().change_scene_to_file("res://scenes/ui/main.tscn")
 	)
 
@@ -320,7 +275,7 @@ func _initialize_ui() -> void:
 	$HUD.add_child(game_over_panel)
 
 func _update_texts() -> void:
-	# 兼容两种可能路径，防止后续 UI 层级调整导致多语言文本失效。
+	# 兼容两种可能路径（HUD 与独立面板层级）。
 	var hold_label: Label = get_node_or_null("HoldPanel/HoldLabel")
 	if hold_label == null:
 		hold_label = get_node_or_null("HUD/HoldLabel")
@@ -339,11 +294,8 @@ func _update_texts() -> void:
 		btn_return.text = tr("TXT_RETURN_LOBBY")
 
 
-# ------------------------------------------------------------------------------
-# 视觉辅助：受攻击条 / SPIN 提示 / COMBO 提示
-# ------------------------------------------------------------------------------
-## 将单人受攻击条贴到主棋盘左侧，并保证每格像素与主棋盘一致。
 func _layout_garbage_bar() -> void:
+	# 让受攻击条贴在主棋盘左侧，并与棋盘同高度。
 	if garbage_bar == null or board == null:
 		return
 
@@ -351,7 +303,6 @@ func _layout_garbage_bar() -> void:
 	var bar_w: float = cell_px
 	var bar_h: float = board.visible_rows * cell_px
 
-	# Board 与 GarbageBar 在同层级，直接使用本地坐标计算。
 	var board_left: float = board.position.x
 	var board_top: float = board.position.y
 	var bar_left: float = board_left - GARBAGE_BAR_GAP - bar_w
@@ -362,8 +313,8 @@ func _layout_garbage_bar() -> void:
 	garbage_bar.offset_right = bar_left + bar_w
 	garbage_bar.offset_bottom = board_top + bar_h
 
-## 统一布局 SPIN / COMBO 文案位置，保证始终围绕主战斗棋盘中心。
 func _layout_effect_labels() -> void:
+	# 让 SPIN/COMBO 文案围绕棋盘中心布局。
 	if board == null:
 		return
 
@@ -372,7 +323,6 @@ func _layout_effect_labels() -> void:
 
 	if label_spin_text:
 		label_spin_text.set_anchors_and_offsets_preset(Control.PRESET_TOP_LEFT)
-		# 放到上方可视安全区（不再使用负 y）。
 		label_spin_text.offset_left = board_center_x - 280.0
 		label_spin_text.offset_top = maxf(18.0, board.position.y + 8.0)
 		label_spin_text.offset_right = board_center_x + 280.0
@@ -385,7 +335,6 @@ func _layout_effect_labels() -> void:
 		label_combo_text.offset_right = board_center_x + 260.0
 		label_combo_text.offset_bottom = label_combo_text.offset_top + 72.0
 
-## 构造屏幕中央的 SPIN 文案。
 func _build_spin_text(piece_type: int, is_t_spin: bool) -> String:
 	if is_t_spin:
 		return "T-SPIN!"
@@ -394,7 +343,6 @@ func _build_spin_text(piece_type: int, is_t_spin: bool) -> String:
 		return "SPIN!"
 	return "%s-SPIN!" % piece_name
 
-## 将方块类型映射为单字母文案。
 func _piece_type_to_letter(piece_type: int) -> String:
 	match piece_type:
 		PieceData.Type.I:
@@ -414,8 +362,8 @@ func _piece_type_to_letter(piece_type: int) -> String:
 		_:
 			return ""
 
-## 播放中央 SPIN 文案动画（淡入 + 缩放 + 淡出）。
 func _show_spin_text(content: String) -> void:
+	# 中央 SPIN 动画：短暂放大后淡出。
 	if label_spin_text == null:
 		return
 
@@ -424,7 +372,6 @@ func _show_spin_text(content: String) -> void:
 
 	label_spin_text.text = content
 	label_spin_text.visible = true
-	# 先直接全亮显示，保证至少“先看到”，再做淡出。
 	label_spin_text.modulate = Color(1, 1, 1, 1)
 	label_spin_text.scale = Vector2(0.92, 0.92)
 
@@ -442,13 +389,12 @@ func _show_spin_text(content: String) -> void:
 			label_spin_text.modulate = Color(1, 1, 1, 1)
 	)
 
-## 根据连击数生成高饱和色，做成动态彩色 COMBO 文案。
 func _combo_color(combo_count: int) -> Color:
 	var hue: float = fmod(float(combo_count) * 0.12, 1.0)
 	return Color.from_hsv(hue, 0.88, 1.0, 1.0)
 
-## 播放顶部 COMBO 文案动画（上弹 + 淡出）。
 func _show_combo_text(combo_count: int) -> void:
+	# 顶部 COMBO 动画：上浮并淡出。
 	if label_combo_text == null:
 		return
 
@@ -474,15 +420,12 @@ func _show_combo_text(combo_count: int) -> void:
 
 
 func _setup_input_actions() -> void:
-	# InputMap 是全局对象；当前项目里动作已在其他入口配置。
-	# 这里保留接口，后续如果要做单人专属按键可直接补在此处。
+	# 预留：需要时可在此注册单人特有按键。
 	pass
 
 
-# ------------------------------------------------------------------------------
-# 消行粒子效果
-# ------------------------------------------------------------------------------
 func _on_rows_cleared(rows_data: Array) -> void:
+	# 行清除粒子效果。
 	if board == null or rows_data.is_empty():
 		return
 
@@ -491,16 +434,11 @@ func _on_rows_cleared(rows_data: Array) -> void:
 	effect.setup(rows_data, board.cell_size, board.buffer_rows)
 
 
-# ------------------------------------------------------------------------------
-# 数据采集辅助方法
-# ------------------------------------------------------------------------------
-
-## 每帧统计按键次数（用于 KPP 计算）。
-## 只统计游戏操作相关的按键，不包含 UI 辅助键。
 func _count_key_presses() -> void:
+	# 每帧累计本块操作键次数。
 	if _data_collector == null:
 		return
-	# 统计本帧发生的游戏操作按键
+
 	var actions: Array = [
 		"move_left", "move_right", "soft_drop", "hard_drop",
 		"rotate_cw", "rotate_ccw", "rotate_180", "hold"
@@ -510,22 +448,25 @@ func _count_key_presses() -> void:
 			_data_collector.key_presses_this_piece += 1
 
 
-## 记录一次落块快照（仅写内存）。
 func _record_piece_snapshot() -> void:
+	# 采集一次“方块锁定快照”：棋盘/next/战斗结果/拓扑评分。
 	if _data_collector == null or not _data_collector.is_active():
 		return
 	if board == null or bag == null:
 		return
 
-	# 获取可见区域的棋盘状态（10x20）
 	var full_grid: Array = board.get_grid_state()
 	var visible_grid: Array = []
 	for r in range(board.buffer_rows, board.total_rows):
 		if r < full_grid.size():
 			visible_grid.append(full_grid[r])
 
-	# 获取接下来 5 个方块
 	var next_pieces: Array = bag.peek(5)
+
+	# 由 TopologyEvaluator 计算拓扑分与空洞分。
+	var topology_eval: Dictionary = _evaluate_topology_scores(visible_grid)
+	_last_topology_score = float(topology_eval.get("topology_score", 0.0))
+	_last_holes_score = float(topology_eval.get("holes_score", 0.0))
 
 	_data_collector.record_piece_drop(
 		cur_type,
@@ -543,16 +484,33 @@ func _record_piece_snapshot() -> void:
 		_last_is_t_spin,
 		_last_lines_cleared_this_lock,
 		_last_damage_this_lock,
-		_hold_used_this_piece
+		_hold_used_this_piece,
+		_last_topology_score,
+		_last_holes_score
 	)
 
-	# 重置 hold 使用标记
 	_hold_used_this_piece = false
 
 
-## 保存采集数据并清理采集器。
-## 在 game_over / 重新开始 / 返回大厅时调用。
 func _save_and_cleanup_data() -> void:
+	# 对局结束时落盘并关闭本局采集。
 	if _data_collector == null or not _data_collector.is_active():
 		return
 	_data_collector.end_session(scoring.score, scoring.level, scoring.lines)
+
+
+func _evaluate_topology_scores(board_state_visible: Array) -> Dictionary:
+	# 同时兼容 PascalCase 与 snake_case 方法名。
+	if _topology_evaluator == null:
+		return {"topology_score": 0.0, "holes_score": 0.0}
+
+	if _topology_evaluator.has_method("EvaluateBoardScores"):
+		var result = _topology_evaluator.call("EvaluateBoardScores", board_state_visible)
+		if result is Dictionary:
+			return result
+	elif _topology_evaluator.has_method("evaluate_board_scores"):
+		var result2 = _topology_evaluator.call("evaluate_board_scores", board_state_visible)
+		if result2 is Dictionary:
+			return result2
+
+	return {"topology_score": 0.0, "holes_score": 0.0}

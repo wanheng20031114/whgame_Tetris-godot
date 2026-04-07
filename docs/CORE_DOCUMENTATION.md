@@ -1,4 +1,4 @@
-﻿# WIDE TETRIS 核心文档
+# WIDE TETRIS 核心文档
 
 更新时间：2026-04-05
 

@@ -1,0 +1,51 @@
+{
+	"best_apm": 10.9314959586591,
+	"best_lines": 15.0,
+	"best_pps": 0.960646614548827,
+	"best_score": 5740,
+	"history": [
+		{
+			"apm": 1.54396438588817,
+			"app": 0.0273972602739726,
+			"date": "2026-04-07",
+			"duration_seconds": 77.722,
+			"holes": 26.2191780821918,
+			"kpp": 4.83561643835616,
+			"level": 2.0,
+			"lines": 15.0,
+			"pieces_placed": 73.0,
+			"pps": 0.939245001415301,
+			"score": 3853.0,
+			"session_id": "2026-04-07T23:58:29",
+			"topology": 71.1383561643836
+		},
+		{
+			"apm": 10.9314959586591,
+			"app": 0.189655172413793,
+			"date": "2026-04-08",
+			"duration_seconds": 60.376,
+			"holes": 63.7241379310345,
+			"kpp": 4.44827586206897,
+			"level": 2,
+			"lines": 12,
+			"pieces_placed": 58,
+			"pps": 0.960646614548827,
+			"score": 5740,
+			"session_id": "2026-04-08T00:00:04",
+			"topology": 81.6362068965517
+		}
+	],
+	"player_name": "wh",
+	"radar_scores": {
+		"attack": 3.6,
+		"efficiency": 17.4,
+		"holes": 37.5,
+		"speed": 31.5,
+		"topology": 74.3,
+		"vision": 0.0
+	},
+	"total_games": 2.0,
+	"total_lines_cleared": 27.0,
+	"total_pieces_placed": 131.0,
+	"total_play_time_seconds": 138.098
+}
