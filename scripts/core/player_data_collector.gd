@@ -1,25 +1,25 @@
+# ==========================================
+# PlayerDataCollector (玩家游戏数据采集器)
+# 
+# 文件整体作用：
+# 此文件作为一个实时数据采集与计算的核心组件存在，主要负责：
+# 1. 对局追踪：在单局游戏的不同生命周期（开始、每次落块、结束）记录各种原始数据。
+# 2. 状态快照：针对玩家每次下落一个方块，保存一帧详细场景状态（包含棋盘、打分、连击、使用的按键数量等）形成的“快照”。
+# 3. 统计累加：对游玩期间的按键次数、消行数据、T-Spin（T旋操作）等进行全场景累加与统计。
+# 4. 指标计算：支持实时评估并计算高级进阶向的雷达能力六项指标（如攻击力、效率、视野等）。
+# 5. 将聚合后的复杂结果最终打包输出给 PlayerDataStore 存储保存。
+# ==========================================
 class_name PlayerDataCollector
 extends RefCounted
 
-# ==============================================================================
-# 玩家单局数据采集器
-# 设计目标：
-# 1) 每次方块锁定时采集一次快照，支持回放与行为分析。
-# 2) 对局中仅做内存累积，结算时统一落盘，避免高频 IO。
-# 3) 在这里集中计算六维雷达图中的 speed / attack / efficiency / topology / holes。
-# ==============================================================================
-
-# 快照体积估算与上限保护，避免极端长局占满内存。
 const SNAPSHOT_ESTIMATED_BYTES: int = 1200
 const MEMORY_LIMIT_BYTES: int = 2_000_000_000
 const MAX_SNAPSHOTS: int = 1_666_666
 
-# 方块类型编码到名称的映射，便于快照与日志阅读。
 const PIECE_TYPE_NAMES: Dictionary = {
 	0: "I", 1: "O", 2: "T", 3: "S", 4: "Z", 5: "J", 6: "L"
 }
 
-# 雷达图归一化常量。
 const SPEED_PPS_MAX: float = 3.0
 const ATTACK_APM_MAX: float = 120.0
 const EFFICIENCY_APP_MAX: float = 1.0
@@ -35,19 +35,22 @@ var _session_start_ticks_ms: int = 0
 var _session_start_iso: String = ""
 var _last_piece_ticks_ms: int = 0
 
-# 当前方块（从生成到锁定）的按键次数；由上层每帧累计。
 var key_presses_this_piece: int = 0
 
 var _snapshots: Array = []
 var _discarded_snapshots: int = 0
-
 var _piece_index: int = 0
 
 var _total_damage: int = 0
 var _total_key_presses: int = 0
 var _topology_score_sum: float = 0.0
-var _holes_score_sum: float = 0.0
+var _stability_score_sum: float = 0.0
 var _topology_samples: int = 0
+
+var _effective_clear_events: int = 0
+var _spin_clear_events: int = 0
+var _tetris_clear_events: int = 0
+var _other_clear_events: int = 0
 
 var _singles: int = 0
 var _doubles: int = 0
@@ -60,19 +63,36 @@ var _max_combo: int = 0
 var _max_b2b: int = 0
 
 
-# 开始一局采集：重置会话内统计数据。
+# ==========================================
+# start_session(player_name)
+# 
+# 作用：标志一场全新单局游戏数据采集的开始。
+# 参数：
+# - player_name: 参与该局游戏的玩家名字。
+# 逻辑：
+# 1. 标记采集器为“激活”状态（_active = true）。
+# 2. 初始化核心起始数据，例如游戏局内的运行时间戳、ISO格式标准时间。
+# 3. 将之前局所有遗留的变量、统计值、收集过的快照信息等全部清零与重置。
+# ==========================================
 func start_session(player_name: String) -> void:
 	_active = true
 	_player_name = player_name
 	_session_start_ticks_ms = Time.get_ticks_msec()
 	_session_start_iso = _get_iso_datetime()
 	_last_piece_ticks_ms = _session_start_ticks_ms
+
 	_piece_index = 0
 	_total_damage = 0
 	_total_key_presses = 0
 	_topology_score_sum = 0.0
-	_holes_score_sum = 0.0
+	_stability_score_sum = 0.0
 	_topology_samples = 0
+
+	_effective_clear_events = 0
+	_spin_clear_events = 0
+	_tetris_clear_events = 0
+	_other_clear_events = 0
+
 	_singles = 0
 	_doubles = 0
 	_triples = 0
@@ -81,13 +101,34 @@ func start_session(player_name: String) -> void:
 	_t_spin_clears = 0
 	_max_combo = 0
 	_max_b2b = 0
+
 	_discarded_snapshots = 0
 	_snapshots.clear()
 	key_presses_this_piece = 0
 
 
-# 记录一次方块锁定快照。
-# 注意：board_state_visible 必须是 10x20 的可见棋盘（不含 buffer 区域）。
+# ==========================================
+# record_piece_drop(...)
+# 
+# 作用：在游戏期间每当一个方块自然落下或者硬降落地并锁定后被触发，进行一次高频数据采样与累加。
+# 参数（由于较多，摘录部分重要参数说明）：
+# - piece_type, rotation, col, row: 当前落下并锁定方块的种类、旋转状态与所在行列。
+# - board_state_visible: 玩家当前可见的棋盘截面。
+# - score, level, lines_cleared_total: 当下游戏的总分数、等级和总消行数。
+# - combo, b2b: 当前连击数以及背靠背（Back-to-Back）状态。
+# - is_spin / is_t_spin: 判断该方块是否属于普通旋转或者高阶技术T旋。
+# - damage_this_lock: 单次落块产生的对敌（或自适应）伤害数值。
+# - hold_used_this_piece: 本次操作是否利用了 Hold（暂存）区。
+# - topology_score / stability_score: 由拓扑评分器给出的地形结构平整度、稳定空洞度得分。
+# 
+# 逻辑：
+# 1. 判断并跳过未激活状态下的意外触发。
+# 2. 累加并计算自上次落块到现在的用时（影响速度计算）。
+# 3. 分类判定单杀、双杀、三杀、四杀（Tetris）以及各类旋转清行技，并记录次数。
+# 4. 汇总总局伤害、总按键记录与各类最高纪录（最大连击等）。
+# 5. 生成一帧完整环境“数据快照”，并压入历史序列中。
+# 6. 为防止内存溢出，最多仅保留最近定量的 MAX_SNAPSHOTS 快照，超过即淘汰首项。
+# ==========================================
 func record_piece_drop(
 	piece_type: int,
 	rotation: int,
@@ -106,27 +147,24 @@ func record_piece_drop(
 	damage_this_lock: int,
 	hold_used_this_piece: bool,
 	topology_score: float,
-	holes_score: float
+	stability_score: float
 ) -> void:
 	if not _active:
 		return
 
-	var now_ms: int = Time.get_ticks_msec() # 会话内当前时间戳（毫秒）
+	var now_ms: int = Time.get_ticks_msec()
 	var elapsed_since_last: int = now_ms - _last_piece_ticks_ms
 	_last_piece_ticks_ms = now_ms
 
-	# 本块按键次数，用于 KPP（Keys Per Piece）。
 	var kp: int = key_presses_this_piece
 	_total_key_presses += kp
 	key_presses_this_piece = 0
 
-	# 累积本块输出指标，结算时取平均。
 	_total_damage += damage_this_lock
 	_topology_score_sum += topology_score
-	_holes_score_sum += holes_score
+	_stability_score_sum += stability_score
 	_topology_samples += 1
 
-	# 消行类型统计。
 	if lines_cleared_this_lock == 1:
 		_singles += 1
 	elif lines_cleared_this_lock == 2:
@@ -135,12 +173,21 @@ func record_piece_drop(
 		_triples += 1
 	elif lines_cleared_this_lock >= 4:
 		_tetrises += 1
+
 	if is_spin:
 		_spin_clears += 1
 	if is_t_spin:
 		_t_spin_clears += 1
 
-	# 维护峰值连击与 B2B。
+	if lines_cleared_this_lock > 0:
+		_effective_clear_events += 1
+		if is_spin or is_t_spin:
+			_spin_clear_events += 1
+		elif lines_cleared_this_lock >= 4:
+			_tetris_clear_events += 1
+		else:
+			_other_clear_events += 1
+
 	if combo > _max_combo:
 		_max_combo = combo
 	if b2b > _max_b2b:
@@ -150,7 +197,6 @@ func record_piece_drop(
 	for nt in next_pieces:
 		next_names.append(PIECE_TYPE_NAMES.get(int(nt), "?"))
 
-	# 单次快照保留对局还原与行为分析所需信息。
 	var snapshot: Dictionary = {
 		"piece_index": _piece_index,
 		"timestamp_ms": now_ms - _session_start_ticks_ms,
@@ -173,11 +219,10 @@ func record_piece_drop(
 		"hold_used": hold_used_this_piece,
 		"elapsed_since_last_piece_ms": elapsed_since_last,
 		"topology_score": snapped(topology_score, 0.1),
-		"holes_score": snapped(holes_score, 0.1)
+		"stability_score": snapped(stability_score, 0.1)
 	}
 
 	if _snapshots.size() >= MAX_SNAPSHOTS:
-		# 滑动窗口策略：超上限后丢弃最早快照，优先保留最近行为。
 		_snapshots.pop_front()
 		_discarded_snapshots += 1
 
@@ -185,7 +230,25 @@ func record_piece_drop(
 	_piece_index += 1
 
 
-# 结束一局采集并落盘，返回完整 session_data 给上层 UI/结算流程。
+# ==========================================
+# end_session(final_score, final_level, final_lines)
+# 
+# 作用：结束并封存当前对局，并开始进行一系列最终复盘数据的计算（结算阶段）。
+# 参数：
+# - final_score, final_level, final_lines: 游戏自然死亡或人为结束时的最终分、最终等级及总计消行。
+# 逻辑：
+# 1. 将状态更改回未激活并记录结束时刻。
+# 2. 深入计算各种综合型评价指标表达式，如：
+#    - pps (Pieces Per Second): 每秒落块速度。
+#    - apm (Attack Per Minute): 每分钟攻击输出值。
+#    - app (Attack Per Piece): 每次落块攻击效率。
+#    - kpp (Keypress Per Piece): 单个方块的平均按键消耗数。
+# 3. 将整局中采集过且平均化后的拓扑与稳定度带入到 _calculate_radar_scores 中计算出最最终局后六维雷达表。
+# 4. 把长长的各类明细指标封包成宏大 Session 对象，呼叫 PlayerDataStore 将该单局写入硬盘。
+# 5. 同时生成简单摘要版的 history_entry，告知其并入全局状态之中。
+# 6. 抹除长列快照信息准备释放内存。
+# 返回：整理合并完毕后的当局详细 Dictionary 数据对象。
+# ==========================================
 func end_session(final_score: int, final_level: int, final_lines: int) -> Dictionary:
 	if not _active:
 		return {}
@@ -195,7 +258,7 @@ func end_session(final_score: int, final_level: int, final_lines: int) -> Dictio
 	var duration_seconds: float = (end_ticks_ms - _session_start_ticks_ms) / 1000.0
 	var end_iso: String = _get_iso_datetime()
 
-	var pieces_placed: int = _piece_index # 实际锁定方块数
+	var pieces_placed: int = _piece_index
 	var pps: float = pieces_placed / maxf(duration_seconds, 0.001)
 	var duration_minutes: float = duration_seconds / 60.0
 	var apm: float = _total_damage / maxf(duration_minutes, 0.001)
@@ -203,8 +266,8 @@ func end_session(final_score: int, final_level: int, final_lines: int) -> Dictio
 	var kpp: float = float(_total_key_presses) / maxf(float(pieces_placed), 1.0)
 
 	var avg_topology: float = _topology_score_sum / maxf(float(_topology_samples), 1.0)
-	var avg_holes: float = _holes_score_sum / maxf(float(_topology_samples), 1.0)
-	var radar: Dictionary = _calculate_radar_scores(pps, apm, app, kpp, avg_topology, avg_holes)
+	var avg_stability: float = _stability_score_sum / maxf(float(_topology_samples), 1.0)
+	var radar: Dictionary = _calculate_radar_scores(pps, apm, app, kpp, avg_topology, avg_stability)
 
 	var session_data: Dictionary = {
 		"player_name": _player_name,
@@ -228,6 +291,10 @@ func end_session(final_score: int, final_level: int, final_lines: int) -> Dictio
 		"tetrises": _tetrises,
 		"spin_clears": _spin_clears,
 		"t_spin_clears": _t_spin_clears,
+		"effective_clear_events": _effective_clear_events,
+		"spin_clear_events": _spin_clear_events,
+		"tetris_clear_events": _tetris_clear_events,
+		"other_clear_events": _other_clear_events,
 		"max_combo": _max_combo,
 		"max_b2b": _max_b2b,
 		"discarded_snapshots": _discarded_snapshots,
@@ -237,7 +304,6 @@ func end_session(final_score: int, final_level: int, final_lines: int) -> Dictio
 
 	PlayerDataStore.save_session(session_data)
 
-	# 历史条目用于“单局历史”面板，包含 topology/holes 平均分。
 	var history_entry: Dictionary = {
 		"session_id": _session_start_iso,
 		"date": _session_start_iso.left(10),
@@ -250,16 +316,23 @@ func end_session(final_score: int, final_level: int, final_lines: int) -> Dictio
 		"app": app,
 		"kpp": kpp,
 		"topology": avg_topology,
-		"holes": avg_holes,
+		"stability": avg_stability,
 		"pieces_placed": pieces_placed
 	}
 	PlayerDataStore.update_stats(_player_name, history_entry, radar)
 
-	# 会话结束后释放快照内存。
 	_snapshots.clear()
 	return session_data
 
 
+# ==========================================
+# get_piece_count() / get_snapshot_count() / is_active()
+# 
+# 作用：一组对外部可见的简单状态查询只读（Getter）方法。
+# - get_piece_count()：当前局游戏下落且锁死的总方块数。
+# - get_snapshot_count()：查询目前在内存中缓存了多少帧经过精细记录的快照。
+# - is_active()：获取目前数据收集器是否处在开启正在记录打分的状态。
+# ==========================================
 func get_piece_count() -> int:
 	return _piece_index
 
@@ -272,21 +345,32 @@ func is_active() -> bool:
 	return _active
 
 
-# 计算雷达图六维中的前五维（vision 当前保留为 0）。
+# ==========================================
+# _calculate_radar_scores(...)
+# 
+# 作用：内置计算函数。它把在游戏里的几项硬核数据映射转化到 0 ~ 100 范围，
+# 并赋予它们作为雷达六芒星属性的直观意义。
+# 
+# 逻辑：
+# - 速度（speed）: 由实际 pps (Pieces Per Second) / 最大理论阈值 (3.0) 归一化。
+# - 攻击（attack）: 由 apm (Attack Per Minute) / 阈值 (120) 归一化。
+# - 效率（efficiency）: 由落块产出攻击力（app）与单块消耗按键（kpp）的加权平均数结合（0.6 app + 0.4 kpp）。
+# - 拓扑（topology）& 稳定性（stability）: 直接由外部AI或计算器传入平滑后的原始得分并钳制极限。
+# - 视野（vision）: 通过专门剥离的 _calculate_vision_score 模块单独解算。
+# 
+# 返回：包含各项雷达维度数值（已保留一位小数）的字典。
+# ==========================================
 func _calculate_radar_scores(
 	pps: float,
 	apm: float,
 	app: float,
 	kpp: float,
 	topology_score: float,
-	holes_score: float
+	stability_score: float
 ) -> Dictionary:
 	var speed_score: float = clampf(pps / SPEED_PPS_MAX, 0.0, 1.0) * 100.0
 	var attack_score: float = clampf(apm / ATTACK_APM_MAX, 0.0, 1.0) * 100.0
 
-	# efficiency = APP 与 KPP 的混合：
-	# - APP 越高越好（每块输出更高）
-	# - KPP 越低越好（操作更精炼）
 	var app_score: float = clampf(app / EFFICIENCY_APP_MAX, 0.0, 1.0) * 100.0
 	var kpp_score: float = clampf(
 		(EFFICIENCY_KPP_WORST - kpp) / (EFFICIENCY_KPP_WORST - EFFICIENCY_KPP_BEST),
@@ -294,18 +378,74 @@ func _calculate_radar_scores(
 		1.0
 	) * 100.0
 	var efficiency_score: float = EFFICIENCY_APP_WEIGHT * app_score + EFFICIENCY_KPP_WEIGHT * kpp_score
+	var vision_score: float = _calculate_vision_score()
 
 	return {
 		"speed": snapped(speed_score, 0.1),
 		"attack": snapped(attack_score, 0.1),
 		"efficiency": snapped(efficiency_score, 0.1),
 		"topology": snapped(clampf(topology_score, 0.0, 100.0), 0.1),
-		"holes": snapped(clampf(holes_score, 0.0, 100.0), 0.1),
-		"vision": 0.0
+		"stability": snapped(clampf(stability_score, 0.0, 100.0), 0.1),
+		"vision": snapped(vision_score, 0.1)
 	}
 
 
-# 生成 ISO 风格时间戳，用于 session_id 与时间字段。
+# ==========================================
+# _calculate_vision_score()
+# 
+# 作用：通过玩家选用的消行策略构成比例（如喜欢T旋，还是普通消行，抑或攒Tetris大招）
+# 来评估“大局观”或者“视野得分”。
+# 
+# 逻辑：
+# 1. 如果没有消行发生，则默认给予50的中庸分期。
+# 2. 分别计算 Spin旋转技占比、Tetris四行技占比 与 杂项清行占比。
+# 3. 再利用 _band_score 的带状评分为这三个比例计算匹配度得分（它们各有期望的理想区间，如T旋理想区间是 30%~50%）。
+# 4. 根据置信度因子（样本数量越多，越信任该构成占比）进行线性插值，最终得出一个 0 到 100 综合分。
+# ==========================================
+func _calculate_vision_score() -> float:
+	if _effective_clear_events <= 0:
+		return 50.0
+
+	var total: float = float(_effective_clear_events)
+	var spin_ratio: float = float(_spin_clear_events) / total
+	var tetris_ratio: float = float(_tetris_clear_events) / total
+	var other_ratio: float = float(_other_clear_events) / total
+
+	var spin_score: float = _band_score(spin_ratio, 0.30, 0.50, 0.25)
+	var tetris_score: float = _band_score(tetris_ratio, 0.20, 0.40, 0.25)
+	var other_score: float = _band_score(other_ratio, 0.20, 0.40, 0.30)
+	var composition_score: float = spin_score * 0.45 + tetris_score * 0.30 + other_score * 0.25
+
+	var confidence: float = clampf((total - 10.0) / 40.0, 0.0, 1.0)
+	return clampf(lerpf(50.0, composition_score, confidence), 0.0, 100.0)
+
+
+# ==========================================
+# _band_score(ratio, min_target, max_target, margin)
+# 
+# 作用：这是一个带状权重或者阶梯容差评分函数。
+# 参数：
+# - ratio: 实际占比。
+# - min_target / max_target: 理想区间下限和上限。
+# - margin: 容留惩罚边框。
+# 逻辑：当数值完美落入理想区间则得满分 100；如果在区间外但落入 margin 边缘内，分数会线性快速衰减，极不理想则为直接0分。
+# ==========================================
+func _band_score(ratio: float, min_target: float, max_target: float, margin: float) -> float:
+	if ratio >= min_target and ratio <= max_target:
+		return 100.0
+	if ratio < min_target:
+		var low_edge: float = maxf(0.0, min_target - margin)
+		return clampf((ratio - low_edge) / maxf(0.0001, min_target - low_edge), 0.0, 1.0) * 100.0
+	var high_edge: float = minf(1.0, max_target + margin)
+	return clampf((high_edge - ratio) / maxf(0.0001, high_edge - max_target), 0.0, 1.0) * 100.0
+
+
+# ==========================================
+# _get_iso_datetime()
+# 
+# 作用：工具方法，从操作系统引擎层面直接捕获现在时钟时刻。
+# 返回：一条 YYYY-MM-DDTHH:MM:SS 标准格式字符组合，方便直接做文件命名和日志校准。
+# ==========================================
 func _get_iso_datetime() -> String:
 	var dt: Dictionary = Time.get_datetime_dict_from_system()
 	return "%04d-%02d-%02dT%02d:%02d:%02d" % [

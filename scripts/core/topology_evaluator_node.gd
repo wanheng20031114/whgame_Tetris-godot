@@ -7,7 +7,7 @@ extends Node
 #
 # 输出：
 # - topology_score: 0~100，综合平整性与空洞质量
-# - holes_score: 0~100，越高表示空洞越少且越不碎片化
+# - stability_score: 0~100，越高表示空洞越少且越不碎片化
 # - empty_cells / empty_regions / trapped_cells / flatness_score 中间指标
 #
 # 关键规则：
@@ -47,12 +47,12 @@ func EvaluateBoardScores(board_state_visible: Array) -> Dictionary:
 	var flatness_score: float = _calculate_flatness_score(empty, rows, cols)
 
 	# 空洞分：空洞越多、越碎，分越低。
-	var holes_score: float = 100.0 - minf(100.0, trapped_cells * 2.0 + maxi(0, empty_regions - 1) * 12.0)
-	holes_score = clampf(holes_score, 0.0, 100.0)
+	var stability_score: float = 100.0 - minf(100.0, trapped_cells * 2.0 + maxi(0, empty_regions - 1) * 12.0)
+	stability_score = clampf(stability_score, 0.0, 100.0)
 
 	# 拓扑分：平整性占 65%，空洞质量占 35%。
-	var topology_score: float = clampf(flatness_score * 0.65 + holes_score * 0.35, 0.0, 100.0)
-	return _build_result(topology_score, holes_score, empty_cells, empty_regions, trapped_cells, flatness_score)
+	var topology_score: float = clampf(flatness_score * 0.65 + stability_score * 0.35, 0.0, 100.0)
+	return _build_result(topology_score, stability_score, empty_cells, empty_regions, trapped_cells, flatness_score)
 
 
 # 兼容小写调用风格（避免调用方函数名大小写差异）。
@@ -183,7 +183,7 @@ func _flood_fill(grid: Array, visited: Array, sy: int, sx: int, rows: int, cols:
 # 统一返回结构，采集器可直接消费。
 func _build_result(
 	topology_score: float,
-	holes_score: float,
+	stability_score: float,
 	empty_cells: int,
 	empty_regions: int,
 	trapped_cells: int,
@@ -191,7 +191,7 @@ func _build_result(
 ) -> Dictionary:
 	return {
 		"topology_score": snapped(topology_score, 0.1),
-		"holes_score": snapped(holes_score, 0.1),
+		"stability_score": snapped(stability_score, 0.1),
 		"empty_cells": empty_cells,
 		"empty_regions": empty_regions,
 		"trapped_cells": trapped_cells,

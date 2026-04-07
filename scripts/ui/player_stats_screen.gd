@@ -72,7 +72,7 @@ func _load_and_display_data() -> void:
 
 	var radar: Dictionary = stats.get("radar_scores", {})
 	if total_games == 0:
-		radar = {"speed": 0, "attack": 0, "efficiency": 0, "topology": 0, "holes": 0, "vision": 0}
+		radar = {"speed": 0, "attack": 0, "efficiency": 0, "topology": 0, "stability": 0, "vision": 0}
 	if radar_chart and radar_chart.has_method("set_data"):
 		radar_chart.set_data(radar)
 
@@ -228,11 +228,22 @@ func _build_session_detail_text(entry: Dictionary) -> String:
 		tr("TXT_KPP_EXPLAIN"),
 		float(session.get("kpp", entry.get("kpp", 0.0)))
 	])
-	lines.append("%s: %.1f | %s: %.1f" % [
+	var radar: Dictionary = session.get("radar_scores", {})
+	lines.append("%s: %.1f | %s: %.1f | %s: %.1f" % [
+		tr("TXT_RADAR_SPEED"),
+		float(radar.get("speed", 0.0)),
+		tr("TXT_RADAR_ATTACK"),
+		float(radar.get("attack", 0.0)),
+		tr("TXT_RADAR_EFFICIENCY"),
+		float(radar.get("efficiency", 0.0))
+	])
+	lines.append("%s: %.1f | %s: %.1f | %s: %.1f" % [
 		tr("TXT_RADAR_TOPOLOGY"),
-		float(session.get("radar_scores", {}).get("topology", entry.get("topology", 0.0))),
-		tr("TXT_RADAR_HOLES"),
-		float(session.get("radar_scores", {}).get("holes", entry.get("holes", 0.0)))
+		float(radar.get("topology", entry.get("topology", 0.0))),
+		tr("TXT_RADAR_STABILITY"),
+		float(radar.get("stability", entry.get("stability", 0.0))),
+		tr("TXT_RADAR_VISION"),
+		float(radar.get("vision", 0.0))
 	])
 	lines.append("%s: %d | %s: %d | %s: %d" % [
 		tr("TXT_PIECES"),

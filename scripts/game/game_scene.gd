@@ -41,7 +41,7 @@ var _last_damage_this_lock: int = 0
 var _last_is_spin: bool = false
 var _last_is_t_spin: bool = false
 var _last_topology_score: float = 0.0
-var _last_holes_score: float = 0.0
+var _last_stability_score: float = 0.0
 var _hold_used_this_piece: bool = false
 
 
@@ -466,7 +466,7 @@ func _record_piece_snapshot() -> void:
 	# 由 TopologyEvaluator 计算拓扑分与空洞分。
 	var topology_eval: Dictionary = _evaluate_topology_scores(visible_grid)
 	_last_topology_score = float(topology_eval.get("topology_score", 0.0))
-	_last_holes_score = float(topology_eval.get("holes_score", 0.0))
+	_last_stability_score = float(topology_eval.get("stability_score", 0.0))
 
 	_data_collector.record_piece_drop(
 		cur_type,
@@ -486,7 +486,7 @@ func _record_piece_snapshot() -> void:
 		_last_damage_this_lock,
 		_hold_used_this_piece,
 		_last_topology_score,
-		_last_holes_score
+		_last_stability_score
 	)
 
 	_hold_used_this_piece = false
@@ -502,7 +502,7 @@ func _save_and_cleanup_data() -> void:
 func _evaluate_topology_scores(board_state_visible: Array) -> Dictionary:
 	# 同时兼容 PascalCase 与 snake_case 方法名。
 	if _topology_evaluator == null:
-		return {"topology_score": 0.0, "holes_score": 0.0}
+		return {"topology_score": 0.0, "stability_score": 0.0}
 
 	if _topology_evaluator.has_method("EvaluateBoardScores"):
 		var result = _topology_evaluator.call("EvaluateBoardScores", board_state_visible)
@@ -513,4 +513,4 @@ func _evaluate_topology_scores(board_state_visible: Array) -> Dictionary:
 		if result2 is Dictionary:
 			return result2
 
-	return {"topology_score": 0.0, "holes_score": 0.0}
+	return {"topology_score": 0.0, "stability_score": 0.0}
