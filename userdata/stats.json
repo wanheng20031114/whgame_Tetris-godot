@@ -1,8 +1,8 @@
 {
 	"best_apm": 17.0869022322504,
-	"best_lines": 56,
-	"best_pps": 0.892681110210519,
-	"best_score": 46010,
+	"best_lines": 56.0,
+	"best_pps": 5.61009817671809,
+	"best_score": 46010.0,
 	"history": [
 		{
 			"apm": 17.0869022322504,
@@ -10,27 +10,57 @@
 			"date": "2026-04-08",
 			"duration_seconds": 182.596,
 			"kpp": 5.26993865030675,
-			"level": 6,
-			"lines": 56,
-			"pieces_placed": 163,
+			"level": 6.0,
+			"lines": 56.0,
+			"pieces_placed": 163.0,
 			"pps": 0.892681110210519,
-			"score": 46010,
+			"score": 46010.0,
 			"session_id": "2026-04-08T01:36:39",
 			"stability": 51.8159509202454,
 			"topology": 78.7392638036809
+		},
+		{
+			"apm": 0.0,
+			"app": 0.0,
+			"date": "2026-04-08",
+			"duration_seconds": 2.769,
+			"kpp": 0.9,
+			"level": 1.0,
+			"lines": 0.0,
+			"pieces_placed": 10.0,
+			"pps": 3.61141206211629,
+			"score": 204.0,
+			"session_id": "2026-04-08T02:18:37",
+			"stability": 100.0,
+			"topology": 89.09
+		},
+		{
+			"apm": 0.0,
+			"app": 0.0,
+			"date": "2026-04-08",
+			"duration_seconds": 2.139,
+			"kpp": 1.16666666666667,
+			"level": 1,
+			"lines": 0,
+			"pieces_placed": 12,
+			"pps": 5.61009817671809,
+			"score": 228,
+			"session_id": "2026-04-08T02:26:47",
+			"stability": 57.0,
+			"topology": 74.95
 		}
 	],
 	"player_name": "wh",
 	"radar_scores": {
-		"attack": 14.2,
-		"efficiency": 26.4,
-		"speed": 29.8,
-		"stability": 51.8,
-		"topology": 78.7,
-		"vision": 51.5
+		"attack": 6.9,
+		"efficiency": 33.3,
+		"speed": 65.6,
+		"stability": 63.5,
+		"topology": 79.8,
+		"vision": 50.7
 	},
-	"total_games": 1,
+	"total_games": 3,
 	"total_lines_cleared": 56,
-	"total_pieces_placed": 163,
-	"total_play_time_seconds": 182.596
+	"total_pieces_placed": 185,
+	"total_play_time_seconds": 187.504
 }

@@ -78,7 +78,7 @@ func _ready() -> void:
 	close_btn = Button.new()
 	close_btn.text = tr("TXT_OK")
 	close_btn.custom_minimum_size = Vector2(0, 40)
-	close_btn.pressed.connect(func(): hide_menu())
+	close_btn.pressed.connect(_on_close_pressed)
 	vbox.add_child(close_btn)
 
 	canvas_layer.add_child(panel)
@@ -89,6 +89,9 @@ func _ready() -> void:
 	_update_texts()
 
 func _on_gear_pressed() -> void:
+	if ButtonSfx:
+		ButtonSfx.play_click()
+
 	if canvas_layer.visible:
 		hide_menu()
 	else:
@@ -113,6 +116,9 @@ func _update_texts() -> void:
 		close_btn.text = tr("TXT_OK")
 
 func _on_language_selected(idx: int) -> void:
+	if ButtonSfx:
+		ButtonSfx.play_click()
+
 	var loc := "en"
 	match idx:
 		0:
@@ -128,6 +134,12 @@ func _on_language_selected(idx: int) -> void:
 	config.load(_get_settings_path())
 	config.set_value("Settings", "locale", loc)
 	config.save(_get_settings_path())
+
+
+func _on_close_pressed() -> void:
+	if ButtonSfx:
+		ButtonSfx.play_click()
+	hide_menu()
 
 func _get_settings_path() -> String:
 	if OS.has_feature("editor"):

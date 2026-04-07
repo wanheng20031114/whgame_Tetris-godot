@@ -94,6 +94,9 @@ func _update_texts() -> void:
 		btn_back.text = tr("TXT_BACK_MAIN")
 
 func _on_connect_pressed() -> void:
+	if ButtonSfx:
+		ButtonSfx.play_click()
+
 	var ip := edit_ip.text.strip_edges()
 	var port := edit_port.text.to_int()
 	var pname := edit_name.text.strip_edges()

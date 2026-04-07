@@ -46,7 +46,7 @@ func EvaluateBoardScores(board_state_visible: Array) -> Dictionary:
 	var trapped_cells: int = _count_trapped_cells(empty, rows, cols)
 	var flatness_score: float = _calculate_flatness_score(empty, rows, cols)
 
-	# 空洞分：空洞越多、越碎，分越低。
+	# 稳定分：空洞越多、越碎，分越低。
 	var stability_score: float = 100.0 - minf(100.0, trapped_cells * 2.0 + maxi(0, empty_regions - 1) * 12.0)
 	stability_score = clampf(stability_score, 0.0, 100.0)
 

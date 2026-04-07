@@ -228,6 +228,9 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _activate_mode(card: Control, mode: String) -> void:
+	if ButtonSfx:
+		ButtonSfx.play_click()
+
 	# 确认点击反馈（按下回弹）
 	var tween = create_tween().set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
 	tween.tween_property(card, "scale", Vector2(0.95, 0.95), 0.1)
