@@ -97,8 +97,8 @@ TXT_PIECES,方块,PIECES,ピース
 TXT_KEYS,按键,KEYS,キー
 TXT_DAMAGE,伤害,DAMAGE,ダメージ
 TXT_CLEAR_BREAKDOWN,单消双消三消四消,Single/Double/Triple/Tetris,シングル/ダブル/トリプル/テトリス
-TXT_TSPIN_CLEARS,T旋消行,T-Spin Clears,Tスピン消去
-TXT_SPIN_CLEARS,旋转消行,Spin Clears,スピン消去
+TXT_TSPIN_CLEARS,T-Spin消行,T-Spin Clears,Tスピン消去
+TXT_SPIN_CLEARS,Spin消行,Spin Clears,スピン消去
 TXT_MAX_COMBO,最大连击,Max Combo,最大コンボ
 TXT_MAX_B2B,最大B2B,Max B2B,最大B2B
 TXT_START,开始,START,開始

@@ -87,6 +87,7 @@ func _ready() -> void:
 	canvas_layer.hide()
 	pressed.connect(_on_gear_pressed)
 	_update_texts()
+	call_deferred("_recenter_panel")
 
 func _on_gear_pressed() -> void:
 	if ButtonSfx:
@@ -98,6 +99,7 @@ func _on_gear_pressed() -> void:
 		show_menu()
 
 func show_menu() -> void:
+	_recenter_panel()
 	canvas_layer.show()
 
 func hide_menu() -> void:
@@ -106,6 +108,8 @@ func hide_menu() -> void:
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_TRANSLATION_CHANGED and is_inside_tree():
 		_update_texts()
+	elif what == NOTIFICATION_WM_SIZE_CHANGED and is_inside_tree():
+		_recenter_panel()
 
 func _update_texts() -> void:
 	if title_lbl:
@@ -140,6 +144,16 @@ func _on_close_pressed() -> void:
 	if ButtonSfx:
 		ButtonSfx.play_click()
 	hide_menu()
+
+
+func _recenter_panel() -> void:
+	if panel == null:
+		return
+	var viewport_size := get_viewport_rect().size
+	var panel_size := panel.size
+	if panel_size.x <= 0.0 or panel_size.y <= 0.0:
+		panel_size = panel.custom_minimum_size
+	panel.position = (viewport_size - panel_size) * 0.5
 
 func _get_settings_path() -> String:
 	if OS.has_feature("editor"):
