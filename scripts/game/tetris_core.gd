@@ -10,7 +10,7 @@ extends Node2D
 signal score_changed(score: int, level: int, lines: int)
 signal piece_locked(type: int, grid_state: Array)
 signal lines_cleared(amount: int, is_spin: bool, is_t_spin: bool, damage: int)
-signal rows_cleared(rows_data: Array)  # 传递被消行的详细数据，用于粒子效果
+signal rows_cleared(rows_data: Array) # 传递被消行的详细数据，用于粒子效果
 signal game_over_triggered()
 signal board_updated()
 

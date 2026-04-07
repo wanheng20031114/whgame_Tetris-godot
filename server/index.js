@@ -2,9 +2,12 @@ const WebSocket = require('ws');
 const http = require('http');
 
 const PORT = 8998;
-const LIST_ROOMS_COOLDOWN_MS = 500;
+const LIST_ROOMS_COOLDOWN_MS = 200;
+const CREATE_ROOM_COOLDOWN_MS = 1000;
+const LOGIN_COOLDOWN_MS = 1000;
 const server = http.createServer();
 const wss = new WebSocket.Server({ server });
+const actionCooldowns = new WeakMap(); // ws -> { action: last_ts_ms }
 
 // 存储全局状态
 const clients = new Map(); // ws -> { id, name, room_id }
@@ -35,12 +38,19 @@ function handleMessage(ws, data) {
 
     switch (type) {
         case 'login':
+            const loginRetryMs = getCooldownRetryMs(ws, 'login', LOGIN_COOLDOWN_MS);
+            if (loginRetryMs > 0) {
+                send(ws, 'error', {
+                    message: 'login_too_fast',
+                    retry_after_ms: loginRetryMs
+                });
+                return;
+            }
             // 登录并保存用户名
             clients.set(ws, {
                 id: Math.random().toString(36).substr(2, 9),
-                name: payload.name || '无名大侠',
-                room_id: null,
-                last_list_rooms_at: 0
+                name: payload.name || 'fucking bot',
+                room_id: null
             });
             send(ws, 'login_success', { id: clients.get(ws).id });
             break;
@@ -49,16 +59,14 @@ function handleMessage(ws, data) {
             const listClient = clients.get(ws);
             if (!listClient) return;
 
-            const now = Date.now();
-            const elapsed = now - (listClient.last_list_rooms_at || 0);
-            if (elapsed < LIST_ROOMS_COOLDOWN_MS) {
+            const listRetryMs = getCooldownRetryMs(ws, 'list_rooms', LIST_ROOMS_COOLDOWN_MS);
+            if (listRetryMs > 0) {
                 send(ws, 'error', {
                     message: 'refresh_too_fast',
-                    retry_after_ms: LIST_ROOMS_COOLDOWN_MS - elapsed
+                    retry_after_ms: listRetryMs
                 });
                 return;
             }
-            listClient.last_list_rooms_at = now;
             // 返回可加入的房间列表
             const roomList = Array.from(rooms.values())
                 .filter(r => r.status === 'waiting')
@@ -70,11 +78,19 @@ function handleMessage(ws, data) {
             // 创建新房间
             const client = clients.get(ws);
             if (!client) return;
+            const createRetryMs = getCooldownRetryMs(ws, 'create_room', CREATE_ROOM_COOLDOWN_MS);
+            if (createRetryMs > 0) {
+                send(ws, 'error', {
+                    message: 'create_room_too_fast',
+                    retry_after_ms: createRetryMs
+                });
+                return;
+            }
 
             const roomId = Math.random().toString(36).substr(2, 6).toUpperCase();
             const newRoom = {
                 id: roomId,
-                name: payload.name || `${client.name} 的房间`,
+                name: payload.name || `${client.name}'s room`,
                 players: [ws],
                 status: 'waiting',
                 seed: null,
@@ -83,6 +99,7 @@ function handleMessage(ws, data) {
             rooms.set(roomId, newRoom);
             client.room_id = roomId;
             send(ws, 'room_created', { room_id: roomId });
+            broadcastRoomList();
             break;
 
         case 'join_room':
@@ -91,6 +108,10 @@ function handleMessage(ws, data) {
             const targetRoom = rooms.get(payload.room_id);
 
             if (targetRoom && targetRoom.players.length < 2) {
+                if (joinClient.room_id && joinClient.room_id !== payload.room_id) {
+                    leaveWaitingRoomIfOwned(joinClient, ws);
+                }
+
                 targetRoom.players.push(ws);
                 joinClient.room_id = payload.room_id;
 
@@ -100,6 +121,8 @@ function handleMessage(ws, data) {
                 if (targetRoom.players.length === 2) {
                     startGame(targetRoom);
                 }
+
+                broadcastRoomList();
             } else {
                 send(ws, 'error', { message: '无法加入房间（已满或不存在）' });
             }
@@ -137,6 +160,40 @@ function handleMessage(ws, data) {
     }
 }
 
+function getCooldownRetryMs(ws, action, cooldownMs) {
+    const now = Date.now();
+    const record = actionCooldowns.get(ws) || {};
+    const lastTs = record[action] || 0;
+    const elapsed = now - lastTs;
+    if (elapsed < cooldownMs) {
+        return cooldownMs - elapsed;
+    }
+    record[action] = now;
+    actionCooldowns.set(ws, record);
+    return 0;
+}
+
+function leaveWaitingRoomIfOwned(client, ws) {
+    const oldRoomId = client.room_id;
+    if (!oldRoomId) return;
+
+    const oldRoom = rooms.get(oldRoomId);
+    if (!oldRoom) {
+        client.room_id = null;
+        return;
+    }
+
+    if (oldRoom.status !== 'waiting') {
+        return;
+    }
+
+    oldRoom.players = oldRoom.players.filter(p => p !== ws);
+    if (oldRoom.players.length === 0) {
+        rooms.delete(oldRoomId);
+    }
+    client.room_id = null;
+}
+
 // ============================================================
 // 游戏启动辅助
 // ============================================================
@@ -150,6 +207,7 @@ function startGame(room) {
 
     send(room.players[0], 'game_start', { opponent_name: p2.name, seed: room.seed });
     send(room.players[1], 'game_start', { opponent_name: p1.name, seed: room.seed });
+    broadcastRoomList();
 }
 
 // ============================================================
@@ -212,6 +270,16 @@ function broadcastRematchStatus(room) {
             my_status: myStatus,
             opponent_status: oppStatus
         });
+    }
+}
+
+function broadcastRoomList() {
+    const roomList = Array.from(rooms.values())
+        .filter(r => r.status === 'waiting')
+        .map(r => ({ id: r.id, name: r.name, playerCount: r.players.length }));
+
+    for (const ws of clients.keys()) {
+        send(ws, 'room_list', { rooms: roomList });
     }
 }
 
