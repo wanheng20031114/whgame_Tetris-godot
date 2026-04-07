@@ -1,6 +1,7 @@
 ﻿# Godot 4+ specific ignores
 .godot/
 /android/
+#userdata
 
 # Node.js server dependencies
 server/node_modules/
