@@ -125,12 +125,18 @@ func _on_language_selected(idx: int) -> void:
 	TranslationServer.set_locale(loc)
 
 	var config := ConfigFile.new()
-	config.load("user://settings.cfg")
+	config.load(_get_settings_path())
 	config.set_value("Settings", "locale", loc)
-	config.save("user://settings.cfg")
+	config.save(_get_settings_path())
+
+func _get_settings_path() -> String:
+	if OS.has_feature("editor"):
+		return "res://settings.cfg"
+	else:
+		return OS.get_executable_path().get_base_dir().path_join("settings.cfg")
 
 func _load_saved_locale(config: ConfigFile) -> String:
-	if config.load("user://settings.cfg") != OK:
+	if config.load(_get_settings_path()) != OK:
 		return ""
 	var loc := str(config.get_value("Settings", "locale", "")).strip_edges().to_lower()
 	return loc

@@ -3,27 +3,20 @@
 [ext_resource type="Script" uid="uid://dupkfpb82y01i" path="res://scripts/ui/player_stats_screen.gd" id="1_stats"]
 [ext_resource type="Script" uid="uid://d0syrllpcnh7o" path="res://scripts/ui/radar_chart.gd" id="2_radar"]
 [ext_resource type="PackedScene" path="res://scenes/ui/settings_menu.tscn" id="3_cjdni"]
+[ext_resource type="PackedScene" path="res://scenes/ui/stats_card.tscn" id="4_stats_card"]
+[ext_resource type="PackedScene" path="res://scenes/ui/history_card.tscn" id="5_history_card"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_topbar"]
 bg_color = Color(0.08, 0.08, 0.11, 1)
 border_width_bottom = 2
 border_color = Color(0.2, 0.2, 0.3, 1)
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_card"]
-content_margin_left = 20.0
-content_margin_top = 16.0
-content_margin_right = 20.0
-content_margin_bottom = 16.0
-bg_color = Color(0.1, 0.1, 0.14, 1)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(0.2, 0.2, 0.28, 1)
-corner_radius_top_left = 12
-corner_radius_top_right = 12
-corner_radius_bottom_right = 12
-corner_radius_bottom_left = 12
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_fnpq7"]
+bg_color = Color(0.047058824, 0.972549, 0.6, 1)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
 
 [node name="PlayerStatsScreen" type="Control" unique_id=534328314]
 layout_mode = 3
@@ -61,6 +54,7 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+offset_bottom = -2.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_constants/separation = 16
@@ -73,8 +67,9 @@ layout_mode = 2
 unique_name_in_owner = true
 custom_minimum_size = Vector2(100, 40)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.7372549, 0.7372549, 0.7372549, 1)
+theme_override_colors/font_color = Color(0.875, 0.875, 0.875, 1)
 theme_override_font_sizes/font_size = 24
+theme_override_styles/focus = SubResource("StyleBoxFlat_fnpq7")
 text = "BACK"
 
 [node name="LblTitle" type="Label" parent="MainVBox/TopBar/HBox" unique_id=708102119]
@@ -122,182 +117,13 @@ custom_minimum_size = Vector2(448, 448)
 layout_mode = 2
 script = ExtResource("2_radar")
 
-[node name="StatsCard" type="PanelContainer" parent="MainVBox/ScrollContainer/MarginContainer/ContentVBox" unique_id=227841427]
-layout_mode = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_card")
-
-[node name="StatsVBox" type="VBoxContainer" parent="MainVBox/ScrollContainer/MarginContainer/ContentVBox/StatsCard" unique_id=1830274301]
-layout_mode = 2
-theme_override_constants/separation = 12
-
-[node name="StatsTitle" type="Label" parent="MainVBox/ScrollContainer/MarginContainer/ContentVBox/StatsCard/StatsVBox" unique_id=84338706]
+[node name="StatsCard" parent="MainVBox/ScrollContainer/MarginContainer/ContentVBox" unique_id=840100975 instance=ExtResource("4_stats_card")]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_colors/font_color = Color(0.9, 0.9, 1, 1)
-theme_override_font_sizes/font_size = 22
-text = "PLAYER STATS"
 
-[node name="Sep1" type="HSeparator" parent="MainVBox/ScrollContainer/MarginContainer/ContentVBox/StatsCard/StatsVBox" unique_id=404575038]
-layout_mode = 2
-
-[node name="RowTotalGames" type="HBoxContainer" parent="MainVBox/ScrollContainer/MarginContainer/ContentVBox/StatsCard/StatsVBox" unique_id=1585438814]
-layout_mode = 2
-
-[node name="LblTotalGamesName" type="Label" parent="MainVBox/ScrollContainer/MarginContainer/ContentVBox/StatsCard/StatsVBox/RowTotalGames" unique_id=2055617721]
+[node name="HistoryCard" parent="MainVBox/ScrollContainer/MarginContainer/ContentVBox" unique_id=1269424795 instance=ExtResource("5_history_card")]
 unique_name_in_owner = true
 layout_mode = 2
-size_flags_horizontal = 3
-theme_override_colors/font_color = Color(0.55, 0.58, 0.7, 1)
-theme_override_font_sizes/font_size = 18
-text = "TOTAL GAMES"
-
-[node name="LblTotalGamesVal" type="Label" parent="MainVBox/ScrollContainer/MarginContainer/ContentVBox/StatsCard/StatsVBox/RowTotalGames" unique_id=272417685]
-unique_name_in_owner = true
-layout_mode = 2
-theme_override_colors/font_color = Color(0.3, 0.85, 1, 1)
-theme_override_font_sizes/font_size = 18
-text = "0"
-horizontal_alignment = 2
-
-[node name="RowTotalTime" type="HBoxContainer" parent="MainVBox/ScrollContainer/MarginContainer/ContentVBox/StatsCard/StatsVBox" unique_id=763667186]
-layout_mode = 2
-
-[node name="LblTotalTimeName" type="Label" parent="MainVBox/ScrollContainer/MarginContainer/ContentVBox/StatsCard/StatsVBox/RowTotalTime" unique_id=1454376872]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_colors/font_color = Color(0.55, 0.58, 0.7, 1)
-theme_override_font_sizes/font_size = 18
-text = "TOTAL TIME"
-
-[node name="LblTotalTimeVal" type="Label" parent="MainVBox/ScrollContainer/MarginContainer/ContentVBox/StatsCard/StatsVBox/RowTotalTime" unique_id=467774305]
-unique_name_in_owner = true
-layout_mode = 2
-theme_override_colors/font_color = Color(0.3, 0.85, 1, 1)
-theme_override_font_sizes/font_size = 18
-text = "00:00"
-horizontal_alignment = 2
-
-[node name="RowBestScore" type="HBoxContainer" parent="MainVBox/ScrollContainer/MarginContainer/ContentVBox/StatsCard/StatsVBox" unique_id=1665982333]
-layout_mode = 2
-
-[node name="LblBestScoreName" type="Label" parent="MainVBox/ScrollContainer/MarginContainer/ContentVBox/StatsCard/StatsVBox/RowBestScore" unique_id=1570342803]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_colors/font_color = Color(0.55, 0.58, 0.7, 1)
-theme_override_font_sizes/font_size = 18
-text = "BEST SCORE"
-
-[node name="LblBestScoreVal" type="Label" parent="MainVBox/ScrollContainer/MarginContainer/ContentVBox/StatsCard/StatsVBox/RowBestScore" unique_id=1148895916]
-unique_name_in_owner = true
-layout_mode = 2
-theme_override_colors/font_color = Color(0.3, 0.85, 1, 1)
-theme_override_font_sizes/font_size = 18
-text = "0"
-horizontal_alignment = 2
-
-[node name="Sep2" type="HSeparator" parent="MainVBox/ScrollContainer/MarginContainer/ContentVBox/StatsCard/StatsVBox" unique_id=1044321957]
-layout_mode = 2
-
-[node name="RowPPS" type="HBoxContainer" parent="MainVBox/ScrollContainer/MarginContainer/ContentVBox/StatsCard/StatsVBox" unique_id=2106319802]
-layout_mode = 2
-
-[node name="LblPPSName" type="Label" parent="MainVBox/ScrollContainer/MarginContainer/ContentVBox/StatsCard/StatsVBox/RowPPS" unique_id=1361212875]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_colors/font_color = Color(0.55, 0.58, 0.7, 1)
-theme_override_font_sizes/font_size = 18
-text = "Pieces Per Second (PPS)"
-
-[node name="LblPPSVal" type="Label" parent="MainVBox/ScrollContainer/MarginContainer/ContentVBox/StatsCard/StatsVBox/RowPPS" unique_id=1027900377]
-unique_name_in_owner = true
-layout_mode = 2
-theme_override_colors/font_color = Color(0.3, 0.85, 1, 1)
-theme_override_font_sizes/font_size = 18
-text = "—"
-horizontal_alignment = 2
-
-[node name="RowAPM" type="HBoxContainer" parent="MainVBox/ScrollContainer/MarginContainer/ContentVBox/StatsCard/StatsVBox" unique_id=661862817]
-layout_mode = 2
-
-[node name="LblAPMName" type="Label" parent="MainVBox/ScrollContainer/MarginContainer/ContentVBox/StatsCard/StatsVBox/RowAPM" unique_id=1810197660]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_colors/font_color = Color(0.55, 0.58, 0.7, 1)
-theme_override_font_sizes/font_size = 18
-text = "Attack Per Minute (APM)"
-
-[node name="LblAPMVal" type="Label" parent="MainVBox/ScrollContainer/MarginContainer/ContentVBox/StatsCard/StatsVBox/RowAPM" unique_id=100355986]
-unique_name_in_owner = true
-layout_mode = 2
-theme_override_colors/font_color = Color(0.3, 0.85, 1, 1)
-theme_override_font_sizes/font_size = 18
-text = "—"
-horizontal_alignment = 2
-
-[node name="RowAPP" type="HBoxContainer" parent="MainVBox/ScrollContainer/MarginContainer/ContentVBox/StatsCard/StatsVBox" unique_id=1603324728]
-layout_mode = 2
-
-[node name="LblAPPName" type="Label" parent="MainVBox/ScrollContainer/MarginContainer/ContentVBox/StatsCard/StatsVBox/RowAPP" unique_id=70160551]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_colors/font_color = Color(0.55, 0.58, 0.7, 1)
-theme_override_font_sizes/font_size = 18
-text = "Attack Per Piece (APP)"
-
-[node name="LblAPPVal" type="Label" parent="MainVBox/ScrollContainer/MarginContainer/ContentVBox/StatsCard/StatsVBox/RowAPP" unique_id=1660707630]
-unique_name_in_owner = true
-layout_mode = 2
-theme_override_colors/font_color = Color(0.3, 0.85, 1, 1)
-theme_override_font_sizes/font_size = 18
-text = "—"
-horizontal_alignment = 2
-
-[node name="RowKPP" type="HBoxContainer" parent="MainVBox/ScrollContainer/MarginContainer/ContentVBox/StatsCard/StatsVBox" unique_id=1500440976]
-layout_mode = 2
-
-[node name="LblKPPName" type="Label" parent="MainVBox/ScrollContainer/MarginContainer/ContentVBox/StatsCard/StatsVBox/RowKPP" unique_id=1752981598]
-unique_name_in_owner = true
-layout_mode = 2
-size_flags_horizontal = 3
-theme_override_colors/font_color = Color(0.55, 0.58, 0.7, 1)
-theme_override_font_sizes/font_size = 18
-text = "Keys Per Piece (KPP)"
-
-[node name="LblKPPVal" type="Label" parent="MainVBox/ScrollContainer/MarginContainer/ContentVBox/StatsCard/StatsVBox/RowKPP" unique_id=2061112979]
-unique_name_in_owner = true
-layout_mode = 2
-theme_override_colors/font_color = Color(0.3, 0.85, 1, 1)
-theme_override_font_sizes/font_size = 18
-text = "—"
-horizontal_alignment = 2
-
-[node name="HistoryCard" type="PanelContainer" parent="MainVBox/ScrollContainer/MarginContainer/ContentVBox" unique_id=1050025137]
-layout_mode = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_card")
-
-[node name="HistoryVBox" type="VBoxContainer" parent="MainVBox/ScrollContainer/MarginContainer/ContentVBox/HistoryCard" unique_id=1650156230]
-layout_mode = 2
-theme_override_constants/separation = 8
-
-[node name="HistoryTitle" type="Label" parent="MainVBox/ScrollContainer/MarginContainer/ContentVBox/HistoryCard/HistoryVBox" unique_id=1826576100]
-unique_name_in_owner = true
-layout_mode = 2
-theme_override_colors/font_color = Color(0.9, 0.9, 1, 1)
-theme_override_font_sizes/font_size = 22
-text = "RECENT HISTORY"
-
-[node name="Sep3" type="HSeparator" parent="MainVBox/ScrollContainer/MarginContainer/ContentVBox/HistoryCard/HistoryVBox" unique_id=2079183052]
-layout_mode = 2
-
-[node name="HistoryContainer" type="VBoxContainer" parent="MainVBox/ScrollContainer/MarginContainer/ContentVBox/HistoryCard/HistoryVBox" unique_id=210465461]
-unique_name_in_owner = true
-layout_mode = 2
-theme_override_constants/separation = 4
 
 [node name="BottomSpacer" type="Control" parent="MainVBox/ScrollContainer/MarginContainer/ContentVBox" unique_id=1358430928]
 custom_minimum_size = Vector2(0, 40)

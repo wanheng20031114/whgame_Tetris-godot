@@ -1,0 +1,306 @@
+[gd_scene format=3]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_card"]
+content_margin_left = 20.0
+content_margin_top = 16.0
+content_margin_right = 20.0
+content_margin_bottom = 16.0
+bg_color = Color(0.1, 0.1, 0.14, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.2, 0.2, 0.28, 1)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[node name="StatsCard" type="PanelContainer"]
+theme_override_styles/panel = SubResource("StyleBoxFlat_card")
+
+[node name="StatsVBox" type="VBoxContainer" parent="."]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="StatsTitle" type="Label" parent="StatsVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9, 0.9, 1, 1)
+theme_override_font_sizes/font_size = 22
+text = "PLAYER STATS"
+
+[node name="Sep1" type="HSeparator" parent="StatsVBox"]
+layout_mode = 2
+
+[node name="RowPlayerName" type="HBoxContainer" parent="StatsVBox"]
+layout_mode = 2
+
+[node name="LblPlayerNameName" type="Label" parent="StatsVBox/RowPlayerName"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.55, 0.58, 0.7, 1)
+theme_override_font_sizes/font_size = 18
+text = "PLAYER"
+
+[node name="LblPlayerNameVal" type="Label" parent="StatsVBox/RowPlayerName"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.3, 0.85, 1, 1)
+theme_override_font_sizes/font_size = 18
+text = "-"
+horizontal_alignment = 2
+
+[node name="RowTotalGames" type="HBoxContainer" parent="StatsVBox"]
+layout_mode = 2
+
+[node name="LblTotalGamesName" type="Label" parent="StatsVBox/RowTotalGames"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.55, 0.58, 0.7, 1)
+theme_override_font_sizes/font_size = 18
+text = "TOTAL GAMES"
+
+[node name="LblTotalGamesVal" type="Label" parent="StatsVBox/RowTotalGames"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.3, 0.85, 1, 1)
+theme_override_font_sizes/font_size = 18
+text = "0"
+horizontal_alignment = 2
+
+[node name="RowTotalTime" type="HBoxContainer" parent="StatsVBox"]
+layout_mode = 2
+
+[node name="LblTotalTimeName" type="Label" parent="StatsVBox/RowTotalTime"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.55, 0.58, 0.7, 1)
+theme_override_font_sizes/font_size = 18
+text = "TOTAL TIME"
+
+[node name="LblTotalTimeVal" type="Label" parent="StatsVBox/RowTotalTime"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.3, 0.85, 1, 1)
+theme_override_font_sizes/font_size = 18
+text = "00:00"
+horizontal_alignment = 2
+
+[node name="RowTotalLines" type="HBoxContainer" parent="StatsVBox"]
+layout_mode = 2
+
+[node name="LblTotalLinesName" type="Label" parent="StatsVBox/RowTotalLines"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.55, 0.58, 0.7, 1)
+theme_override_font_sizes/font_size = 18
+text = "TOTAL LINES"
+
+[node name="LblTotalLinesVal" type="Label" parent="StatsVBox/RowTotalLines"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.3, 0.85, 1, 1)
+theme_override_font_sizes/font_size = 18
+text = "0"
+horizontal_alignment = 2
+
+[node name="RowTotalPieces" type="HBoxContainer" parent="StatsVBox"]
+layout_mode = 2
+
+[node name="LblTotalPiecesName" type="Label" parent="StatsVBox/RowTotalPieces"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.55, 0.58, 0.7, 1)
+theme_override_font_sizes/font_size = 18
+text = "TOTAL PIECES"
+
+[node name="LblTotalPiecesVal" type="Label" parent="StatsVBox/RowTotalPieces"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.3, 0.85, 1, 1)
+theme_override_font_sizes/font_size = 18
+text = "0"
+horizontal_alignment = 2
+
+[node name="Sep2" type="HSeparator" parent="StatsVBox"]
+layout_mode = 2
+
+[node name="RowBestScore" type="HBoxContainer" parent="StatsVBox"]
+layout_mode = 2
+
+[node name="LblBestScoreName" type="Label" parent="StatsVBox/RowBestScore"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.55, 0.58, 0.7, 1)
+theme_override_font_sizes/font_size = 18
+text = "BEST SCORE"
+
+[node name="LblBestScoreVal" type="Label" parent="StatsVBox/RowBestScore"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.3, 0.85, 1, 1)
+theme_override_font_sizes/font_size = 18
+text = "0"
+horizontal_alignment = 2
+
+[node name="RowBestLines" type="HBoxContainer" parent="StatsVBox"]
+layout_mode = 2
+
+[node name="LblBestLinesName" type="Label" parent="StatsVBox/RowBestLines"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.55, 0.58, 0.7, 1)
+theme_override_font_sizes/font_size = 18
+text = "BEST LINES"
+
+[node name="LblBestLinesVal" type="Label" parent="StatsVBox/RowBestLines"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.3, 0.85, 1, 1)
+theme_override_font_sizes/font_size = 18
+text = "0"
+horizontal_alignment = 2
+
+[node name="RowBestPPS" type="HBoxContainer" parent="StatsVBox"]
+layout_mode = 2
+
+[node name="LblBestPPSName" type="Label" parent="StatsVBox/RowBestPPS"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.55, 0.58, 0.7, 1)
+theme_override_font_sizes/font_size = 18
+text = "BEST PPS"
+
+[node name="LblBestPPSVal" type="Label" parent="StatsVBox/RowBestPPS"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.3, 0.85, 1, 1)
+theme_override_font_sizes/font_size = 18
+text = "0.00"
+horizontal_alignment = 2
+
+[node name="RowBestAPM" type="HBoxContainer" parent="StatsVBox"]
+layout_mode = 2
+
+[node name="LblBestAPMName" type="Label" parent="StatsVBox/RowBestAPM"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.55, 0.58, 0.7, 1)
+theme_override_font_sizes/font_size = 18
+text = "BEST APM"
+
+[node name="LblBestAPMVal" type="Label" parent="StatsVBox/RowBestAPM"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.3, 0.85, 1, 1)
+theme_override_font_sizes/font_size = 18
+text = "0.0"
+horizontal_alignment = 2
+
+[node name="Sep3" type="HSeparator" parent="StatsVBox"]
+layout_mode = 2
+
+[node name="RowPPS" type="HBoxContainer" parent="StatsVBox"]
+layout_mode = 2
+
+[node name="LblPPSName" type="Label" parent="StatsVBox/RowPPS"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.55, 0.58, 0.7, 1)
+theme_override_font_sizes/font_size = 18
+text = "AVG PPS"
+
+[node name="LblPPSVal" type="Label" parent="StatsVBox/RowPPS"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.3, 0.85, 1, 1)
+theme_override_font_sizes/font_size = 18
+text = "N/A"
+horizontal_alignment = 2
+
+[node name="RowAPM" type="HBoxContainer" parent="StatsVBox"]
+layout_mode = 2
+
+[node name="LblAPMName" type="Label" parent="StatsVBox/RowAPM"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.55, 0.58, 0.7, 1)
+theme_override_font_sizes/font_size = 18
+text = "AVG APM"
+
+[node name="LblAPMVal" type="Label" parent="StatsVBox/RowAPM"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.3, 0.85, 1, 1)
+theme_override_font_sizes/font_size = 18
+text = "N/A"
+horizontal_alignment = 2
+
+[node name="RowAPP" type="HBoxContainer" parent="StatsVBox"]
+layout_mode = 2
+
+[node name="LblAPPName" type="Label" parent="StatsVBox/RowAPP"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.55, 0.58, 0.7, 1)
+theme_override_font_sizes/font_size = 18
+text = "AVG APP"
+
+[node name="LblAPPVal" type="Label" parent="StatsVBox/RowAPP"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.3, 0.85, 1, 1)
+theme_override_font_sizes/font_size = 18
+text = "N/A"
+horizontal_alignment = 2
+
+[node name="RowKPP" type="HBoxContainer" parent="StatsVBox"]
+layout_mode = 2
+
+[node name="LblKPPName" type="Label" parent="StatsVBox/RowKPP"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.55, 0.58, 0.7, 1)
+theme_override_font_sizes/font_size = 18
+text = "AVG KPP"
+
+[node name="LblKPPVal" type="Label" parent="StatsVBox/RowKPP"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.3, 0.85, 1, 1)
+theme_override_font_sizes/font_size = 18
+text = "N/A"
+horizontal_alignment = 2
+
+[node name="RowAvgScore" type="HBoxContainer" parent="StatsVBox"]
+layout_mode = 2
+
+[node name="LblAvgScoreName" type="Label" parent="StatsVBox/RowAvgScore"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_colors/font_color = Color(0.55, 0.58, 0.7, 1)
+theme_override_font_sizes/font_size = 18
+text = "AVG SCORE"
+
+[node name="LblAvgScoreVal" type="Label" parent="StatsVBox/RowAvgScore"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.3, 0.85, 1, 1)
+theme_override_font_sizes/font_size = 18
+text = "0"
+horizontal_alignment = 2

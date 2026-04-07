@@ -37,8 +37,8 @@ const MAX_HISTORY_ENTRIES: int = 500
 ## 开发模式（编辑器中运行）：user://userdata/
 static func get_data_dir() -> String:
 	if OS.has_feature("editor"):
-		# 编辑器中运行 → user:// 路径
-		return "user://userdata"
+		# 编辑器中运行 → 项目根目录
+		return "res://userdata"
 	else:
 		# 导出后 → exe 同目录
 		var exe_dir: String = OS.get_executable_path().get_base_dir()

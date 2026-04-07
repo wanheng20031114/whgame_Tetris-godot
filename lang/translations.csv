@@ -78,3 +78,39 @@ TXT_TOTAL_TIME,累计时长,TOTAL TIME,累計時間
 TXT_BEST_SCORE,最高分数,BEST SCORE,ハイスコア
 TXT_RECENT_HISTORY,最近记录,RECENT HISTORY,最近の記録
 TXT_NO_DATA,暂无数据，先去玩一局吧！,No data yet. Play a game first!,データがありません。まずプレイしてください！
+TXT_PLAYER,玩家,PLAYER,プレイヤー
+TXT_TOTAL_LINES,总消行,TOTAL LINES,総消去ライン
+TXT_TOTAL_PIECES,总方块数,TOTAL PIECES,総ピース数
+TXT_BEST_LINES,最高消行,BEST LINES,最高ライン
+TXT_BEST_PPS,最高PPS,BEST PPS,最高PPS
+TXT_BEST_APM,最高APM,BEST APM,最高APM
+TXT_AVG_PPS,平均PPS,AVG PPS,平均PPS
+TXT_AVG_APM,平均APM,AVG APM,平均APM
+TXT_AVG_APP,平均APP,AVG APP,平均APP
+TXT_AVG_KPP,平均KPP,AVG KPP,平均KPP
+TXT_AVG_SCORE,平均分,AVG SCORE,平均スコア
+TXT_TIME,时间,TIME,時間
+TXT_SESSION,对局,SESSION,セッション
+TXT_NO_DETAIL_SNAPSHOT,未找到详细快照,No detailed snapshot found,詳細スナップショットが見つかりません
+TXT_DURATION,时长,DURATION,時間
+TXT_PIECES,方块,PIECES,ピース
+TXT_KEYS,按键,KEYS,キー
+TXT_DAMAGE,伤害,DAMAGE,ダメージ
+TXT_CLEAR_BREAKDOWN,单消双消三消四消,Single/Double/Triple/Tetris,シングル/ダブル/トリプル/テトリス
+TXT_TSPIN_CLEARS,T旋消行,T-Spin Clears,Tスピン消去
+TXT_SPIN_CLEARS,旋转消行,Spin Clears,スピン消去
+TXT_MAX_COMBO,最大连击,Max Combo,最大コンボ
+TXT_MAX_B2B,最大B2B,Max B2B,最大B2B
+TXT_START,开始,START,開始
+TXT_END,结束,END,終了
+TXT_SNAPSHOTS,快照数,SNAPSHOTS,スナップショット数
+TXT_DISCARDED,丢弃数,DISCARDED,破棄数
+TXT_NA,暂无,N/A,該当なし
+TXT_PPS_SHORT,PPS,PPS,PPS
+TXT_APM_SHORT,APM,APM,APM
+TXT_APP_SHORT,APP,APP,APP
+TXT_KPP_SHORT,KPP,KPP,KPP
+TXT_PPS_EXPLAIN,PPS（每秒落块）,PPS (Pieces Per Second),PPS（秒間ピース数）
+TXT_APM_EXPLAIN,APM（每分钟攻击）,APM (Attack Per Minute),APM（分間攻撃数）
+TXT_APP_EXPLAIN,APP（每块攻击）,APP (Attack Per Piece),APP（ピースあたり攻撃）
+TXT_KPP_EXPLAIN,KPP（每块按键）,KPP (Keys Per Piece),KPP（ピースあたりキー）
