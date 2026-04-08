@@ -67,13 +67,7 @@ func _ready() -> void:
 	# 手柄/键盘用户在第一次按左右键后才进入明确选中态。
 	call_deferred("_clear_initial_card_selection")
 
-	# 背景层固定在底部并全屏裁切显示
-	var custom_bg = get_node_or_null("CustomBackground")
-	if custom_bg:
-		move_child(custom_bg, 0)
-		custom_bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		custom_bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		custom_bg.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	# 背景保持场景文件中的静态布局，不在运行时改锚点/拉伸参数。
 
 	# 数据按钮交互
 	if btn_stats:

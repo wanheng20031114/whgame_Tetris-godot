@@ -3,24 +3,23 @@ extends Control
 
 ## UI：极简现代登录界面
 
+const BG_SWING_TOP_Y: float = -500.0
+const BG_SWING_BOTTOM_Y: float = 0.0
+const BG_SWING_TRAVEL_SECONDS: float = 28.5
+const BG_SWING_PAUSE_SECONDS: float = 1.5
+
 signal login_successful(player_name: String)
 
 @onready var line_edit_name: LineEdit = %NameInput
 @onready var btn_login: Button = %LoginButton
+@onready var custom_bg: TextureRect = get_node_or_null("CustomBackground")
+
+var _bg_tween: Tween
 
 func _ready() -> void:
-	# 强制保证背景节点永远在最底层并且拉伸全图
-	var custom_bg = get_node_or_null("CustomBackground")
-	if custom_bg:
-		move_child(custom_bg, 0)
-		custom_bg.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		custom_bg.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		custom_bg.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
-		
-		
+	# 背景保持场景文件中的静态布局，不在运行时改锚点/拉伸参数。
 	_update_texts()
-	
-
+	_start_bg_swing_loop()
 
 	# 进入界面的淡入动画，使用原生 Tween 让效果高级点
 	modulate.a = 0
@@ -31,6 +30,10 @@ func _ready() -> void:
 	line_edit_name.text_submitted.connect(_on_text_submitted)
 	
 	line_edit_name.grab_focus() # 启动后自动获取焦点
+
+func _exit_tree() -> void:
+	if _bg_tween and _bg_tween.is_running():
+		_bg_tween.kill()
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_TRANSLATION_CHANGED and is_inside_tree():
@@ -63,3 +66,19 @@ func _submit_login() -> void:
 	
 	# 等动画跑完后跳转
 	tween.finished.connect(func(): login_successful.emit(pname))
+
+func _start_bg_swing_loop() -> void:
+	if custom_bg == null:
+		return
+
+	custom_bg.position.y = BG_SWING_BOTTOM_Y
+
+	if _bg_tween and _bg_tween.is_running():
+		_bg_tween.kill()
+
+	_bg_tween = create_tween()
+	_bg_tween.set_loops()
+	_bg_tween.tween_interval(BG_SWING_PAUSE_SECONDS)
+	_bg_tween.tween_property(custom_bg, "position:y", BG_SWING_TOP_Y, BG_SWING_TRAVEL_SECONDS).set_trans(Tween.TRANS_LINEAR).set_ease(Tween.EASE_IN)
+	_bg_tween.tween_interval(BG_SWING_PAUSE_SECONDS)
+	_bg_tween.tween_property(custom_bg, "position:y", BG_SWING_BOTTOM_Y, BG_SWING_TRAVEL_SECONDS).set_trans(Tween.TRANS_LINEAR).set_ease(Tween.EASE_IN)

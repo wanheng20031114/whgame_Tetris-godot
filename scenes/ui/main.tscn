@@ -3,7 +3,6 @@
 [ext_resource type="Script" uid="uid://clqynivx6dbv4" path="res://scripts/ui/ui_manager.gd" id="1_manager"]
 [ext_resource type="PackedScene" uid="uid://dvueqf22sfge1" path="res://scenes/ui/login_screen.tscn" id="2_login"]
 [ext_resource type="PackedScene" uid="uid://bbgjx6q6tpspu" path="res://scenes/ui/main_lobby.tscn" id="3_lobby"]
-[ext_resource type="Texture2D" uid="uid://c1176m2llbj8n" path="res://assets/images/bg_login.jpg" id="4_vspwy"]
 
 [node name="MainUI" type="Control" unique_id=1894004525]
 layout_mode = 3
@@ -15,11 +14,3 @@ grow_vertical = 2
 script = ExtResource("1_manager")
 login_screen_scene = ExtResource("2_login")
 main_lobby_scene = ExtResource("3_lobby")
-
-[node name="CustomBackground" type="TextureRect" parent="." unique_id=133898143]
-layout_mode = 0
-offset_left = -3.0
-offset_top = -60.0
-offset_right = 1281.0
-offset_bottom = 964.0
-texture = ExtResource("4_vspwy")
