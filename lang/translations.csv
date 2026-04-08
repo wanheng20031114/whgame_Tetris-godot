@@ -114,3 +114,25 @@ TXT_PPS_EXPLAIN,PPS（每秒落块）,PPS (Pieces Per Second),PPS（秒間ピー
 TXT_APM_EXPLAIN,APM（每分钟攻击）,APM (Attack Per Minute),APM（分間攻撃数）
 TXT_APP_EXPLAIN,APP（每块攻击）,APP (Attack Per Piece),APP（ピースあたり攻撃）
 TXT_KPP_EXPLAIN,KPP（每块按键）,KPP (Keys Per Piece),KPP（ピースあたりキー）
+TXT_KEYBINDINGS,按键设置,KEY BINDINGS,キー設定
+TXT_BIND_TIP,点击一个槽位后按下键盘或手柄按键进行绑定（每个操作最多3个输入，按 ESC 取消监听）,Click a slot then press a keyboard or gamepad button to bind (up to 3 per action; press ESC to cancel).,スロットを押してからキーボードまたはゲームパッドのボタンを入力してください（各操作最大3つ、ESCでキャンセル）
+TXT_BIND_RESET_DEFAULT,恢复默认按键,RESET TO DEFAULT,デフォルトに戻す
+TXT_BIND_RESET_ACTION,重置,RESET,リセット
+TXT_BIND_WAITING,按下按键...,Press input...,入力待ち...
+TXT_BIND_EMPTY,未设置,Empty,未設定
+TXT_BIND_SLOT_TIP,点击后进入监听并覆盖该槽位,Click to listen and replace this slot.,クリックしてこのスロットを上書き
+TXT_BIND_PRESS_KEY,监听中：请按下键盘或手柄按钮（ESC 取消）,Listening: press a keyboard or gamepad button (ESC to cancel).,入力待ち：キーボードまたはゲームパッドボタンを押してください（ESCでキャンセル）
+TXT_BIND_SAVED,按键已保存,Binding saved.,バインドを保存しました。
+TXT_BIND_CANCELLED,已取消监听,Capture cancelled.,入力待ちをキャンセルしました。
+TXT_BIND_DUPLICATE,同一操作内不能重复绑定相同输入,Duplicate input in the same action is not allowed.,同じ操作内で同一入力は重複できません。
+TXT_BIND_RESTORED,已恢复默认映射,Default bindings restored.,デフォルト割り当てに戻しました。
+TXT_BIND_UNKNOWN,未知输入,Unknown input,不明な入力
+TXT_ACTION_MOVE_LEFT,左移,Move Left,左移動
+TXT_ACTION_MOVE_RIGHT,右移,Move Right,右移動
+TXT_ACTION_SOFT_DROP,软降,Soft Drop,ソフトドロップ
+TXT_ACTION_HARD_DROP,硬降,Hard Drop,ハードドロップ
+TXT_ACTION_ROTATE_CW,顺时针旋转,Rotate CW,右回転
+TXT_ACTION_ROTATE_CCW,逆时针旋转,Rotate CCW,左回転
+TXT_ACTION_ROTATE_180,180旋转,Rotate 180,180度回転
+TXT_ACTION_HOLD,暂存,Hold,ホールド
+TXT_ACTION_PAUSE,暂停,Pause,一時停止
