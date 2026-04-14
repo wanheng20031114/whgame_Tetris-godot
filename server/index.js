@@ -78,6 +78,10 @@ function handleMessage(ws, data) {
             // 创建新房间
             const client = clients.get(ws);
             if (!client) return;
+            if (client.room_id) {
+                send(ws, 'error', { message: 'already_in_room' });
+                return;
+            }
             const createRetryMs = getCooldownRetryMs(ws, 'create_room', CREATE_ROOM_COOLDOWN_MS);
             if (createRetryMs > 0) {
                 send(ws, 'error', {
@@ -105,7 +109,22 @@ function handleMessage(ws, data) {
         case 'join_room':
             // 加入房间
             const joinClient = clients.get(ws);
+            if (!joinClient) return;
             const targetRoom = rooms.get(payload.room_id);
+            if (!targetRoom) {
+                send(ws, 'error', { message: 'room_not_found' });
+                return;
+            }
+
+            if (joinClient.room_id === payload.room_id || targetRoom.players.includes(ws)) {
+                send(ws, 'error', { message: 'already_in_room' });
+                return;
+            }
+
+            if (targetRoom.players.length > 0 && targetRoom.players[0] === ws) {
+                send(ws, 'error', { message: 'cannot_join_own_room' });
+                return;
+            }
 
             if (targetRoom && targetRoom.players.length < 2) {
                 if (joinClient.room_id && joinClient.room_id !== payload.room_id) {
@@ -198,15 +217,27 @@ function leaveWaitingRoomIfOwned(client, ws) {
 // 游戏启动辅助
 // ============================================================
 function startGame(room) {
+    // Defensive guard: a valid match must have exactly two distinct sockets.
+    const uniquePlayers = Array.from(new Set(room.players));
+    if (uniquePlayers.length !== 2) {
+        room.players = uniquePlayers;
+        room.status = 'waiting';
+        for (const p of uniquePlayers) {
+            send(p, 'error', { message: 'invalid_room_state' });
+        }
+        broadcastRoomList();
+        return;
+    }
+
     room.status = 'playing';
     room.seed = Math.floor(Math.random() * 2147483647) + 1;
     room.rematch.clear();
 
-    const p1 = clients.get(room.players[0]);
-    const p2 = clients.get(room.players[1]);
+    const p1 = clients.get(uniquePlayers[0]);
+    const p2 = clients.get(uniquePlayers[1]);
 
-    send(room.players[0], 'game_start', { opponent_name: p2.name, seed: room.seed });
-    send(room.players[1], 'game_start', { opponent_name: p1.name, seed: room.seed });
+    send(uniquePlayers[0], 'game_start', { opponent_name: p2.name, seed: room.seed });
+    send(uniquePlayers[1], 'game_start', { opponent_name: p1.name, seed: room.seed });
     broadcastRoomList();
 }
 
