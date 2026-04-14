@@ -6,7 +6,7 @@
 # 1. 路径管理：管理玩家游戏本地数据的存储目录路径（区分编辑器环境和打包后的正式环境）。
 # 2. 单局记录：将玩家的单局游戏数据（Session）自动以 JSON 格式保存到本地磁盘。
 # 3. 全局统计：汇总并计算玩家的整体统计数据（Stats），例如总游戏时长、总落块数、总消除行数，记录最高分、最大连击等。
-# 4. 雷达图管理：利用指数移动平均（EMA）等算法，对玩家的六维能力（速度、攻击、效率、拓扑、稳定性、视野）进行平滑和持久化存储。
+# 4. 雷达图管理：利用指数移动平均（EMA）等算法，对玩家的六维能力（速度、攻击、效率、结构、稳定性、视野）进行平滑和持久化存储。
 # 5. 历史记录管理：维护一个支持最多 500 条近期游戏快照的历史记录队列，超出部分会自动弹出。
 # 
 # 该类所有的方法均为 static（静态方法），在全剧中可以直接通过 PlayerDataStore.方法名() 调用，无需实例化。
@@ -192,13 +192,13 @@ static func update_stats(player_name: String, history_entry: Dictionary, radar_s
 	var ema_alpha: float = 0.3
 	var existing_radar: Dictionary = stats.get("radar_scores", {
 		"speed": 0.0, "attack": 0.0, "efficiency": 0.0,
-		"topology": 0.0, "stability": 0.0, "vision": 0.0
+		"structure": 0.0, "stability": 0.0, "vision": 0.0
 	})
 	if not existing_radar.has("stability"):
 		existing_radar["stability"] = 0.0
 
 	var updated_radar: Dictionary = {}
-	for key in ["speed", "attack", "efficiency", "topology", "stability", "vision"]:
+	for key in ["speed", "attack", "efficiency", "structure", "stability", "vision"]:
 		var old_val: float = float(existing_radar.get(key, 0.0))
 		var default_new_val: float = 0.0
 		var new_val: float = float(radar_scores.get(key, default_new_val))
@@ -274,7 +274,7 @@ static func _default_stats() -> Dictionary:
 			"speed": 0.0,
 			"attack": 0.0,
 			"efficiency": 0.0,
-			"topology": 0.0,
+			"structure": 0.0,
 			"stability": 0.0,
 			"vision": 0.0
 		},

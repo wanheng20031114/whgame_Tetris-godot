@@ -72,7 +72,7 @@ func _load_and_display_data() -> void:
 
 	var radar: Dictionary = stats.get("radar_scores", {})
 	if total_games == 0:
-		radar = {"speed": 0, "attack": 0, "efficiency": 0, "topology": 0, "stability": 0, "vision": 0}
+		radar = {"speed": 0, "attack": 0, "efficiency": 0, "structure": 0, "stability": 0, "vision": 0}
 	if radar_chart and radar_chart.has_method("set_data"):
 		radar_chart.set_data(radar)
 
@@ -238,8 +238,8 @@ func _build_session_detail_text(entry: Dictionary) -> String:
 		float(radar.get("efficiency", 0.0))
 	])
 	lines.append("%s: %.1f | %s: %.1f | %s: %.1f" % [
-		tr("TXT_RADAR_TOPOLOGY"),
-		float(radar.get("topology", entry.get("topology", 0.0))),
+		tr("TXT_RADAR_STRUCTURE"),
+		float(radar.get("structure", entry.get("structure", 0.0))),
 		tr("TXT_RADAR_STABILITY"),
 		float(radar.get("stability", entry.get("stability", 0.0))),
 		tr("TXT_RADAR_VISION"),

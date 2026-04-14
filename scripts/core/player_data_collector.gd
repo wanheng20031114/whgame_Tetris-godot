@@ -43,9 +43,9 @@ var _piece_index: int = 0
 
 var _total_damage: int = 0
 var _total_key_presses: int = 0
-var _topology_score_sum: float = 0.0
+var _structure_score_sum: float = 0.0
 var _stability_score_sum: float = 0.0
-var _topology_samples: int = 0
+var _structure_samples: int = 0
 
 var _effective_clear_events: int = 0
 var _spin_clear_events: int = 0
@@ -84,9 +84,9 @@ func start_session(player_name: String) -> void:
 	_piece_index = 0
 	_total_damage = 0
 	_total_key_presses = 0
-	_topology_score_sum = 0.0
+	_structure_score_sum = 0.0
 	_stability_score_sum = 0.0
-	_topology_samples = 0
+	_structure_samples = 0
 
 	_effective_clear_events = 0
 	_spin_clear_events = 0
@@ -119,7 +119,7 @@ func start_session(player_name: String) -> void:
 # - is_spin / is_t_spin: 判断该方块是否属于普通旋转或者高阶技术T旋。
 # - damage_this_lock: 单次落块产生的对敌（或自适应）伤害数值。
 # - hold_used_this_piece: 本次操作是否利用了 Hold（暂存）区。
-# - topology_score / stability_score: 由拓扑评分器给出的地形结构平整度、稳定空洞度得分。
+# - structure_score / stability_score: 由结构评分器给出的地形结构平整度、稳定空洞度得分。
 # 
 # 逻辑：
 # 1. 判断并跳过未激活状态下的意外触发。
@@ -146,7 +146,7 @@ func record_piece_drop(
 	lines_cleared_this_lock: int,
 	damage_this_lock: int,
 	hold_used_this_piece: bool,
-	topology_score: float,
+	structure_score: float,
 	stability_score: float
 ) -> void:
 	if not _active:
@@ -161,9 +161,9 @@ func record_piece_drop(
 	key_presses_this_piece = 0
 
 	_total_damage += damage_this_lock
-	_topology_score_sum += topology_score
+	_structure_score_sum += structure_score
 	_stability_score_sum += stability_score
-	_topology_samples += 1
+	_structure_samples += 1
 
 	if lines_cleared_this_lock == 1:
 		_singles += 1
@@ -218,7 +218,7 @@ func record_piece_drop(
 		"key_presses_this_piece": kp,
 		"hold_used": hold_used_this_piece,
 		"elapsed_since_last_piece_ms": elapsed_since_last,
-		"topology_score": snapped(topology_score, 0.1),
+		"structure_score": snapped(structure_score, 0.1),
 		"stability_score": snapped(stability_score, 0.1)
 	}
 
@@ -243,7 +243,7 @@ func record_piece_drop(
 #    - apm (Attack Per Minute): 每分钟攻击输出值。
 #    - app (Attack Per Piece): 每次落块攻击效率。
 #    - kpp (Keypress Per Piece): 单个方块的平均按键消耗数。
-# 3. 将整局中采集过且平均化后的拓扑与稳定度带入到 _calculate_radar_scores 中计算出最最终局后六维雷达表。
+# 3. 将整局中采集过且平均化后的结构与稳定度带入到 _calculate_radar_scores 中计算出最最终局后六维雷达表。
 # 4. 把长长的各类明细指标封包成宏大 Session 对象，呼叫 PlayerDataStore 将该单局写入硬盘。
 # 5. 同时生成简单摘要版的 history_entry，告知其并入全局状态之中。
 # 6. 抹除长列快照信息准备释放内存。
@@ -265,9 +265,9 @@ func end_session(final_score: int, final_level: int, final_lines: int) -> Dictio
 	var app: float = float(_total_damage) / maxf(float(pieces_placed), 1.0)
 	var kpp: float = float(_total_key_presses) / maxf(float(pieces_placed), 1.0)
 
-	var avg_topology: float = _topology_score_sum / maxf(float(_topology_samples), 1.0)
-	var avg_stability: float = _stability_score_sum / maxf(float(_topology_samples), 1.0)
-	var radar: Dictionary = _calculate_radar_scores(pps, apm, app, kpp, avg_topology, avg_stability)
+	var avg_structure: float = _structure_score_sum / maxf(float(_structure_samples), 1.0)
+	var avg_stability: float = _stability_score_sum / maxf(float(_structure_samples), 1.0)
+	var radar: Dictionary = _calculate_radar_scores(pps, apm, app, kpp, avg_structure, avg_stability)
 
 	var session_data: Dictionary = {
 		"player_name": _player_name,
@@ -315,7 +315,7 @@ func end_session(final_score: int, final_level: int, final_lines: int) -> Dictio
 		"apm": apm,
 		"app": app,
 		"kpp": kpp,
-		"topology": avg_topology,
+		"structure": avg_structure,
 		"stability": avg_stability,
 		"pieces_placed": pieces_placed
 	}
@@ -355,7 +355,7 @@ func is_active() -> bool:
 # - 速度（speed）: 由实际 pps (Pieces Per Second) / 最大理论阈值 (3.0) 归一化。
 # - 攻击（attack）: 由 apm (Attack Per Minute) / 阈值 (120) 归一化。
 # - 效率（efficiency）: 由落块产出攻击力（app）与单块消耗按键（kpp）的加权平均数结合（0.6 app + 0.4 kpp）。
-# - 拓扑（topology）& 稳定性（stability）: 直接由外部AI或计算器传入平滑后的原始得分并钳制极限。
+# - 结构（structure）& 稳定性（stability）: 直接由外部AI或计算器传入平滑后的原始得分并钳制极限。
 # - 视野（vision）: 通过专门剥离的 _calculate_vision_score 模块单独解算。
 # 
 # 返回：包含各项雷达维度数值（已保留一位小数）的字典。
@@ -365,7 +365,7 @@ func _calculate_radar_scores(
 	apm: float,
 	app: float,
 	kpp: float,
-	topology_score: float,
+	structure_score: float,
 	stability_score: float
 ) -> Dictionary:
 	var speed_score: float = clampf(pps / SPEED_PPS_MAX, 0.0, 1.0) * 100.0
@@ -384,7 +384,7 @@ func _calculate_radar_scores(
 		"speed": snapped(speed_score, 0.1),
 		"attack": snapped(attack_score, 0.1),
 		"efficiency": snapped(efficiency_score, 0.1),
-		"topology": snapped(clampf(topology_score, 0.0, 100.0), 0.1),
+		"structure": snapped(clampf(structure_score, 0.0, 100.0), 0.1),
 		"stability": snapped(clampf(stability_score, 0.0, 100.0), 0.1),
 		"vision": snapped(vision_score, 0.1)
 	}

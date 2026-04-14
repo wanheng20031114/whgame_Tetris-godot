@@ -1,12 +1,12 @@
 extends Node
 
 # ==============================================================================
-# 拓扑评分器（GDScript 版）
+# 结构评分器（GDScript 版）
 # 输入：
 # - board_state_visible: 10x20 可见棋盘，空格定义为 -1
 #
 # 输出：
-# - topology_score: 0~100，综合平整性与空洞质量
+# - structure_score: 0~100，综合平整性与空洞质量
 # - stability_score: 0~100，越高表示空洞越少且越不碎片化
 # - empty_cells / empty_regions / trapped_cells / flatness_score 中间指标
 #
@@ -50,9 +50,9 @@ func EvaluateBoardScores(board_state_visible: Array) -> Dictionary:
 	var stability_score: float = 100.0 - minf(100.0, trapped_cells * 2.0 + maxi(0, empty_regions - 1) * 12.0)
 	stability_score = clampf(stability_score, 0.0, 100.0)
 
-	# 拓扑分：平整性占 65%，空洞质量占 35%。
-	var topology_score: float = clampf(flatness_score * 0.65 + stability_score * 0.35, 0.0, 100.0)
-	return _build_result(topology_score, stability_score, empty_cells, empty_regions, trapped_cells, flatness_score)
+	# 结构分：平整性占 65%，空洞质量占 35%。
+	var structure_score: float = clampf(flatness_score * 0.65 + stability_score * 0.35, 0.0, 100.0)
+	return _build_result(structure_score, stability_score, empty_cells, empty_regions, trapped_cells, flatness_score)
 
 
 # 兼容小写调用风格（避免调用方函数名大小写差异）。
@@ -182,7 +182,7 @@ func _flood_fill(grid: Array, visited: Array, sy: int, sx: int, rows: int, cols:
 
 # 统一返回结构，采集器可直接消费。
 func _build_result(
-	topology_score: float,
+	structure_score: float,
 	stability_score: float,
 	empty_cells: int,
 	empty_regions: int,
@@ -190,7 +190,7 @@ func _build_result(
 	flatness_score: float
 ) -> Dictionary:
 	return {
-		"topology_score": snapped(topology_score, 0.1),
+		"structure_score": snapped(structure_score, 0.1),
 		"stability_score": snapped(stability_score, 0.1),
 		"empty_cells": empty_cells,
 		"empty_regions": empty_regions,

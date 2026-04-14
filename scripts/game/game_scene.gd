@@ -3,7 +3,7 @@ extends TetrisCore
 
 # 单人对局场景：
 # - 继承 TetrisCore 承担基础俄罗斯方块逻辑
-# - 补充单人受攻击条、UI 动效、数据采集与拓扑评分接入
+# - 补充单人受攻击条、UI 动效、数据采集与结构评分接入
 
 @onready var label_score: Label = $HUD/ScoreLabel
 @onready var label_level: Label = $HUD/LevelLabel
@@ -33,14 +33,14 @@ var combo_text_tween: Tween
 
 const GARBAGE_BAR_GAP: float = 6.0
 
-# 单局数据采集与拓扑评分缓存。
+# 单局数据采集与结构评分缓存。
 var _data_collector: PlayerDataCollector
-var _topology_evaluator: Node
+var _structure_evaluator: Node
 var _last_lines_cleared_this_lock: int = 0
 var _last_damage_this_lock: int = 0
 var _last_is_spin: bool = false
 var _last_is_t_spin: bool = false
-var _last_topology_score: float = 0.0
+var _last_structure_score: float = 0.0
 var _last_stability_score: float = 0.0
 var _hold_used_this_piece: bool = false
 
@@ -62,7 +62,7 @@ func _ready() -> void:
 	bgm.play()
 
 	_data_collector = PlayerDataCollector.new()
-	_topology_evaluator = get_node_or_null("TopologyEvaluator")
+	_structure_evaluator = get_node_or_null("StructureEvaluator")
 	var state := get_node_or_null("/root/GameState")
 	var pname: String = ""
 	if state:
@@ -449,7 +449,7 @@ func _count_key_presses() -> void:
 
 
 func _record_piece_snapshot() -> void:
-	# 采集一次“方块锁定快照”：棋盘/next/战斗结果/拓扑评分。
+	# 采集一次“方块锁定快照”：棋盘/next/战斗结果/结构评分。
 	if _data_collector == null or not _data_collector.is_active():
 		return
 	if board == null or bag == null:
@@ -463,10 +463,10 @@ func _record_piece_snapshot() -> void:
 
 	var next_pieces: Array = bag.peek(5)
 
-	# 由 TopologyEvaluator 计算拓扑分与空洞分。
-	var topology_eval: Dictionary = _evaluate_topology_scores(visible_grid)
-	_last_topology_score = float(topology_eval.get("topology_score", 0.0))
-	_last_stability_score = float(topology_eval.get("stability_score", 0.0))
+	# 由 StructureEvaluator 计算结构分与空洞分。
+	var structure_eval: Dictionary = _evaluate_structure_scores(visible_grid)
+	_last_structure_score = float(structure_eval.get("structure_score", 0.0))
+	_last_stability_score = float(structure_eval.get("stability_score", 0.0))
 
 	_data_collector.record_piece_drop(
 		cur_type,
@@ -485,7 +485,7 @@ func _record_piece_snapshot() -> void:
 		_last_lines_cleared_this_lock,
 		_last_damage_this_lock,
 		_hold_used_this_piece,
-		_last_topology_score,
+		_last_structure_score,
 		_last_stability_score
 	)
 
@@ -499,18 +499,18 @@ func _save_and_cleanup_data() -> void:
 	_data_collector.end_session(scoring.score, scoring.level, scoring.lines)
 
 
-func _evaluate_topology_scores(board_state_visible: Array) -> Dictionary:
+func _evaluate_structure_scores(board_state_visible: Array) -> Dictionary:
 	# 同时兼容 PascalCase 与 snake_case 方法名。
-	if _topology_evaluator == null:
-		return {"topology_score": 0.0, "stability_score": 0.0}
+	if _structure_evaluator == null:
+		return {"structure_score": 0.0, "stability_score": 0.0}
 
-	if _topology_evaluator.has_method("EvaluateBoardScores"):
-		var result = _topology_evaluator.call("EvaluateBoardScores", board_state_visible)
+	if _structure_evaluator.has_method("EvaluateBoardScores"):
+		var result = _structure_evaluator.call("EvaluateBoardScores", board_state_visible)
 		if result is Dictionary:
 			return result
-	elif _topology_evaluator.has_method("evaluate_board_scores"):
-		var result2 = _topology_evaluator.call("evaluate_board_scores", board_state_visible)
+	elif _structure_evaluator.has_method("evaluate_board_scores"):
+		var result2 = _structure_evaluator.call("evaluate_board_scores", board_state_visible)
 		if result2 is Dictionary:
 			return result2
 
-	return {"topology_score": 0.0, "stability_score": 0.0}
+	return {"structure_score": 0.0, "stability_score": 0.0}

@@ -56,7 +56,7 @@ userdata/
 - `speed`
 - `attack`
 - `efficiency`
-- `topology`
+- `structure`
 - `stability`
 - `vision`
 
@@ -80,7 +80,7 @@ userdata/
 - `key_presses_this_piece`：本块使用的按键数
 - `hold_used`：本块是否使用 Hold
 - `elapsed_since_last_piece_ms`：与上次落锁的时间间隔
-- `topology_score` / `stability_score`：该落锁时棋盘结构评分
+- `structure_score` / `stability_score`：该落锁时棋盘结构评分
 
 ## 4. 玩家总数据（stats.json）
 
@@ -102,7 +102,7 @@ userdata/
 - `score` / `lines` / `level`
 - `duration_seconds`
 - `pps` / `apm` / `app` / `kpp`
-- `topology` / `stability`
+- `structure` / `stability`
 - `pieces_placed`
 
 ### 4.3 EMA 更新规则
@@ -135,14 +135,14 @@ userdata/
 - `KPP_score = clamp((6.0 - KPP) / (6.0 - 2.0), 0, 1) * 100`
 - `efficiency = 0.6 * APP_score + 0.4 * KPP_score`
 
-### 5.4 Topology（拓扑）
+### 5.4 Structure（结构）
 
-由 `TopologyEvaluator` 基于 10x20 棋盘计算：
+由 `StructureEvaluator` 基于 10x20 棋盘计算：
 
 - `empty_regions`：空区连通域数量（包含顶部虚拟空行）
 - `trapped_cells`：从顶部不可达的封闭空格数量
 - `flatness_score`：地形平整分
-- `topology_score = 0.65 * flatness_score + 0.35 * stability_score`
+- `structure_score = 0.65 * flatness_score + 0.35 * stability_score`
 
 ### 5.5 Stability（稳定）
 
@@ -177,7 +177,7 @@ userdata/
     "speed": 41.2,
     "attack": 28.7,
     "efficiency": 35.9,
-    "topology": 72.6,
+    "structure": 72.6,
     "stability": 32.9,
     "vision": 54.3
   },
@@ -190,7 +190,7 @@ userdata/
       "apm": 11.3,
       "app": 0.16,
       "kpp": 4.62,
-      "topology": 72.6,
+      "structure": 72.6,
       "stability": 32.9,
       "pieces_placed": 250
     }

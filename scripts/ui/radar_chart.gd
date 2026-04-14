@@ -2,12 +2,12 @@ class_name RadarChart
 extends Control
 
 const DIMENSION_COUNT: int = 6
-const DIMENSION_KEYS: Array = ["speed", "attack", "efficiency", "topology", "stability", "vision"]
+const DIMENSION_KEYS: Array = ["speed", "attack", "efficiency", "structure", "stability", "vision"]
 const DIMENSION_LABEL_KEYS: Array = [
 	"TXT_RADAR_SPEED",
 	"TXT_RADAR_ATTACK",
 	"TXT_RADAR_EFFICIENCY",
-	"TXT_RADAR_TOPOLOGY",
+	"TXT_RADAR_STRUCTURE",
 	"TXT_RADAR_STABILITY",
 	"TXT_RADAR_VISION"
 ]
