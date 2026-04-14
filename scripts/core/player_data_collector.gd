@@ -346,19 +346,31 @@ func is_active() -> bool:
 
 
 # ==========================================
+# _map_curve(value, points)
+# 
+# 作用：通用的非线性经验映射函数，用于在一系列 (x, y) 坐标点之间进行线性插值，得出平滑的分数。
+# ==========================================
+func _map_curve(value: float, points: Array) -> float:
+	if points.is_empty():
+		return 0.0
+	if value <= points[0].x:
+		return points[0].y
+	if value >= points[-1].x:
+		return points[-1].y
+		
+	for i in range(points.size() - 1):
+		var p1: Vector2 = points[i]
+		var p2: Vector2 = points[i + 1]
+		if value >= p1.x and value <= p2.x:
+			var t: float = (value - p1.x) / (p2.x - p1.x)
+			return lerpf(p1.y, p2.y, t)
+	return 0.0
+
+
+# ==========================================
 # _calculate_radar_scores(...)
 # 
-# 作用：内置计算函数。它把在游戏里的几项硬核数据映射转化到 0 ~ 100 范围，
-# 并赋予它们作为雷达六芒星属性的直观意义。
-# 
-# 逻辑：
-# - 速度（speed）: 由实际 pps (Pieces Per Second) / 最大理论阈值 (3.0) 归一化。
-# - 攻击（attack）: 由 apm (Attack Per Minute) / 阈值 (120) 归一化。
-# - 效率（efficiency）: 由落块产出攻击力（app）与单块消耗按键（kpp）的加权平均数结合（0.6 app + 0.4 kpp）。
-# - 结构（structure）& 稳定性（stability）: 直接由外部AI或计算器传入平滑后的原始得分并钳制极限。
-# - 视野（vision）: 通过专门剥离的 _calculate_vision_score 模块单独解算。
-# 
-# 返回：包含各项雷达维度数值（已保留一位小数）的字典。
+# 作用：计算雷达图各项能力得分，使用多级非线性映射曲线。
 # ==========================================
 func _calculate_radar_scores(
 	pps: float,
@@ -368,15 +380,46 @@ func _calculate_radar_scores(
 	structure_score: float,
 	stability_score: float
 ) -> Dictionary:
-	var speed_score: float = clampf(pps / SPEED_PPS_MAX, 0.0, 1.0) * 100.0
-	var attack_score: float = clampf(apm / ATTACK_APM_MAX, 0.0, 1.0) * 100.0
+	# 速度映射：阶梯上升，2.8及以上满分
+	var speed_points: Array = [
+		Vector2(0.0, 0.0), 
+		Vector2(0.3, 20.0), 
+		Vector2(1.0, 60.0), 
+		Vector2(2.2, 85.0), 
+		Vector2(2.8, 100.0)
+	]
+	var speed_score: float = _map_curve(pps, speed_points)
 
-	var app_score: float = clampf(app / EFFICIENCY_APP_MAX, 0.0, 1.0) * 100.0
-	var kpp_score: float = clampf(
-		(EFFICIENCY_KPP_WORST - kpp) / (EFFICIENCY_KPP_WORST - EFFICIENCY_KPP_BEST),
-		0.0,
-		1.0
-	) * 100.0
+	# 攻击映射：120 极限满分，70 分水岭
+	var attack_points: Array = [
+		Vector2(0.0, 0.0),
+		Vector2(30.0, 50.0),
+		Vector2(50.0, 70.0),
+		Vector2(70.0, 85.0),
+		Vector2(120.0, 100.0)
+	]
+	var attack_score: float = _map_curve(apm, attack_points)
+
+	# 效率-单块攻击（APP）映射：0.6 及以上满分满效
+	var app_points: Array = [
+		Vector2(0.0, 0.0),
+		Vector2(0.2, 40.0),
+		Vector2(0.4, 75.0),
+		Vector2(0.5, 90.0),
+		Vector2(0.6, 100.0)
+	]
+	var app_score: float = _map_curve(app, app_points)
+
+	# 效率-按键（KPP）映射：倒梯形，越少越好，11极其以上0分
+	var kpp_points: Array = [
+		Vector2(3.0, 100.0),  # 放宽到3以内100
+		Vector2(6.0, 80.0),
+		Vector2(9.0, 60.0),
+		Vector2(10.0, 20.0),
+		Vector2(11.0, 0.0)
+	]
+	var kpp_score: float = _map_curve(kpp, kpp_points)
+
 	var efficiency_score: float = EFFICIENCY_APP_WEIGHT * app_score + EFFICIENCY_KPP_WEIGHT * kpp_score
 	var vision_score: float = _calculate_vision_score()
 
@@ -393,51 +436,28 @@ func _calculate_radar_scores(
 # ==========================================
 # _calculate_vision_score()
 # 
-# 作用：通过玩家选用的消行策略构成比例（如喜欢T旋，还是普通消行，抑或攒Tetris大招）
-# 来评估“大局观”或者“视野得分”。
-# 
-# 逻辑：
-# 1. 如果没有消行发生，则默认给予50的中庸分期。
-# 2. 分别计算 Spin旋转技占比、Tetris四行技占比 与 杂项清行占比。
-# 3. 再利用 _band_score 的带状评分为这三个比例计算匹配度得分（它们各有期望的理想区间，如T旋理想区间是 30%~50%）。
-# 4. 根据置信度因子（样本数量越多，越信任该构成占比）进行线性插值，最终得出一个 0 到 100 综合分。
+# 作用：采用“保底分+动作加分”算法计算视野（大局观）。奖励高级消行能力。
 # ==========================================
 func _calculate_vision_score() -> float:
+	var base_score: float = 40.0
 	if _effective_clear_events <= 0:
-		return 50.0
+		return base_score
 
 	var total: float = float(_effective_clear_events)
 	var spin_ratio: float = float(_spin_clear_events) / total
 	var tetris_ratio: float = float(_tetris_clear_events) / total
-	var other_ratio: float = float(_other_clear_events) / total
+	var triple_ratio: float = float(_triples) / total  # 注意这里使用三消的比例
 
-	var spin_score: float = _band_score(spin_ratio, 0.30, 0.50, 0.25)
-	var tetris_score: float = _band_score(tetris_ratio, 0.20, 0.40, 0.25)
-	var other_score: float = _band_score(other_ratio, 0.20, 0.40, 0.30)
-	var composition_score: float = spin_score * 0.45 + tetris_score * 0.30 + other_score * 0.25
+	# 根据不同强度的消行方式赋予不同的增益权重
+	var bonus_multiplier: float = 50.0
+	var spin_weight: float = 1.5
+	var tetris_weight: float = 1.0
+	var triple_weight: float = 0.3
 
-	var confidence: float = clampf((total - 10.0) / 40.0, 0.0, 1.0)
-	return clampf(lerpf(50.0, composition_score, confidence), 0.0, 100.0)
+	var bonus_score: float = (spin_ratio * spin_weight + tetris_ratio * tetris_weight + triple_ratio * triple_weight) * bonus_multiplier
+	
+	return clampf(base_score + bonus_score, 0.0, 100.0)
 
-
-# ==========================================
-# _band_score(ratio, min_target, max_target, margin)
-# 
-# 作用：这是一个带状权重或者阶梯容差评分函数。
-# 参数：
-# - ratio: 实际占比。
-# - min_target / max_target: 理想区间下限和上限。
-# - margin: 容留惩罚边框。
-# 逻辑：当数值完美落入理想区间则得满分 100；如果在区间外但落入 margin 边缘内，分数会线性快速衰减，极不理想则为直接0分。
-# ==========================================
-func _band_score(ratio: float, min_target: float, max_target: float, margin: float) -> float:
-	if ratio >= min_target and ratio <= max_target:
-		return 100.0
-	if ratio < min_target:
-		var low_edge: float = maxf(0.0, min_target - margin)
-		return clampf((ratio - low_edge) / maxf(0.0001, min_target - low_edge), 0.0, 1.0) * 100.0
-	var high_edge: float = minf(1.0, max_target + margin)
-	return clampf((high_edge - ratio) / maxf(0.0001, high_edge - max_target), 0.0, 1.0) * 100.0
 
 
 # ==========================================

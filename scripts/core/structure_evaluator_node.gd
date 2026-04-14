@@ -46,8 +46,18 @@ func EvaluateBoardScores(board_state_visible: Array) -> Dictionary:
 	var trapped_cells: int = _count_trapped_cells(empty, rows, cols)
 	var flatness_score: float = _calculate_flatness_score(empty, rows, cols)
 
-	# 稳定分：空洞越多、越碎，分越低。
-	var stability_score: float = 100.0 - minf(100.0, trapped_cells * 2.0 + maxi(0, empty_regions - 1) * 12.0)
+	# 稳定分：空洞越多、越碎，分越低。采用阶梯分段惩罚计算空洞碎片化扣分。
+	var fragmentation_count: int = maxi(0, empty_regions - 1)
+	var fragmentation_penalty: float = 0.0
+	
+	if fragmentation_count <= 3:
+		fragmentation_penalty = fragmentation_count * 6.0
+	elif fragmentation_count <= 5:
+		fragmentation_penalty = 3 * 6.0 + (fragmentation_count - 3) * 8.0
+	else:
+		fragmentation_penalty = 3 * 6.0 + 2 * 8.0 + (fragmentation_count - 5) * 10.0
+
+	var stability_score: float = 100.0 - minf(100.0, trapped_cells * 2.0 + fragmentation_penalty)
 	stability_score = clampf(stability_score, 0.0, 100.0)
 
 	# 结构分：平整性占 65%，空洞质量占 35%。
@@ -140,8 +150,9 @@ func _calculate_flatness_score(empty: Array, rows: int, cols: int) -> float:
 	for x2 in range(cols - 1):
 		roughness += absf(float(heights[x2] - heights[x2 + 1]))
 
-	var max_roughness: float = float(rows * maxi(1, cols - 1))
-	var bumpiness_score: float = 100.0 * (1.0 - roughness / maxf(1.0, max_roughness))
+	# 使用符合玩家实际忍受能力的界限，代替不切实际的极端理论基准
+	var max_practical_roughness: float = 45.0
+	var bumpiness_score: float = 100.0 * (1.0 - minf(roughness, max_practical_roughness) / max_practical_roughness)
 	bumpiness_score = clampf(bumpiness_score, 0.0, 100.0)
 
 	var mean: float = 0.0
@@ -155,8 +166,9 @@ func _calculate_flatness_score(empty: Array, rows: int, cols: int) -> float:
 		variance += d * d
 	variance /= float(cols)
 
-	var max_variance: float = float(rows * rows) / 4.0
-	var variance_score: float = 100.0 * (1.0 - variance / maxf(1.0, max_variance))
+	# 使用更符合玩家实际感受的方差界限
+	var max_practical_variance: float = 28
+	var variance_score: float = 100.0 * (1.0 - minf(variance, max_practical_variance) / max_practical_variance)
 	variance_score = clampf(variance_score, 0.0, 100.0)
 
 	return bumpiness_score * 0.7 + variance_score * 0.3
