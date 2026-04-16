@@ -108,7 +108,8 @@ static func save_session(session_data: Dictionary) -> void:
 			file_path, error_string(FileAccess.get_open_error())
 		])
 		return
-	file.store_string(JSON.stringify(session_data, "\t"))
+	var pretty_json: String = JSON.stringify(session_data, "\t")
+	file.store_string(_compact_numeric_arrays(pretty_json))
 	file.close()
 
 	_ensure_readme()
@@ -321,3 +322,79 @@ static func _build_readme_content() -> String:
 This directory stores local player statistics and per-session snapshots.
 See docs/DATA_README.md for the full schema and scoring reference.
 """
+
+
+static func _compact_numeric_arrays(pretty_json: String) -> String:
+	var lines: PackedStringArray = pretty_json.split("\n")
+	var output: PackedStringArray = []
+	var i: int = 0
+
+	while i < lines.size():
+		var line: String = lines[i]
+		var open_trimmed: String = line.strip_edges()
+		if open_trimmed == "[":
+			var compact_line: String = _try_compact_numeric_array(lines, i)
+			if not compact_line.is_empty():
+				output.append(compact_line)
+				i = _find_array_close_index(lines, i) + 1
+				continue
+		output.append(line)
+		i += 1
+
+	return "\n".join(output)
+
+
+static func _try_compact_numeric_array(lines: PackedStringArray, start_index: int) -> String:
+	var open_line: String = lines[start_index]
+	var indent: String = _leading_whitespace(open_line)
+	var values: Array[String] = []
+	var i: int = start_index + 1
+
+	while i < lines.size():
+		var row: String = lines[i]
+		var trimmed: String = row.strip_edges()
+		if trimmed == "]" or trimmed == "],":
+			if values.is_empty():
+				return ""
+			var trailing_comma: String = "," if trimmed.ends_with(",") else ""
+			return "%s[%s]%s" % [indent, ", ".join(values), trailing_comma]
+
+		var token: String = trimmed.trim_suffix(",")
+		if not _is_json_number(token):
+			return ""
+		values.append(token)
+		i += 1
+
+	return ""
+
+
+static func _find_array_close_index(lines: PackedStringArray, start_index: int) -> int:
+	var depth: int = 0
+	for i in range(start_index, lines.size()):
+		var trimmed: String = lines[i].strip_edges()
+		if trimmed == "[":
+			depth += 1
+		elif trimmed == "]" or trimmed == "],":
+			depth -= 1
+			if depth == 0:
+				return i
+	return start_index
+
+
+static func _leading_whitespace(text: String) -> String:
+	var idx: int = 0
+	while idx < text.length():
+		var ch: String = text.substr(idx, 1)
+		if ch != " " and ch != "\t":
+			break
+		idx += 1
+	return text.substr(0, idx)
+
+
+static func _is_json_number(token: String) -> bool:
+	if token.is_empty():
+		return false
+	var parser := JSON.new()
+	if parser.parse(token) != OK:
+		return false
+	return parser.data is float or parser.data is int

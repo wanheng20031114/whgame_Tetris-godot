@@ -31,8 +31,8 @@ func EvaluateBoardScores(board_state_visible: Array) -> Dictionary:
 		var row: Array = board_state_visible[y]
 		var empty_row: Array = []
 		for x in range(cols):
-			var cell: int = int(row[x]) if x < row.size() else -1
-			var is_empty: bool = cell == -1
+			var cell: int = int(row[x]) if x < row.size() else 0
+			var is_empty: bool = cell == 0
 			empty_row.append(is_empty)
 			if is_empty:
 				empty_cells += 1

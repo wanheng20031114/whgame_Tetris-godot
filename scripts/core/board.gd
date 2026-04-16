@@ -14,7 +14,8 @@ const GRID_LINE_COLOR := Color("1a1a2e")
 const BORDER_COLOR := Color("3a3a5c")
 
 var grid: Array = []
-const GARBAGE_CELL_TYPE: int = -2
+const EMPTY_CELL_TYPE: int = 0
+const GARBAGE_CELL_TYPE: int = 8
 var last_hole_col: int = -1
 
 var danger_warning_active: bool = false
@@ -139,7 +140,7 @@ func get_grid_state() -> Array:
 		for c in range(columns):
 			var cell_color = grid[r][c]
 			if cell_color == null:
-				row_data.append(-1)
+				row_data.append(EMPTY_CELL_TYPE)
 			else:
 				var type_idx := -1
 				for t in PieceData.COLORS:
@@ -149,7 +150,7 @@ func get_grid_state() -> Array:
 				if type_idx == -1:
 					row_data.append(GARBAGE_CELL_TYPE)
 				else:
-					row_data.append(type_idx)
+					row_data.append(int(type_idx) + 1)
 		state.append(row_data)
 	return state
 
@@ -161,13 +162,14 @@ func set_grid_state(data: Array) -> void:
 		var row_data: Array = data[r]
 		for c in range(columns):
 			var type_idx: int = row_data[c]
-			if type_idx == -1:
+			if type_idx == EMPTY_CELL_TYPE:
 				grid[r][c] = null
 			elif type_idx == GARBAGE_CELL_TYPE:
 				grid[r][c] = Color(0.45, 0.45, 0.45)
 			else:
-				if PieceData.COLORS.has(type_idx):
-					grid[r][c] = PieceData.COLORS[type_idx]
+				var piece_type: int = type_idx - 1
+				if PieceData.COLORS.has(piece_type):
+					grid[r][c] = PieceData.COLORS[piece_type]
 				else:
 					grid[r][c] = Color(0.45, 0.45, 0.45)
 
