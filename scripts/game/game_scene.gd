@@ -523,6 +523,7 @@ func _record_piece_snapshot() -> void:
 		_last_lines_cleared_this_lock,
 		_last_damage_this_lock,
 		_hold_used_this_piece,
+		held_type,
 		_last_structure_score,
 		_last_stability_score,
 		_cached_board_after_drop,

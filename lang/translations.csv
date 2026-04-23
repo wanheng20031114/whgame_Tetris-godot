@@ -138,3 +138,25 @@ TXT_ACTION_ROTATE_CCW,逆时针旋转,Rotate CCW,左回転
 TXT_ACTION_ROTATE_180,180旋转,Rotate 180,180度回転
 TXT_ACTION_HOLD,暂存,Hold,ホールド
 TXT_ACTION_PAUSE,暂停,Pause,一時停止
+
+TXT_REPLAY,复盘系统,REPLAY SYSTEM,リプレイシステム
+TXT_REPLAY_DESC,AI辅助局后分析,AI ASSISTED ANALYSIS,AI支援リプレイ分析
+TXT_REPLAY_ANALYSIS,复盘分析,REPLAY ANALYSIS,リプレイ分析
+TXT_PIECE_INFO,方块信息,PIECE INFO,ピース情報
+TXT_TYPE,种类:,Type:,種類:
+TXT_POSITION,位置:,Position:,位置:
+TXT_CLEAR,消除:,Clear:,消去:
+TXT_NONE,无,None,なし
+TXT_LINES_CLEARED,行数: %d (累计: %d),Lines: %d (total: %d),ライン: %d (合計: %d)
+TXT_DAMAGE_VAL,伤害: %d,Damage: %d,ダメージ: %d
+TXT_COMBO_VAL,连击: %d / B2B: %d,Combo: %d / B2B: %d,コンボ: %d / B2B: %d
+TXT_TIME_VAL,用时: %s,Time: %s,時間: %s
+TXT_TERRAIN_METRICS,地形数据,TERRAIN METRICS,地形データ
+TXT_HOLES,空洞:,Holes:,穴:
+TXT_BUMPINESS,凹凸度:,Bumpiness:,凹凸度:
+TXT_TOTAL_HEIGHT,总高度:,Total Height:,総高さ:
+TXT_AI_EVALUATION,AI 评分,AI EVALUATION,AI評価
+TXT_TIMELINE,时间线,TIMELINE,タイムライン
+TXT_NO_SESSIONS_FOUND,未找到对局记录,No sessions found,セッションが見つかりません
+TXT_SELECT_SESSION,选择一个对局进行分析,Select a session to analyze,分析するセッションを選択
+TXT_STEP_FORMAT,步数 %d / %d,Step %d / %d,ステップ %d / %d

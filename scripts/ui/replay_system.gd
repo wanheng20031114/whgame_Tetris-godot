@@ -20,6 +20,24 @@ const CELL_COLORS: Array[Color] = [
 	Color(0.1, 0.3, 0.9, 1),       # 7: J — 蓝
 ]
 
+# 方块名称 → 颜色索引映射
+const PIECE_NAME_COLOR: Dictionary = {
+	"I": 1, "O": 2, "T": 3, "S": 4, "Z": 5, "L": 6, "J": 7
+}
+
+# 方块迷你形状（rotation 0）用于预览绘制
+const MINI_SHAPES: Dictionary = {
+	"I": [[1,1,1,1]],
+	"O": [[1,1],[1,1]],
+	"T": [[0,1,0],[1,1,1]],
+	"S": [[0,1,1],[1,1,0]],
+	"Z": [[1,1,0],[0,1,1]],
+	"L": [[0,0,1],[1,1,1]],
+	"J": [[1,0,0],[1,1,1]]
+}
+
+const MINI_CELL: int = 18  # 预览方块格子大小
+
 # 节点引用
 @onready var btn_back: Button = %BtnBack
 @onready var session_info_label: Label = %SessionInfoLabel
@@ -63,7 +81,47 @@ func _ready() -> void:
 	btn_last.pressed.connect(func(): _go_to_step(_snapshots.size() - 1))
 	step_slider.value_changed.connect(func(val): _go_to_step(int(val)))
 
+	_update_texts()
 	_show_session_list()
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_TRANSLATION_CHANGED and is_node_ready():
+		_update_texts()
+		if _current_step >= 0:
+			_update_step_label()
+			_update_data_panel(_current_step)
+
+
+func _update_texts() -> void:
+	btn_back.text = "◀ " + tr("TXT_BACK")
+	
+	var title_lbl = get_node_or_null("%TitleLabel")
+	if title_lbl:
+		title_lbl.text = tr("TXT_REPLAY_ANALYSIS")
+		
+	var pinfo_lbl = get_node_or_null("%PieceInfoTitle")
+	if pinfo_lbl:
+		pinfo_lbl.text = "▸ " + tr("TXT_PIECE_INFO")
+		
+	var ter_lbl = get_node_or_null("%TerrainTitle")
+	if ter_lbl:
+		ter_lbl.text = "▸ " + tr("TXT_TERRAIN_METRICS")
+		
+	var ai_lbl = get_node_or_null("%AiTitle")
+	if ai_lbl:
+		ai_lbl.text = "▸ " + tr("TXT_AI_EVALUATION")
+		
+	var tl_lbl = get_node_or_null("%TimelineTitle")
+	if tl_lbl:
+		tl_lbl.text = "▸ " + tr("TXT_TIMELINE")
+		
+	var pop_lbl = get_node_or_null("%PopupTitle")
+	if pop_lbl:
+		pop_lbl.text = tr("TXT_SELECT_SESSION")
+		
+	if session_list.get_child_count() == 1 and session_list.get_child(0) is Label:
+		(session_list.get_child(0) as Label).text = tr("TXT_NO_SESSIONS_FOUND")
 
 
 # ==============================================================================
@@ -78,15 +136,19 @@ func _show_session_list() -> void:
 	var files: Array = PlayerDataStore.get_all_session_files()
 	if files.is_empty():
 		var lbl := Label.new()
-		lbl.text = "No sessions found"
+		lbl.text = tr("TXT_NO_SESSIONS_FOUND")
 		lbl.add_theme_color_override("font_color", Color(0.4, 0.5, 0.67))
 		session_list.add_child(lbl)
 		session_list_popup.visible = true
 		return
 
-	# 按时间倒序显示（最新在前）
-	files.reverse()
-	for fname in files:
+	# 过滤掉 _analyzed.json 文件，按时间倒序显示（最新在前）
+	var filtered: Array = []
+	for f in files:
+		if not str(f).ends_with("_analyzed.json"):
+			filtered.append(f)
+	filtered.reverse()
+	for fname in filtered:
 		var btn := Button.new()
 		# 从文件名提取时间戳：session_2026-04-23T20-50-26.json -> 2026-04-23 20:50:26
 		var raw: String = fname.replace("session_", "").replace(".json", "")
@@ -145,7 +207,7 @@ func _load_session(file_name: String) -> void:
 		step_slider.step = 1
 		_go_to_step(0)
 	else:
-		step_label.text = "No snapshots"
+		step_label.text = tr("TXT_STEP_FORMAT") % [0, 0]
 
 	# 生成时间线
 	_build_timeline()
@@ -238,11 +300,17 @@ func _go_to_step(index: int) -> void:
 
 	_current_step = index
 	step_slider.set_value_no_signal(index)
-	step_label.text = "Step %d / %d" % [index + 1, _snapshots.size()]
+	_update_step_label()
 
 	_render_step(index)
 	_update_data_panel(index)
 	_highlight_timeline_item(index)
+
+func _update_step_label() -> void:
+	if _snapshots.is_empty():
+		step_label.text = tr("TXT_STEP_FORMAT") % [0, 0]
+	else:
+		step_label.text = tr("TXT_STEP_FORMAT") % [_current_step + 1, _snapshots.size()]
 
 
 func _render_step(index: int) -> void:
@@ -282,33 +350,43 @@ func _render_step(index: int) -> void:
 		line.color = grid_color
 		replay_board.add_child(line)
 
-	# 棋盘外框
-	var border := ColorRect.new()
-	border.size = Vector2(BOARD_COLS * CELL_SIZE + 2, BOARD_ROWS * CELL_SIZE + 2)
-	border.position = Vector2(-1, -1)
-	border.color = Color(0, 0.83, 1, 0.3)
-	border.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	replay_board.add_child(border)
-	# 填充内部让边框只有1px
-	var inner := ColorRect.new()
-	inner.size = Vector2(BOARD_COLS * CELL_SIZE, BOARD_ROWS * CELL_SIZE)
-	inner.position = Vector2(0, 0)
-	inner.color = Color(0, 0, 0, 0)
-	inner.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	replay_board.add_child(inner)
+	# 棋盘外框（4条薄线，不再用填充矩形）
+	var bw: float = BOARD_COLS * CELL_SIZE
+	var bh: float = BOARD_ROWS * CELL_SIZE
+	var bc := Color(0, 0.83, 1, 0.4)
+	for edge in [
+		[Vector2(-1, -1), Vector2(bw + 2, 1)],       # 上
+		[Vector2(-1, bh), Vector2(bw + 2, 1)],        # 下
+		[Vector2(-1, -1), Vector2(1, bh + 2)],        # 左
+		[Vector2(bw, -1), Vector2(1, bh + 2)],        # 右
+	]:
+		var e := ColorRect.new()
+		e.position = edge[0]
+		e.size = edge[1]
+		e.color = bc
+		e.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		replay_board.add_child(e)
+
+	# 居中棋盘
+	_center_board()
+
+	# 绘制 Hold 和 Next 预览
+	_draw_hold_piece(snap)
+	_draw_next_pieces(snap)
+
 
 
 func _update_data_panel(index: int) -> void:
 	var snap: Dictionary = _snapshots[index]
 
-	piece_type_label.text = "Type: %s" % str(snap.get("piece_type", "?"))
-	position_label.text = "Position: col=%d, row=%d, rot=%d" % [
-		int(snap.get("col", 0)), int(snap.get("row", 0)), int(snap.get("rotation", 0))
+	piece_type_label.text = "%s %s" % [tr("TXT_TYPE"), str(snap.get("piece_type", "?"))]
+	position_label.text = "%s col=%d, row=%d, rot=%d" % [
+		tr("TXT_POSITION"), int(snap.get("col", 0)), int(snap.get("row", 0)), int(snap.get("rotation", 0))
 	]
 
 	# 消除类型
 	var lcl: int = int(snap.get("lines_cleared_this_lock", 0))
-	var clear_text: String = "None"
+	var clear_text: String = tr("TXT_NONE")
 	if lcl > 0:
 		var is_spin: bool = snap.get("is_spin", false)
 		var is_t_spin: bool = snap.get("is_t_spin", false)
@@ -318,17 +396,17 @@ func _update_data_panel(index: int) -> void:
 			clear_text = "Spin %s" % _lines_name(lcl)
 		else:
 			clear_text = _lines_name(lcl)
-	clear_type_label.text = "Clear: %s" % clear_text
+	clear_type_label.text = "%s %s" % [tr("TXT_CLEAR"), clear_text]
 
-	lines_label.text = "Lines: %d (total: %d)" % [lcl, int(snap.get("lines_cleared", 0))]
-	damage_label.text = "Damage: %d" % int(snap.get("damage_this_lock", 0))
-	combo_label.text = "Combo: %d / B2B: %d" % [int(snap.get("combo", -1)), int(snap.get("b2b", -1))]
-	time_label.text = "Time: %dms" % int(snap.get("elapsed_since_last_piece_ms", 0))
+	lines_label.text = tr("TXT_LINES_CLEARED") % [lcl, int(snap.get("lines_cleared", 0))]
+	damage_label.text = tr("TXT_DAMAGE_VAL") % int(snap.get("damage_this_lock", 0))
+	combo_label.text = tr("TXT_COMBO_VAL") % [int(snap.get("combo", -1)), int(snap.get("b2b", -1))]
+	time_label.text = tr("TXT_TIME_VAL") % ("%dms" % int(snap.get("elapsed_since_last_piece_ms", 0)))
 
 	# 地形指标
-	holes_label.text = "Holes: %d" % int(snap.get("holes", 0))
-	bumpiness_label.text = "Bumpiness: %d" % int(snap.get("bumpiness", 0))
-	height_label.text = "Total Height: %d" % int(snap.get("total_height", 0))
+	holes_label.text = "%s %d" % [tr("TXT_HOLES"), int(snap.get("holes", 0))]
+	bumpiness_label.text = "%s %d" % [tr("TXT_BUMPINESS"), int(snap.get("bumpiness", 0))]
+	height_label.text = "%s %d" % [tr("TXT_TOTAL_HEIGHT"), int(snap.get("total_height", 0))]
 
 	# AI 评分
 	if index < _ai_scores.size():
@@ -344,7 +422,7 @@ func _update_data_panel(index: int) -> void:
 		else:
 			ai_score_label.add_theme_color_override("font_color", Color(1, 0.27, 0.27))
 	else:
-		ai_score_label.text = "N/A"
+		ai_score_label.text = tr("TXT_NA")
 		ai_score_label.add_theme_color_override("font_color", Color(0.4, 0.5, 0.67))
 
 
@@ -366,33 +444,67 @@ func _build_timeline() -> void:
 
 	for i in range(_snapshots.size()):
 		var snap: Dictionary = _snapshots[i]
-		var btn := Button.new()
 		var piece_name: String = str(snap.get("piece_type", "?"))
-		var lcl: int = int(snap.get("lines_cleared_this_lock", 0))
-		var suffix: String = ""
-		if lcl > 0:
-			suffix = " ★%d" % lcl
-		btn.text = "#%d  %s%s" % [i + 1, piece_name, suffix]
+		var elapsed_ms: int = int(snap.get("elapsed_since_last_piece_ms", 0))
+
+		# 行容器
+		var hbox := HBoxContainer.new()
+		hbox.custom_minimum_size.y = 26
+		hbox.add_theme_constant_override("separation", 4)
+
+		# 方块颜色指示条
+		var cidx: int = PIECE_NAME_COLOR.get(piece_name, 0)
+		var indicator := ColorRect.new()
+		indicator.custom_minimum_size = Vector2(4, 20)
+		if cidx > 0 and cidx < CELL_COLORS.size():
+			indicator.color = CELL_COLORS[cidx]
+		else:
+			indicator.color = Color(0.3, 0.3, 0.4)
+		hbox.add_child(indicator)
+
+		# 按钮（点击跳转）
+		var btn := Button.new()
+		btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		btn.add_theme_font_size_override("font_size", 11)
 		btn.add_theme_color_override("font_color", Color(0.6, 0.65, 0.75))
-		btn.add_theme_font_size_override("font_size", 12)
+
+		# AI 分数
+		var ai_text: String = ""
+		if i < _ai_scores.size():
+			ai_text = "%.1f" % float(_ai_scores[i])
+		else:
+			ai_text = "—"
+
+		# 用时
+		var time_text: String = "%dms" % elapsed_ms
+		if elapsed_ms >= 1000:
+			time_text = "%.1fs" % (elapsed_ms / 1000.0)
+
+		btn.text = "#%d %s  %s  %s" % [i + 1, piece_name, ai_text, time_text]
 		btn.pressed.connect(_go_to_step.bind(i))
-		timeline_list.add_child(btn)
+		hbox.add_child(btn)
+
+		timeline_list.add_child(hbox)
 
 
 func _highlight_timeline_item(index: int) -> void:
 	for i in range(timeline_list.get_child_count()):
-		var btn: Button = timeline_list.get_child(i) as Button
+		var hbox: HBoxContainer = timeline_list.get_child(i) as HBoxContainer
+		if hbox == null or hbox.get_child_count() < 2:
+			continue
+		var btn: Button = hbox.get_child(1) as Button
 		if btn == null:
 			continue
 		if i == index:
 			btn.add_theme_color_override("font_color", Color(0, 0.83, 1))
 		else:
-			var lcl: int = 0
+			var pname: String = ""
 			if i < _snapshots.size():
-				lcl = int(_snapshots[i].get("lines_cleared_this_lock", 0))
-			if lcl > 0:
-				btn.add_theme_color_override("font_color", Color(0, 1, 0.53))
+				pname = str(_snapshots[i].get("piece_type", ""))
+			var cidx: int = PIECE_NAME_COLOR.get(pname, 0)
+			if cidx > 0:
+				btn.add_theme_color_override("font_color", CELL_COLORS[cidx].lerp(Color(0.5, 0.5, 0.6), 0.4))
 			else:
 				btn.add_theme_color_override("font_color", Color(0.6, 0.65, 0.75))
 
@@ -424,3 +536,77 @@ func _unhandled_input(event: InputEvent) -> void:
 	elif event.is_action_pressed("ui_right") and not session_list_popup.visible:
 		_go_to_step(_current_step + 1)
 		get_viewport().set_input_as_handled()
+
+
+# ==============================================================================
+# 棋盘居中 + Hold / Next 预览
+# ==============================================================================
+
+func _center_board() -> void:
+	var container: Control = replay_board.get_parent()
+	if container == null:
+		return
+	var bw: float = BOARD_COLS * CELL_SIZE
+	var bh: float = BOARD_ROWS * CELL_SIZE
+	replay_board.position.x = (container.size.x - bw) / 2.0
+	replay_board.position.y = (container.size.y - bh) / 2.0
+
+
+func _draw_hold_piece(snap: Dictionary) -> void:
+	var hold_name: String = str(snap.get("hold_piece", ""))
+	var hold_x: float = -(MINI_CELL * 4 + 25)
+	var y_offset: float = 10.0
+
+	# "HOLD" 标签
+	var lbl := Label.new()
+	lbl.text = tr("TXT_HOLD")
+	lbl.add_theme_color_override("font_color", Color(0, 0.83, 1, 0.8))
+	lbl.add_theme_font_size_override("font_size", 12)
+	lbl.position = Vector2(hold_x, y_offset - 5)
+	replay_board.add_child(lbl)
+	y_offset += 20.0
+
+	if hold_name != "" and MINI_SHAPES.has(hold_name):
+		_draw_mini_piece(hold_name, Vector2(hold_x, y_offset))
+	else:
+		var dash := Label.new()
+		dash.text = "—"
+		dash.add_theme_color_override("font_color", Color(0.3, 0.3, 0.45))
+		dash.position = Vector2(hold_x + 10, y_offset)
+		replay_board.add_child(dash)
+
+
+func _draw_next_pieces(snap: Dictionary) -> void:
+	var next_names: Array = snap.get("next_pieces", [])
+	var board_right_x: float = BOARD_COLS * CELL_SIZE + 20.0
+	var y_offset: float = 10.0
+
+	# "NEXT" 标签
+	var lbl := Label.new()
+	lbl.text = tr("TXT_NEXT")
+	lbl.add_theme_color_override("font_color", Color(0, 0.83, 1, 0.8))
+	lbl.add_theme_font_size_override("font_size", 12)
+	lbl.position = Vector2(board_right_x, y_offset - 5)
+	replay_board.add_child(lbl)
+	y_offset += 20.0
+
+	for idx in range(mini(next_names.size(), 5)):
+		var pname: String = str(next_names[idx])
+		_draw_mini_piece(pname, Vector2(board_right_x, y_offset))
+		y_offset += MINI_CELL * 3 + 8
+
+
+func _draw_mini_piece(piece_name: String, origin: Vector2) -> void:
+	var shape: Array = MINI_SHAPES.get(piece_name, [[1]])
+	var cidx: int = PIECE_NAME_COLOR.get(piece_name, 0)
+	var col: Color = CELL_COLORS[cidx] if cidx < CELL_COLORS.size() else Color.WHITE
+
+	for r in range(shape.size()):
+		var row_data: Array = shape[r]
+		for c in range(row_data.size()):
+			if int(row_data[c]) != 0:
+				var rect := ColorRect.new()
+				rect.size = Vector2(MINI_CELL - 1, MINI_CELL - 1)
+				rect.position = origin + Vector2(c * MINI_CELL, r * MINI_CELL)
+				rect.color = col
+				replay_board.add_child(rect)
