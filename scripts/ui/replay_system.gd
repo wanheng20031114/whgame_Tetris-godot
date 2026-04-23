@@ -16,14 +16,17 @@ const CELL_COLORS: Array[Color] = [
 	Color(0.6, 0.0, 0.8, 1),       # 3: T - 紫
 	Color(0.0, 0.8, 0.0, 1),       # 4: S - 绿
 	Color(0.9, 0.1, 0.1, 1),       # 5: Z - 红
-	Color(1.0, 0.55, 0.0, 1),      # 6: L - 橙
-	Color(0.1, 0.3, 0.9, 1),       # 7: J - 蓝
+	Color(0.1, 0.3, 0.9, 1),       # 6: J - 蓝
+	Color(1.0, 0.55, 0.0, 1),      # 7: L - 橙
 	Color(0.45, 0.45, 0.45, 1),    # 8: Garbage - 灰
 ]
 
 # 方块名称 → 颜色索引映射
 const PIECE_NAME_COLOR: Dictionary = {
-	"I": 1, "O": 2, "T": 3, "S": 4, "Z": 5, "L": 6, "J": 7
+	"I": 1, "O": 2, "T": 3, "S": 4, "Z": 5, "J": 6, "L": 7
+}
+const PIECE_NAME_TYPE: Dictionary = {
+	"I": 0, "O": 1, "T": 2, "S": 3, "Z": 4, "J": 5, "L": 6
 }
 
 # 方块迷你形状（rotation 0）用于预览绘制
@@ -38,6 +41,8 @@ const MINI_SHAPES: Dictionary = {
 }
 
 const MINI_CELL: int = 18  # 预览方块格子大小
+const TIMELINE_PIECE_CELL: int = 6
+const TIMELINE_PIECE_ROW_H: int = 18
 
 # 节点引用
 @onready var btn_back: Button = %BtnBack
@@ -81,6 +86,7 @@ func _ready() -> void:
 	btn_next.pressed.connect(func(): _go_to_step(_current_step + 1))
 	btn_last.pressed.connect(func(): _go_to_step(_snapshots.size() - 1))
 	step_slider.value_changed.connect(func(val): _go_to_step(int(val)))
+	ai_score_label.add_theme_font_size_override("font_size", 44)
 
 	_update_texts()
 	_show_session_list()
@@ -358,6 +364,9 @@ func _render_step(index: int) -> void:
 		line.color = grid_color
 		replay_board.add_child(line)
 
+	# 高亮本步新落下的方块（锁定时的 piece_type/rotation/col/row）
+	_draw_locked_piece_highlight(snap, index)
+
 	# 棋盘外框（4条薄线，不再用填充矩形）
 	var bw: float = BOARD_COLS * CELL_SIZE
 	var bh: float = BOARD_ROWS * CELL_SIZE
@@ -419,10 +428,11 @@ func _update_data_panel(index: int) -> void:
 	# AI 评分
 	if index < _ai_scores.size():
 		var score_val: float = float(_ai_scores[index])
-		ai_score_label.text = "%.2f" % score_val
+		var delta: float = _timeline_score_delta(index)
+		ai_score_label.text = "%.2f\n(%+d)" % [score_val, roundi(delta)]
 		ai_score_label.add_theme_color_override("font_color", _ai_score_color(score_val))
 	else:
-		ai_score_label.text = tr("TXT_NA")
+		ai_score_label.text = "%s\n(-)" % tr("TXT_NA")
 		ai_score_label.add_theme_color_override("font_color", Color(0.4, 0.5, 0.67))
 
 
@@ -439,6 +449,51 @@ func _ai_score_color(score_val: float) -> Color:
 	if score_val >= 0.0:
 		return Color(1.0, 0.85, 0.2)
 	return Color(1.0, 0.3, 0.3)
+
+
+func _timeline_score_delta(index: int) -> float:
+	if index < 0 or index >= _ai_scores.size():
+		return 0.0
+	if index == 0:
+		return 0.0
+	return float(_ai_scores[index]) - float(_ai_scores[index - 1])
+
+
+func _timeline_delta_color(delta: float) -> Color:
+	if delta < -150.0:
+		return Color(0.65, 0.0, 0.0) # 深红
+	if delta <= -100.0:
+		return Color(1.0, 0.22, 0.22) # 红
+	if delta <= -50.0:
+		return Color(1.0, 0.84, 0.2) # 黄
+	if delta <= 50.0:
+		return Color(0.62, 0.95, 0.62) # 淡绿
+	return Color(0.1, 1.0, 0.25) # 鲜绿
+
+
+func _timeline_row_color(index: int) -> Color:
+	if index >= 0 and index < _ai_scores.size():
+		return _timeline_delta_color(_timeline_score_delta(index))
+	return Color(0.6, 0.65, 0.75)
+
+
+func _set_timeline_button_border(btn: Button, border_color: Color, selected: bool) -> void:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0, 0, 0, 0)
+	if selected:
+		sb.border_width_left = 2
+		sb.border_width_top = 2
+		sb.border_width_right = 2
+		sb.border_width_bottom = 2
+		sb.border_color = border_color
+		sb.corner_radius_top_left = 3
+		sb.corner_radius_top_right = 3
+		sb.corner_radius_bottom_left = 3
+		sb.corner_radius_bottom_right = 3
+	btn.add_theme_stylebox_override("normal", sb)
+	btn.add_theme_stylebox_override("hover", sb)
+	btn.add_theme_stylebox_override("pressed", sb)
+	btn.add_theme_stylebox_override("focus", sb)
 
 
 # ==============================================================================
@@ -468,16 +523,20 @@ func _build_timeline() -> void:
 		else:
 			indicator.color = Color(0.3, 0.3, 0.4)
 		hbox.add_child(indicator)
+		hbox.add_child(_create_timeline_piece_icon(piece_name))
 
 		# 按钮（点击跳转）
 		var btn := Button.new()
 		btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		btn.add_theme_font_size_override("font_size", 11)
-		var row_color: Color = Color(0.6, 0.65, 0.75)
+		var row_color: Color = _timeline_row_color(i)
+		var delta_text: String = "(+0)"
 		if i < _ai_scores.size():
-			row_color = _ai_score_color(float(_ai_scores[i]))
+			var delta: float = _timeline_score_delta(i)
+			delta_text = "(%+d)" % roundi(delta)
 		btn.add_theme_color_override("font_color", row_color)
+		_set_timeline_button_border(btn, row_color, i == _current_step)
 
 		# AI 分数
 		var ai_text: String = ""
@@ -491,7 +550,7 @@ func _build_timeline() -> void:
 		if elapsed_ms >= 1000:
 			time_text = "%.1fs" % (elapsed_ms / 1000.0)
 
-		btn.text = "#%d %s  %s  %s" % [i + 1, piece_name, ai_text, time_text]
+		btn.text = "#%d  %s %s  %s" % [i + 1, ai_text, delta_text, time_text]
 		btn.pressed.connect(_go_to_step.bind(i))
 		hbox.add_child(btn)
 
@@ -503,16 +562,12 @@ func _highlight_timeline_item(index: int) -> void:
 		var hbox: HBoxContainer = timeline_list.get_child(i) as HBoxContainer
 		if hbox == null or hbox.get_child_count() < 2:
 			continue
-		var btn: Button = hbox.get_child(1) as Button
+		var btn: Button = hbox.get_child(hbox.get_child_count() - 1) as Button
 		if btn == null:
 			continue
-		if i == index:
-			btn.add_theme_color_override("font_color", Color(0, 0.83, 1))
-		else:
-			var row_color: Color = Color(0.6, 0.65, 0.75)
-			if i < _ai_scores.size():
-				row_color = _ai_score_color(float(_ai_scores[i]))
-			btn.add_theme_color_override("font_color", row_color)
+		var row_color: Color = _timeline_row_color(i)
+		btn.add_theme_color_override("font_color", row_color)
+		_set_timeline_button_border(btn, row_color, i == index)
 
 	# 自动滚动到当前步
 	var scroll: ScrollContainer = timeline_list.get_parent() as ScrollContainer
@@ -616,3 +671,152 @@ func _draw_mini_piece(piece_name: String, origin: Vector2) -> void:
 				rect.position = origin + Vector2(c * MINI_CELL, r * MINI_CELL)
 				rect.color = col
 				replay_board.add_child(rect)
+
+
+func _create_timeline_piece_icon(piece_name: String) -> Control:
+	var box := Control.new()
+	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.custom_minimum_size = Vector2(TIMELINE_PIECE_CELL * 4 + 2, TIMELINE_PIECE_ROW_H)
+
+	var shape: Array = MINI_SHAPES.get(piece_name, [])
+	if shape.is_empty():
+		return box
+
+	var rows: int = shape.size()
+	var cols: int = (shape[0] as Array).size() if rows > 0 else 0
+	var piece_w: float = cols * TIMELINE_PIECE_CELL
+	var piece_h: float = rows * TIMELINE_PIECE_CELL
+	var off_x: float = maxi(0, int((box.custom_minimum_size.x - piece_w) * 0.5))
+	var off_y: float = maxi(0, int((box.custom_minimum_size.y - piece_h) * 0.5))
+
+	var cidx: int = PIECE_NAME_COLOR.get(piece_name, 0)
+	var col: Color = CELL_COLORS[cidx] if cidx < CELL_COLORS.size() else Color(0.85, 0.85, 0.85)
+
+	for r in range(rows):
+		var row_data: Array = shape[r]
+		for c in range(row_data.size()):
+			if int(row_data[c]) == 0:
+				continue
+			var rect := ColorRect.new()
+			rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			rect.size = Vector2(TIMELINE_PIECE_CELL - 1, TIMELINE_PIECE_CELL - 1)
+			rect.position = Vector2(off_x + c * TIMELINE_PIECE_CELL, off_y + r * TIMELINE_PIECE_CELL)
+			rect.color = col
+			box.add_child(rect)
+
+	return box
+
+
+func _draw_locked_piece_highlight(snap: Dictionary, step_index: int) -> void:
+	var piece_name: String = str(snap.get("piece_type", ""))
+	if not PIECE_NAME_TYPE.has(piece_name):
+		return
+
+	var piece_type: int = int(PIECE_NAME_TYPE[piece_name])
+	var rot: int = posmod(int(snap.get("rotation", 0)), 4)
+	var center_col: int = int(snap.get("col", -999))
+	var center_row_raw: int = int(snap.get("row", -999))
+	if center_col < -100 or center_row_raw < -100:
+		return
+
+	var center_row: int = center_row_raw - BOARD_ROWS if center_row_raw >= BOARD_ROWS else center_row_raw
+	var row_color: Color = _timeline_row_color(step_index)
+	var cidx: int = PIECE_NAME_COLOR.get(piece_name, 0)
+	var piece_glow_col: Color = CELL_COLORS[cidx] if cidx < CELL_COLORS.size() else Color(1, 1, 1, 1)
+	var inner_border_col: Color = Color(1.0, 1.0, 1.0, 0.48)
+	var glow_col: Color = row_color
+	glow_col.a = 0.90
+
+	var cells: Array[Vector2i] = []
+	var shape: Array = PieceData.SHAPES[piece_type][rot]
+	for offset in shape:
+		var gx: int = center_col + int(offset.x)
+		var gy: int = center_row + int(offset.y)
+		if gx < 0 or gx >= BOARD_COLS or gy < 0 or gy >= BOARD_ROWS:
+			continue
+		cells.append(Vector2i(gx, gy))
+		_add_cell_self_glow(gx, gy, piece_glow_col)
+		_add_highlight_border(gx, gy, inner_border_col)
+
+	_add_piece_glow_outline(cells, glow_col)
+
+
+func _add_highlight_border(col: int, row: int, border_col: Color) -> void:
+	var panel := Panel.new()
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.position = Vector2(col * CELL_SIZE, row * CELL_SIZE)
+	panel.size = Vector2(CELL_SIZE - 1, CELL_SIZE - 1)
+
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0, 0, 0, 0)
+	sb.border_width_left = 1
+	sb.border_width_top = 1
+	sb.border_width_right = 1
+	sb.border_width_bottom = 1
+	sb.border_color = border_col
+	panel.add_theme_stylebox_override("panel", sb)
+
+	replay_board.add_child(panel)
+
+
+func _add_piece_glow_outline(cells: Array[Vector2i], glow_col: Color) -> void:
+	if cells.is_empty():
+		return
+
+	var cell_set: Dictionary = {}
+	for p in cells:
+		cell_set[_cell_key(p.x, p.y)] = true
+
+	var cell_px: float = CELL_SIZE - 1
+	for p in cells:
+		var gx: int = p.x
+		var gy: int = p.y
+		var x: float = gx * CELL_SIZE
+		var y: float = gy * CELL_SIZE
+
+		# Left edge
+		if not cell_set.has(_cell_key(gx - 1, gy)):
+			_add_glow_strip(Vector2(x - 1, y), Vector2(1, cell_px), glow_col, 0.90)
+			_add_glow_strip(Vector2(x - 4, y - 1), Vector2(3, cell_px + 2), glow_col, 0.46)
+			_add_glow_strip(Vector2(x - 7, y - 2), Vector2(3, cell_px + 4), glow_col, 0.22)
+		# Right edge
+		if not cell_set.has(_cell_key(gx + 1, gy)):
+			_add_glow_strip(Vector2(x + cell_px, y), Vector2(1, cell_px), glow_col, 0.90)
+			_add_glow_strip(Vector2(x + cell_px + 1, y - 1), Vector2(3, cell_px + 2), glow_col, 0.46)
+			_add_glow_strip(Vector2(x + cell_px + 4, y - 2), Vector2(3, cell_px + 4), glow_col, 0.22)
+		# Top edge
+		if not cell_set.has(_cell_key(gx, gy - 1)):
+			_add_glow_strip(Vector2(x, y - 1), Vector2(cell_px, 1), glow_col, 0.90)
+			_add_glow_strip(Vector2(x - 1, y - 4), Vector2(cell_px + 2, 3), glow_col, 0.46)
+			_add_glow_strip(Vector2(x - 2, y - 7), Vector2(cell_px + 4, 3), glow_col, 0.22)
+		# Bottom edge
+		if not cell_set.has(_cell_key(gx, gy + 1)):
+			_add_glow_strip(Vector2(x, y + cell_px), Vector2(cell_px, 1), glow_col, 0.90)
+			_add_glow_strip(Vector2(x - 1, y + cell_px + 1), Vector2(cell_px + 2, 3), glow_col, 0.46)
+			_add_glow_strip(Vector2(x - 2, y + cell_px + 4), Vector2(cell_px + 4, 3), glow_col, 0.22)
+
+
+func _add_cell_self_glow(col: int, row: int, glow_col: Color) -> void:
+	var cell_px: float = CELL_SIZE - 1
+	var x: float = col * CELL_SIZE
+	var y: float = row * CELL_SIZE
+
+	var outer_size: float = maxf(1.0, cell_px - 4.0)
+	_add_glow_strip(Vector2(x + 2, y + 2), Vector2(outer_size, outer_size), glow_col, 0.24)
+
+	var core_size: float = maxf(1.0, cell_px - 12.0)
+	var core_off: float = (cell_px - core_size) * 0.5
+	_add_glow_strip(Vector2(x + core_off, y + core_off), Vector2(core_size, core_size), glow_col, 0.30)
+
+
+func _cell_key(x: int, y: int) -> String:
+	return "%d,%d" % [x, y]
+
+
+func _add_glow_strip(pos: Vector2, size: Vector2, glow_col: Color, alpha: float) -> void:
+	var strip := ColorRect.new()
+	strip.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	strip.position = pos
+	strip.size = size
+	strip.color = Color(glow_col.r, glow_col.g, glow_col.b, clampf(alpha, 0.0, 1.0))
+	replay_board.add_child(strip)
