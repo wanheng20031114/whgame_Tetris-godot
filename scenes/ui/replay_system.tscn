@@ -1,0 +1,406 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/replay_system.gd" id="1_script"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bg"]
+bg_color = Color(0.04, 0.04, 0.07, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
+bg_color = Color(0.063, 0.063, 0.1, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.1, 0.165, 0.25, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_topbar"]
+bg_color = Color(0.05, 0.05, 0.08, 1)
+border_width_bottom = 1
+border_color = Color(0.1, 0.165, 0.25, 1)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_popup"]
+bg_color = Color(0.06, 0.06, 0.1, 0.95)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0, 0.83, 1, 0.6)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+shadow_color = Color(0, 0.5, 1, 0.2)
+shadow_size = 20
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn"]
+bg_color = Color(0.1, 0.1, 0.15, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.15, 0.25, 0.4, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn_hover"]
+bg_color = Color(0.12, 0.15, 0.22, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0, 0.83, 1, 0.8)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_slider_grabber"]
+bg_color = Color(0, 0.83, 1, 1)
+corner_radius_top_left = 2
+corner_radius_top_right = 2
+corner_radius_bottom_right = 2
+corner_radius_bottom_left = 2
+
+[node name="ReplaySystem" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_script")
+
+[node name="Background" type="Panel" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_bg")
+
+[node name="VBoxMain" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="TopBar" type="PanelContainer" parent="VBoxMain"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_topbar")
+
+[node name="HBox" type="HBoxContainer" parent="VBoxMain/TopBar"]
+layout_mode = 2
+theme_override_constants/separation = 20
+
+[node name="BtnBack" type="Button" parent="VBoxMain/TopBar/HBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0, 0.83, 1, 1)
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
+theme_override_styles/hover = SubResource("StyleBoxFlat_btn_hover")
+text = "◀ BACK"
+
+[node name="TitleLabel" type="Label" parent="VBoxMain/TopBar/HBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.88, 0.91, 0.94, 1)
+theme_override_font_sizes/font_size = 22
+text = "REPLAY ANALYSIS"
+
+[node name="Spacer" type="Control" parent="VBoxMain/TopBar/HBox"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="SessionInfoLabel" type="Label" parent="VBoxMain/TopBar/HBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.4, 0.5, 0.67, 1)
+theme_override_font_sizes/font_size = 14
+text = "No session loaded"
+horizontal_alignment = 2
+
+[node name="MainContent" type="HBoxContainer" parent="VBoxMain"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/separation = 0
+
+[node name="LeftPanel" type="PanelContainer" parent="VBoxMain/MainContent"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(280, 0)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="MarginContainer" type="MarginContainer" parent="VBoxMain/MainContent/LeftPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 12
+
+[node name="DataScroll" type="ScrollContainer" parent="VBoxMain/MainContent/LeftPanel/MarginContainer"]
+layout_mode = 2
+
+[node name="DataVBox" type="VBoxContainer" parent="VBoxMain/MainContent/LeftPanel/MarginContainer/DataScroll"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 6
+
+[node name="PieceInfoTitle" type="Label" parent="VBoxMain/MainContent/LeftPanel/MarginContainer/DataScroll/DataVBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0, 0.83, 1, 1)
+theme_override_font_sizes/font_size = 14
+text = "▸ PIECE INFO"
+
+[node name="PieceTypeLabel" type="Label" parent="VBoxMain/MainContent/LeftPanel/MarginContainer/DataScroll/DataVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.88, 0.91, 0.94, 1)
+text = "Type: —"
+
+[node name="PositionLabel" type="Label" parent="VBoxMain/MainContent/LeftPanel/MarginContainer/DataScroll/DataVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.88, 0.91, 0.94, 1)
+text = "Position: —"
+
+[node name="ClearTypeLabel" type="Label" parent="VBoxMain/MainContent/LeftPanel/MarginContainer/DataScroll/DataVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.88, 0.91, 0.94, 1)
+text = "Clear: —"
+
+[node name="LinesLabel" type="Label" parent="VBoxMain/MainContent/LeftPanel/MarginContainer/DataScroll/DataVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.88, 0.91, 0.94, 1)
+text = "Lines: —"
+
+[node name="DamageLabel" type="Label" parent="VBoxMain/MainContent/LeftPanel/MarginContainer/DataScroll/DataVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.88, 0.91, 0.94, 1)
+text = "Damage: —"
+
+[node name="ComboLabel" type="Label" parent="VBoxMain/MainContent/LeftPanel/MarginContainer/DataScroll/DataVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.88, 0.91, 0.94, 1)
+text = "Combo: —"
+
+[node name="TimeLabel" type="Label" parent="VBoxMain/MainContent/LeftPanel/MarginContainer/DataScroll/DataVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.88, 0.91, 0.94, 1)
+text = "Time: —"
+
+[node name="Sep1" type="HSeparator" parent="VBoxMain/MainContent/LeftPanel/MarginContainer/DataScroll/DataVBox"]
+layout_mode = 2
+theme_override_colors/separator_color = Color(0.1, 0.165, 0.25, 1)
+
+[node name="TerrainTitle" type="Label" parent="VBoxMain/MainContent/LeftPanel/MarginContainer/DataScroll/DataVBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0, 0.83, 1, 1)
+theme_override_font_sizes/font_size = 14
+text = "▸ TERRAIN METRICS"
+
+[node name="HolesLabel" type="Label" parent="VBoxMain/MainContent/LeftPanel/MarginContainer/DataScroll/DataVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.88, 0.91, 0.94, 1)
+text = "Holes: —"
+
+[node name="BumpinessLabel" type="Label" parent="VBoxMain/MainContent/LeftPanel/MarginContainer/DataScroll/DataVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.88, 0.91, 0.94, 1)
+text = "Bumpiness: —"
+
+[node name="HeightLabel" type="Label" parent="VBoxMain/MainContent/LeftPanel/MarginContainer/DataScroll/DataVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.88, 0.91, 0.94, 1)
+text = "Total Height: —"
+
+[node name="Sep2" type="HSeparator" parent="VBoxMain/MainContent/LeftPanel/MarginContainer/DataScroll/DataVBox"]
+layout_mode = 2
+theme_override_colors/separator_color = Color(0.1, 0.165, 0.25, 1)
+
+[node name="AiTitle" type="Label" parent="VBoxMain/MainContent/LeftPanel/MarginContainer/DataScroll/DataVBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0, 0.83, 1, 1)
+theme_override_font_sizes/font_size = 14
+text = "▸ AI EVALUATION"
+
+[node name="AiScoreLabel" type="Label" parent="VBoxMain/MainContent/LeftPanel/MarginContainer/DataScroll/DataVBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0, 1, 0.53, 1)
+theme_override_font_sizes/font_size = 20
+text = "— —"
+
+[node name="CenterPanel" type="PanelContainer" parent="VBoxMain/MainContent"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_styles/panel = SubResource("StyleBoxFlat_bg")
+
+[node name="CenterVBox" type="VBoxContainer" parent="VBoxMain/MainContent/CenterPanel"]
+layout_mode = 2
+alignment = 1
+
+[node name="BoardContainer" type="CenterContainer" parent="VBoxMain/MainContent/CenterPanel/CenterVBox"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="ReplayBoard" type="Node2D" parent="VBoxMain/MainContent/CenterPanel/CenterVBox/BoardContainer"]
+unique_name_in_owner = true
+
+[node name="StepNav" type="HBoxContainer" parent="VBoxMain/MainContent/CenterPanel/CenterVBox"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 40)
+layout_mode = 2
+theme_override_constants/separation = 8
+alignment = 1
+
+[node name="BtnFirst" type="Button" parent="VBoxMain/MainContent/CenterPanel/CenterVBox/StepNav"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(40, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0, 0.83, 1, 1)
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
+theme_override_styles/hover = SubResource("StyleBoxFlat_btn_hover")
+text = "|◀"
+
+[node name="BtnPrev" type="Button" parent="VBoxMain/MainContent/CenterPanel/CenterVBox/StepNav"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(40, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0, 0.83, 1, 1)
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
+theme_override_styles/hover = SubResource("StyleBoxFlat_btn_hover")
+text = "◀"
+
+[node name="StepSlider" type="HSlider" parent="VBoxMain/MainContent/CenterPanel/CenterVBox/StepNav"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 0.0
+max_value = 1.0
+step = 1.0
+
+[node name="BtnNext" type="Button" parent="VBoxMain/MainContent/CenterPanel/CenterVBox/StepNav"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(40, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0, 0.83, 1, 1)
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
+theme_override_styles/hover = SubResource("StyleBoxFlat_btn_hover")
+text = "▶"
+
+[node name="BtnLast" type="Button" parent="VBoxMain/MainContent/CenterPanel/CenterVBox/StepNav"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(40, 0)
+layout_mode = 2
+theme_override_colors/font_color = Color(0, 0.83, 1, 1)
+theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
+theme_override_styles/hover = SubResource("StyleBoxFlat_btn_hover")
+text = "▶|"
+
+[node name="StepLabel" type="Label" parent="VBoxMain/MainContent/CenterPanel/CenterVBox/StepNav"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.4, 0.5, 0.67, 1)
+theme_override_font_sizes/font_size = 14
+text = "Step 0 / 0"
+
+[node name="RightPanel" type="PanelContainer" parent="VBoxMain/MainContent"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(260, 0)
+layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
+
+[node name="MarginContainer" type="MarginContainer" parent="VBoxMain/MainContent/RightPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 10
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 10
+
+[node name="VBox" type="VBoxContainer" parent="VBoxMain/MainContent/RightPanel/MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="TimelineTitle" type="Label" parent="VBoxMain/MainContent/RightPanel/MarginContainer/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0, 0.83, 1, 1)
+theme_override_font_sizes/font_size = 14
+text = "▸ TIMELINE"
+
+[node name="TimelineScroll" type="ScrollContainer" parent="VBoxMain/MainContent/RightPanel/MarginContainer/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="TimelineList" type="VBoxContainer" parent="VBoxMain/MainContent/RightPanel/MarginContainer/VBox/TimelineScroll"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 2
+
+[node name="SessionListPopup" type="PanelContainer" parent="."]
+unique_name_in_owner = true
+visible = false
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -250.0
+offset_top = -250.0
+offset_right = 250.0
+offset_bottom = 250.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_popup")
+
+[node name="MarginContainer" type="MarginContainer" parent="SessionListPopup"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 16
+
+[node name="VBox" type="VBoxContainer" parent="SessionListPopup/MarginContainer"]
+layout_mode = 2
+theme_override_constants/separation = 12
+
+[node name="PopupTitle" type="Label" parent="SessionListPopup/MarginContainer/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0, 0.83, 1, 1)
+theme_override_font_sizes/font_size = 18
+text = "SELECT SESSION"
+horizontal_alignment = 1
+
+[node name="SessionScroll" type="ScrollContainer" parent="SessionListPopup/MarginContainer/VBox"]
+layout_mode = 2
+size_flags_vertical = 3
+
+[node name="SessionList" type="VBoxContainer" parent="SessionListPopup/MarginContainer/VBox/SessionScroll"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 4

@@ -112,6 +112,7 @@ func _show_lobby(player_name: String) -> void:
 		_main_lobby.start_marathon.connect(_start_marathon_mode)
 		_main_lobby.start_multiplayer.connect(_start_multiplayer_mode)
 		_main_lobby.open_player_stats.connect(_open_player_stats)
+		_main_lobby.open_replay.connect(_open_replay)
 
 		# 大厅入场动画不影响逻辑，仅作为表现层增强。
 		_main_lobby.play_entrance_animation()
@@ -136,3 +137,8 @@ func _start_multiplayer_mode() -> void:
 ## 打开玩家数据界面
 func _open_player_stats() -> void:
 	get_tree().change_scene_to_file("res://scenes/ui/player_stats_screen.tscn")
+
+
+## 打开对局复盘界面
+func _open_replay() -> void:
+	get_tree().change_scene_to_file("res://scenes/ui/replay_system.tscn")

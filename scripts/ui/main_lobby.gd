@@ -10,11 +10,13 @@ extends Control
 signal start_marathon()
 signal start_multiplayer()
 signal open_player_stats()
+signal open_replay()
 
 @onready var lbl_player_name: Label = %PlayerNameLabel
 @onready var card_marathon: PanelContainer = %CardMarathon
 @onready var card_multiplayer: PanelContainer = %CardMultiplayer
 @onready var btn_stats: Button = %BtnStats
+@onready var card_replay: PanelContainer = %CardReplay
 
 var _current_pname: String = ""
 
@@ -37,26 +39,35 @@ func _ready() -> void:
 	# 绑定点击输入
 	card_marathon.gui_input.connect(_on_card_input.bind(card_marathon, "marathon"))
 	card_multiplayer.gui_input.connect(_on_card_input.bind(card_multiplayer, "multiplayer"))
+	card_replay.gui_input.connect(_on_card_input.bind(card_replay, "replay"))
 
 	# 绑定 hover + focus，统一走同一套高亮刷新逻辑
 	card_marathon.mouse_entered.connect(_on_card_hover.bind(card_marathon, true))
 	card_marathon.mouse_exited.connect(_on_card_hover.bind(card_marathon, false))
 	card_multiplayer.mouse_entered.connect(_on_card_hover.bind(card_multiplayer, true))
 	card_multiplayer.mouse_exited.connect(_on_card_hover.bind(card_multiplayer, false))
+	card_replay.mouse_entered.connect(_on_card_hover.bind(card_replay, true))
+	card_replay.mouse_exited.connect(_on_card_hover.bind(card_replay, false))
 	card_marathon.focus_entered.connect(_on_card_hover.bind(card_marathon, true))
 	card_marathon.focus_exited.connect(_on_card_hover.bind(card_marathon, false))
 	card_multiplayer.focus_entered.connect(_on_card_hover.bind(card_multiplayer, true))
 	card_multiplayer.focus_exited.connect(_on_card_hover.bind(card_multiplayer, false))
+	card_replay.focus_entered.connect(_on_card_hover.bind(card_replay, true))
+	card_replay.focus_exited.connect(_on_card_hover.bind(card_replay, false))
 
 	# 焦点导航配置（手柄/键盘）
 	card_marathon.focus_mode = Control.FOCUS_ALL
 	card_multiplayer.focus_mode = Control.FOCUS_ALL
+	card_replay.focus_mode = Control.FOCUS_ALL
 	card_marathon.focus_neighbor_right = card_multiplayer.get_path()
 	card_multiplayer.focus_neighbor_left = card_marathon.get_path()
+	card_multiplayer.focus_neighbor_right = card_replay.get_path()
+	card_replay.focus_neighbor_left = card_multiplayer.get_path()
 
 	# 缩放动画基准点设为卡片中心
 	card_marathon.pivot_offset = card_marathon.size / 2.0
 	card_multiplayer.pivot_offset = card_multiplayer.size / 2.0
+	card_replay.pivot_offset = card_replay.size / 2.0
 
 	# 初始化卡片外发光样式（默认态 + 选中态）
 	_init_card_glow_styles()
@@ -90,6 +101,9 @@ func _clear_initial_card_selection() -> void:
 	if card_multiplayer:
 		card_multiplayer.release_focus()
 		card_multiplayer.scale = CARD_NORMAL_SCALE
+	if card_replay:
+		card_replay.release_focus()
+		card_replay.scale = CARD_NORMAL_SCALE
 	_refresh_card_visuals()
 
 
@@ -115,6 +129,14 @@ func _update_texts() -> void:
 	if lbl_mp_desc:
 		lbl_mp_desc.text = tr("TXT_MULTIPLAYER_DESC")
 
+	var lbl_replay = get_node_or_null("%CardReplay/VBoxContainer/Title")
+	if lbl_replay:
+		lbl_replay.text = tr("TXT_REPLAY")
+
+	var lbl_r_desc = get_node_or_null("%CardReplay/VBoxContainer/Desc")
+	if lbl_r_desc:
+		lbl_r_desc.text = tr("TXT_REPLAY_DESC")
+
 	if lbl_player_name and not _current_pname.is_empty():
 		lbl_player_name.text = "%s, %s" % [tr("TXT_WELCOME"), _current_pname]
 
@@ -138,7 +160,7 @@ func _init_card_glow_styles() -> void:
 	# 每张卡都从当前 panel 样式复制出两份：
 	# - base: 默认样式
 	# - glow: 选中时的高亮外发光样式
-	for card in [card_marathon, card_multiplayer]:
+	for card in [card_marathon, card_multiplayer, card_replay]:
 		var panel_style: StyleBox = card.get_theme_stylebox("panel")
 		if not (panel_style is StyleBoxFlat):
 			continue
@@ -196,6 +218,7 @@ func _set_card_glow(card: PanelContainer, active: bool) -> void:
 func _refresh_card_visuals() -> void:
 	_set_card_glow(card_marathon, _is_card_active(card_marathon))
 	_set_card_glow(card_multiplayer, _is_card_active(card_multiplayer))
+	_set_card_glow(card_replay, _is_card_active(card_replay))
 
 
 func _on_card_input(event: InputEvent, card: Control, mode: String) -> void:
@@ -235,6 +258,8 @@ func _activate_mode(card: Control, mode: String) -> void:
 			start_marathon.emit()
 		elif mode == "multiplayer":
 			start_multiplayer.emit()
+		elif mode == "replay":
+			open_replay.emit()
 	)
 
 

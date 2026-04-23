@@ -3,7 +3,7 @@
 [ext_resource type="Texture2D" uid="uid://dbvc33esastt1" path="res://assets/ui/icon_settings.png" id="1_icon"]
 [ext_resource type="Script" uid="uid://hl75fqdrisnq" path="res://scripts/ui/settings_menu.gd" id="2_script"]
 
-[node name="SettingsMenu" type="TextureButton"]
+[node name="SettingsMenu" type="TextureButton" unique_id=2113850122]
 custom_minimum_size = Vector2(40, 40)
 texture_normal = ExtResource("1_icon")
 ignore_texture_size = true

@@ -1,9 +1,11 @@
-[gd_scene format=3 uid="uid://bbgjx6q6tpspu"]
+[gd_scene format=3]
 
-[ext_resource type="Script" uid="uid://ba3a7lvhlsd15" path="res://scripts/ui/main_lobby.gd" id="1_lobby"]
-[ext_resource type="Texture2D" uid="uid://4wscemrs1yx4" path="res://assets/images/bg_lobby.jpg" id="2_g5nql"]
-[ext_resource type="Texture2D" uid="uid://bdno2l6dijik8" path="res://assets/ui/icon_userdata.png" id="3_qkqkv"]
+[ext_resource type="Script" path="res://scripts/ui/main_lobby.gd" id="1_lobby"]
+
+[ext_resource type="Texture2D" path="res://assets/images/bg_lobby.jpg" id="2_g5nql"]
+[ext_resource type="Texture2D" path="res://assets/ui/icon_userdata.png" id="3_qkqkv"]
 [ext_resource type="PackedScene" path="res://scenes/ui/settings_menu.tscn" id="3_stngs"]
+[ext_resource type="Texture2D" path="res://assets/ui/icon_settings.png" id="4_b0wn2"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_navbar"]
 bg_color = Color(0.08, 0.08, 0.11, 1)
@@ -95,8 +97,8 @@ layout_mode = 2
 
 [node name="LogoLabel" type="Label" parent="VBoxContainer/NavBar/MarginContainer/HBoxContainer" unique_id=108006944]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.9, 0.9, 1, 1)
 theme_override_font_sizes/font_size = 28
+theme_override_colors/font_color = Color(0.9, 0.9, 1, 1)
 text = "WIDE TETRIS"
 
 [node name="Spacer" type="Control" parent="VBoxContainer/NavBar/MarginContainer/HBoxContainer" unique_id=1412057732]
@@ -124,8 +126,8 @@ alignment = 1
 
 [node name="Title" type="Label" parent="VBoxContainer/MainContent/CardsHBox/CardMarathon/VBoxContainer" unique_id=1266518568]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.9, 0.9, 1, 1)
 theme_override_font_sizes/font_size = 36
+theme_override_colors/font_color = Color(0.9, 0.9, 1, 1)
 text = "MARATHON"
 horizontal_alignment = 1
 
@@ -150,8 +152,8 @@ alignment = 1
 
 [node name="Title" type="Label" parent="VBoxContainer/MainContent/CardsHBox/CardMultiplayer/VBoxContainer" unique_id=1845887401]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.9, 0.9, 1, 1)
 theme_override_font_sizes/font_size = 36
+theme_override_colors/font_color = Color(0.9, 0.9, 1, 1)
 text = "MULTIPLAYER"
 horizontal_alignment = 1
 
@@ -163,6 +165,33 @@ ONLINE VIA
 STEAM RELAY."
 horizontal_alignment = 1
 
+[node name="CardReplay" type="PanelContainer" parent="VBoxContainer/MainContent/CardsHBox" unique_id=2000000001]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(280, 400)
+layout_mode = 2
+focus_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_card_normal")
+
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MainContent/CardsHBox/CardReplay" unique_id=2000000002]
+layout_mode = 2
+alignment = 1
+
+[node name="Title" type="Label" parent="VBoxContainer/MainContent/CardsHBox/CardReplay/VBoxContainer" unique_id=2000000003]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.9, 0.9, 1, 1)
+theme_override_font_sizes/font_size = 36
+text = "REPLAY"
+horizontal_alignment = 1
+
+[node name="Desc" type="Label" parent="VBoxContainer/MainContent/CardsHBox/CardReplay/VBoxContainer" unique_id=2000000004]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.6, 0.6, 0.7, 1)
+text = "REVIEW YOUR
+GAMES WITH
+AI ANALYSIS."
+horizontal_alignment = 1
+
+
 [node name="PlayerNameLabel" type="Label" parent="." unique_id=149902058]
 unique_name_in_owner = true
 layout_mode = 0
@@ -170,8 +199,8 @@ offset_left = 900.0
 offset_top = 18.0
 offset_right = 1118.0
 offset_bottom = 52.0
-theme_override_colors/font_color = Color(0.6, 0.8, 1, 1)
 theme_override_font_sizes/font_size = 24
+theme_override_colors/font_color = Color(0.6, 0.8, 1, 1)
 text = "WELCOME, PLAYER"
 
 [node name="BtnStats" type="Button" parent="." unique_id=888777666]
@@ -190,10 +219,14 @@ theme_override_styles/focus = SubResource("StyleBoxFlat_btn_stats_hover")
 icon = ExtResource("3_qkqkv")
 expand_icon = true
 
-[node name="BtnSettings" parent="." unique_id=1127632104 instance=ExtResource("3_stngs")]
+[node name="BtnSettings" type="TextureButton" parent="." unique_id=1127632104 instance=ExtResource("3_stngs")]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(40, 40)
 layout_mode = 0
 offset_left = 1230.0
 offset_top = 15.0
 offset_right = 1270.0
 offset_bottom = 55.0
+texture_normal = ExtResource("4_b0wn2")
+ignore_texture_size = true
+stretch_mode = 5

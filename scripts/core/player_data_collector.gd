@@ -147,7 +147,9 @@ func record_piece_drop(
 	damage_this_lock: int,
 	hold_used_this_piece: bool,
 	structure_score: float,
-	stability_score: float
+	stability_score: float,
+	board_after_drop: Array = [],
+	board_after_clear: Array = []
 ) -> void:
 	if not _active:
 		return
@@ -197,6 +199,12 @@ func record_piece_drop(
 	for nt in next_pieces:
 		next_names.append(PIECE_TYPE_NAMES.get(int(nt), "?"))
 
+	# 使用消行后的棋盘计算 MLP 地形特征
+	var terrain_board: Array = board_after_clear if not board_after_clear.is_empty() else board_state_visible
+	var holes: int = _calculate_holes(terrain_board)
+	var bumpiness: int = _calculate_bumpiness(terrain_board)
+	var total_height: int = _calculate_total_height(terrain_board)
+
 	var snapshot: Dictionary = {
 		"piece_index": _piece_index,
 		"timestamp_ms": now_ms - _session_start_ticks_ms,
@@ -204,7 +212,9 @@ func record_piece_drop(
 		"rotation": rotation,
 		"col": col,
 		"row": row,
-		"board_state": board_state_visible,
+		"board_state": terrain_board,
+		"board_state_after_drop": board_after_drop if not board_after_drop.is_empty() else board_state_visible,
+		"board_state_after_clear": terrain_board,
 		"next_pieces": next_names,
 		"score": score,
 		"level": level,
@@ -219,7 +229,10 @@ func record_piece_drop(
 		"hold_used": hold_used_this_piece,
 		"elapsed_since_last_piece_ms": elapsed_since_last,
 		"structure_score": snapped(structure_score, 0.1),
-		"stability_score": snapped(stability_score, 0.1)
+		"stability_score": snapped(stability_score, 0.1),
+		"holes": holes,
+		"bumpiness": bumpiness,
+		"total_height": total_height
 	}
 
 	if _snapshots.size() >= MAX_SNAPSHOTS:
@@ -472,3 +485,65 @@ func _get_iso_datetime() -> String:
 		dt["year"], dt["month"], dt["day"],
 		dt["hour"], dt["minute"], dt["second"]
 	]
+
+
+# ==========================================
+# MLP 地形特征计算方法
+# 用于在每次落锁后计算棋盘的空洞数、凹凸度、总高度，
+# 这些是 MLP 模型推理所需的 4 个状态特征中的 3 个
+# （第 4 个 lines_cleared 已在 snapshot 中记录）。
+# ==========================================
+
+
+# 计算棋盘中的空洞总数。
+# 空洞定义：某列中，最高实块以下的所有空格。
+func _calculate_holes(board: Array) -> int:
+	var rows: int = board.size()
+	if rows <= 0:
+		return 0
+	var cols: int = (board[0] as Array).size() if rows > 0 else 0
+	var num_holes: int = 0
+	for c in range(cols):
+		var found_block: bool = false
+		for r in range(rows):
+			var cell: int = int(board[r][c])
+			if cell != 0:
+				found_block = true
+			elif found_block:
+				num_holes += 1
+	return num_holes
+
+
+# 计算相邻列高度差的绝对值之和（凹凸度）。
+func _calculate_bumpiness(board: Array) -> int:
+	var heights: Array = _get_column_heights(board)
+	var bumpiness: int = 0
+	for i in range(heights.size() - 1):
+		bumpiness += absi(int(heights[i]) - int(heights[i + 1]))
+	return bumpiness
+
+
+# 计算所有列高度的总和。
+func _calculate_total_height(board: Array) -> int:
+	var heights: Array = _get_column_heights(board)
+	var total: int = 0
+	for h in heights:
+		total += int(h)
+	return total
+
+
+# 获取每列的高度（从底部算起到最高实块的距离）。
+func _get_column_heights(board: Array) -> Array:
+	var rows: int = board.size()
+	if rows <= 0:
+		return []
+	var cols: int = (board[0] as Array).size() if rows > 0 else 0
+	var heights: Array = []
+	for c in range(cols):
+		var col_height: int = 0
+		for r in range(rows):
+			if int(board[r][c]) != 0:
+				col_height = rows - r
+				break
+		heights.append(col_height)
+	return heights

@@ -44,6 +44,9 @@ var _last_structure_score: float = 0.0
 var _last_stability_score: float = 0.0
 var _hold_used_this_piece: bool = false
 
+# 消行前的棋盘状态缓存（用于 AI 复盘双份棋盘数据）
+var _cached_board_after_drop: Array = []
+
 
 func _ready() -> void:
 	super._ready()
@@ -185,7 +188,42 @@ func _lock_piece() -> void:
 	_last_is_spin = false
 	_last_is_t_spin = false
 
-	super._lock_piece()
+	# === 内联 TetrisCore._lock_piece() 逻辑，以便在 lock 与 clear 之间捕获棋盘 ===
+	lock_timer.stop()
+	board.lock_piece(cur_type, cur_rot, cur_col, cur_row, PieceData.COLORS[cur_type])
+
+	# >>> 捕获消行前的棋盘状态（方块已放置但未消行）<<<
+	var full_grid_before_clear: Array = board.get_grid_state()
+	_cached_board_after_drop = []
+	for r in range(board.buffer_rows, board.total_rows):
+		if r < full_grid_before_clear.size():
+			_cached_board_after_drop.append(full_grid_before_clear[r])
+
+	# 检查特殊旋转
+	var is_spin: bool = false
+	if last_was_rotation and _is_spin_piece_type(cur_type):
+		is_spin = _check_immobile()
+
+	# 执行消行逻辑
+	var clear_result: Dictionary = board.clear_lines_with_data()
+	var cleared: int = clear_result["cleared"]
+	var cleared_rows_data: Array = clear_result["rows_data"]
+	var dmg: int = 0
+	if cleared > 0:
+		var is_t_spin = (cur_type == PieceData.Type.T and is_spin)
+		scoring.process_line_clear(cleared, is_spin, is_t_spin)
+		dmg = _calculate_damage(cleared, is_spin)
+		lines_cleared.emit(cleared, is_spin, is_t_spin, dmg)
+		rows_cleared.emit(cleared_rows_data)
+	else:
+		scoring.reset_combo()
+
+	score_changed.emit(scoring.score, scoring.level, scoring.lines)
+	piece_locked.emit(cur_type, board.get_grid_state())
+
+	hold_used = false
+	_spawn_next_piece()
+	# === 核心逻辑内联结束 ===
 
 	sfx_planting.play()
 
@@ -486,7 +524,9 @@ func _record_piece_snapshot() -> void:
 		_last_damage_this_lock,
 		_hold_used_this_piece,
 		_last_structure_score,
-		_last_stability_score
+		_last_stability_score,
+		_cached_board_after_drop,
+		visible_grid
 	)
 
 	_hold_used_this_piece = false
