@@ -188,6 +188,12 @@ func _lock_piece() -> void:
 	_last_is_spin = false
 	_last_is_t_spin = false
 
+	var locked_piece_type: int = cur_type
+	var locked_rotation: int = cur_rot
+	var locked_col: int = cur_col
+	var locked_row: int = cur_row
+	var next_pieces_at_lock: Array = bag.peek(5)
+
 	# === 内联 TetrisCore._lock_piece() 逻辑，以便在 lock 与 clear 之间捕获棋盘 ===
 	lock_timer.stop()
 	board.lock_piece(cur_type, cur_rot, cur_col, cur_row, PieceData.COLORS[cur_type])
@@ -233,7 +239,13 @@ func _lock_piece() -> void:
 		ready_garbage = 0
 
 	# 每次锁定后记录一次快照。
-	_record_piece_snapshot()
+	_record_piece_snapshot(
+		locked_piece_type,
+		locked_rotation,
+		locked_col,
+		locked_row,
+		next_pieces_at_lock
+	)
 
 func _on_game_over() -> void:
 	if label_game_over:
@@ -486,7 +498,13 @@ func _count_key_presses() -> void:
 			_data_collector.key_presses_this_piece += 1
 
 
-func _record_piece_snapshot() -> void:
+func _record_piece_snapshot(
+	locked_piece_type: int,
+	locked_rotation: int,
+	locked_col: int,
+	locked_row: int,
+	next_pieces_at_lock: Array
+) -> void:
 	# 采集一次“方块锁定快照”：棋盘/next/战斗结果/结构评分。
 	if _data_collector == null or not _data_collector.is_active():
 		return
@@ -499,7 +517,6 @@ func _record_piece_snapshot() -> void:
 		if r < full_grid.size():
 			visible_grid.append(full_grid[r])
 
-	var next_pieces: Array = bag.peek(5)
 
 	# 由 StructureEvaluator 计算结构分与空洞分。
 	var structure_eval: Dictionary = _evaluate_structure_scores(visible_grid)
@@ -507,12 +524,12 @@ func _record_piece_snapshot() -> void:
 	_last_stability_score = float(structure_eval.get("stability_score", 0.0))
 
 	_data_collector.record_piece_drop(
-		cur_type,
-		cur_rot,
-		cur_col,
-		cur_row,
+		locked_piece_type,
+		locked_rotation,
+		locked_col,
+		locked_row,
 		visible_grid,
-		next_pieces,
+		next_pieces_at_lock,
 		scoring.score,
 		scoring.level,
 		scoring.lines,

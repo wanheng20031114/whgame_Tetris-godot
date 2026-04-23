@@ -213,7 +213,6 @@ func record_piece_drop(
 		"rotation": rotation,
 		"col": col,
 		"row": row,
-		"board_state": terrain_board,
 		"board_state_after_drop": board_after_drop if not board_after_drop.is_empty() else board_state_visible,
 		"board_state_after_clear": terrain_board,
 		"next_pieces": next_names,

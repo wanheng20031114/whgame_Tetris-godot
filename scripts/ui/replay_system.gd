@@ -10,14 +10,15 @@ const CELL_SIZE: int = 30
 
 # 方块颜色（与 PieceData.COLORS 一致，0=空）
 const CELL_COLORS: Array[Color] = [
-	Color(0.08, 0.08, 0.12, 1),    # 0: 空 — 深色背景
-	Color(0.0, 0.85, 0.85, 1),     # 1: I — 青
-	Color(1.0, 0.85, 0.0, 1),      # 2: O — 黄
-	Color(0.6, 0.0, 0.8, 1),       # 3: T — 紫
-	Color(0.0, 0.8, 0.0, 1),       # 4: S — 绿
-	Color(0.9, 0.1, 0.1, 1),       # 5: Z — 红
-	Color(1.0, 0.55, 0.0, 1),      # 6: L — 橙
-	Color(0.1, 0.3, 0.9, 1),       # 7: J — 蓝
+	Color(0.08, 0.08, 0.12, 1),    # 0: 空 - 深色背景
+	Color(0.0, 0.85, 0.85, 1),     # 1: I - 青
+	Color(1.0, 0.85, 0.0, 1),      # 2: O - 黄
+	Color(0.6, 0.0, 0.8, 1),       # 3: T - 紫
+	Color(0.0, 0.8, 0.0, 1),       # 4: S - 绿
+	Color(0.9, 0.1, 0.1, 1),       # 5: Z - 红
+	Color(1.0, 0.55, 0.0, 1),      # 6: L - 橙
+	Color(0.1, 0.3, 0.9, 1),       # 7: J - 蓝
+	Color(0.45, 0.45, 0.45, 1),    # 8: Garbage - 灰
 ]
 
 # 方块名称 → 颜色索引映射
@@ -315,7 +316,11 @@ func _update_step_label() -> void:
 
 func _render_step(index: int) -> void:
 	var snap: Dictionary = _snapshots[index]
-	var board_data: Array = snap.get("board_state", [])
+	var board_data: Array = snap.get("board_state_after_drop", [])
+	if board_data.is_empty():
+		board_data = snap.get("board_state", [])
+	if board_data.is_empty():
+		board_data = snap.get("board_state_after_clear", [])
 
 	# 清除旧绘制
 	for child in replay_board.get_children():
@@ -331,6 +336,9 @@ func _render_step(index: int) -> void:
 			rect.position = Vector2(c * CELL_SIZE, r * CELL_SIZE)
 			if cell_val > 0 and cell_val < CELL_COLORS.size():
 				rect.color = CELL_COLORS[cell_val]
+			elif cell_val > 0:
+				# 兼容未知非空编码（例如未来新增块类型）
+				rect.color = CELL_COLORS[8]
 			else:
 				rect.color = CELL_COLORS[0]
 			replay_board.add_child(rect)
@@ -412,15 +420,7 @@ func _update_data_panel(index: int) -> void:
 	if index < _ai_scores.size():
 		var score_val: float = float(_ai_scores[index])
 		ai_score_label.text = "%.2f" % score_val
-		# 颜色分级：正值越高越绿，负值越低越红
-		if score_val > 5.0:
-			ai_score_label.add_theme_color_override("font_color", Color(0, 1, 0.53))
-		elif score_val > 0.0:
-			ai_score_label.add_theme_color_override("font_color", Color(0.5, 1, 0.5))
-		elif score_val > -5.0:
-			ai_score_label.add_theme_color_override("font_color", Color(1, 0.8, 0.2))
-		else:
-			ai_score_label.add_theme_color_override("font_color", Color(1, 0.27, 0.27))
+		ai_score_label.add_theme_color_override("font_color", _ai_score_color(score_val))
 	else:
 		ai_score_label.text = tr("TXT_NA")
 		ai_score_label.add_theme_color_override("font_color", Color(0.4, 0.5, 0.67))
@@ -432,6 +432,13 @@ func _lines_name(count: int) -> String:
 		2: return "Double"
 		3: return "Triple"
 		_: return "Tetris" if count >= 4 else ""
+
+func _ai_score_color(score_val: float) -> Color:
+	if score_val > 100.0:
+		return Color(0.0, 0.95, 0.45)
+	if score_val >= 0.0:
+		return Color(1.0, 0.85, 0.2)
+	return Color(1.0, 0.3, 0.3)
 
 
 # ==============================================================================
@@ -467,14 +474,17 @@ func _build_timeline() -> void:
 		btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		btn.add_theme_font_size_override("font_size", 11)
-		btn.add_theme_color_override("font_color", Color(0.6, 0.65, 0.75))
+		var row_color: Color = Color(0.6, 0.65, 0.75)
+		if i < _ai_scores.size():
+			row_color = _ai_score_color(float(_ai_scores[i]))
+		btn.add_theme_color_override("font_color", row_color)
 
 		# AI 分数
 		var ai_text: String = ""
 		if i < _ai_scores.size():
 			ai_text = "%.1f" % float(_ai_scores[i])
 		else:
-			ai_text = "—"
+			ai_text = "-"
 
 		# 用时
 		var time_text: String = "%dms" % elapsed_ms
@@ -499,14 +509,10 @@ func _highlight_timeline_item(index: int) -> void:
 		if i == index:
 			btn.add_theme_color_override("font_color", Color(0, 0.83, 1))
 		else:
-			var pname: String = ""
-			if i < _snapshots.size():
-				pname = str(_snapshots[i].get("piece_type", ""))
-			var cidx: int = PIECE_NAME_COLOR.get(pname, 0)
-			if cidx > 0:
-				btn.add_theme_color_override("font_color", CELL_COLORS[cidx].lerp(Color(0.5, 0.5, 0.6), 0.4))
-			else:
-				btn.add_theme_color_override("font_color", Color(0.6, 0.65, 0.75))
+			var row_color: Color = Color(0.6, 0.65, 0.75)
+			if i < _ai_scores.size():
+				row_color = _ai_score_color(float(_ai_scores[i]))
+			btn.add_theme_color_override("font_color", row_color)
 
 	# 自动滚动到当前步
 	var scroll: ScrollContainer = timeline_list.get_parent() as ScrollContainer
