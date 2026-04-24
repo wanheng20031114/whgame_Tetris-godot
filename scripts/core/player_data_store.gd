@@ -65,6 +65,12 @@ static func get_stats_path() -> String:
 	return get_data_dir().path_join(STATS_FILE_NAME)
 
 
+static func ensure_data_dirs() -> void:
+	_ensure_dir(get_data_dir())
+	_ensure_dir(get_sessions_dir())
+	_ensure_readme()
+
+
 # ==========================================
 # _ensure_dir(dir_path)
 # 

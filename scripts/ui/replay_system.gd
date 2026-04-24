@@ -238,13 +238,12 @@ func _load_ai_scores(session_file_name: String) -> void:
 
 
 func _run_ai_analysis(session_file_name: String) -> void:
-	var mlp_dir: String = ""
-	if OS.has_feature("editor"):
-		mlp_dir = ProjectSettings.globalize_path("res://MLP")
-	else:
-		mlp_dir = OS.get_executable_path().get_base_dir().path_join("MLP")
+	if not MlpEnvironment.ensure_environment(true):
+		push_warning("[ReplaySystem] MLP environment is not ready, skipping AI analysis")
+		return
 
-	var python_path: String = _find_python(mlp_dir)
+	var mlp_dir: String = MlpEnvironment.get_mlp_dir()
+	var python_path: String = MlpEnvironment.find_python(mlp_dir)
 	if python_path.is_empty():
 		push_warning("[ReplaySystem] 未找到 Python 环境，跳过 AI 分析")
 		return
