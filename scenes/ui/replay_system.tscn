@@ -1,40 +1,15 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://bp05t3qv8mknd"]
 
-[ext_resource type="Script" path="res://scripts/ui/replay_system.gd" id="1_script"]
+[ext_resource type="Script" uid="uid://cjsmhqys4w2pj" path="res://scripts/ui/replay_system.gd" id="1_script"]
+[ext_resource type="PackedScene" uid="uid://bmpyvms5vjv8" path="res://scenes/ui/settings_menu.tscn" id="2_sf7a6"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_bg"]
 bg_color = Color(0.04, 0.04, 0.07, 1)
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
-bg_color = Color(0.063, 0.063, 0.1, 1)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(0.1, 0.165, 0.25, 1)
-corner_radius_top_left = 8
-corner_radius_top_right = 8
-corner_radius_bottom_right = 8
-corner_radius_bottom_left = 8
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_topbar"]
 bg_color = Color(0.05, 0.05, 0.08, 1)
 border_width_bottom = 1
 border_color = Color(0.1, 0.165, 0.25, 1)
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_popup"]
-bg_color = Color(0.06, 0.06, 0.1, 0.95)
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
-border_color = Color(0, 0.83, 1, 0.6)
-corner_radius_top_left = 12
-corner_radius_top_right = 12
-corner_radius_bottom_right = 12
-corner_radius_bottom_left = 12
-shadow_color = Color(0, 0.5, 1, 0.2)
-shadow_size = 20
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn"]
 bg_color = Color(0.1, 0.1, 0.15, 1)
@@ -60,14 +35,33 @@ corner_radius_top_right = 4
 corner_radius_bottom_right = 4
 corner_radius_bottom_left = 4
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_slider_grabber"]
-bg_color = Color(0, 0.83, 1, 1)
-corner_radius_top_left = 2
-corner_radius_top_right = 2
-corner_radius_bottom_right = 2
-corner_radius_bottom_left = 2
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_panel"]
+bg_color = Color(0.063, 0.063, 0.1, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.1, 0.165, 0.25, 1)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
 
-[node name="ReplaySystem" type="Control"]
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_popup"]
+bg_color = Color(0.06, 0.06, 0.1, 0.95)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0, 0.83, 1, 0.6)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+shadow_color = Color(0, 0.5, 1, 0.2)
+shadow_size = 20
+
+[node name="ReplaySystem" type="Control" unique_id=1492740308]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -76,7 +70,7 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_script")
 
-[node name="Background" type="Panel" parent="."]
+[node name="Background" type="Panel" parent="." unique_id=545957671]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -85,7 +79,7 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_bg")
 
-[node name="VBoxMain" type="VBoxContainer" parent="."]
+[node name="VBoxMain" type="VBoxContainer" parent="." unique_id=538397301]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -93,17 +87,17 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="TopBar" type="PanelContainer" parent="VBoxMain"]
+[node name="TopBar" type="PanelContainer" parent="VBoxMain" unique_id=1642534653]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 50)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_topbar")
 
-[node name="HBox" type="HBoxContainer" parent="VBoxMain/TopBar"]
+[node name="HBox" type="HBoxContainer" parent="VBoxMain/TopBar" unique_id=1738238846]
 layout_mode = 2
 theme_override_constants/separation = 20
 
-[node name="BtnBack" type="Button" parent="VBoxMain/TopBar/HBox"]
+[node name="BtnBack" type="Button" parent="VBoxMain/TopBar/HBox" unique_id=512729575]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(100, 0)
 layout_mode = 2
@@ -112,18 +106,18 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
 theme_override_styles/hover = SubResource("StyleBoxFlat_btn_hover")
 text = "◀ BACK"
 
-[node name="TitleLabel" type="Label" parent="VBoxMain/TopBar/HBox"]
+[node name="TitleLabel" type="Label" parent="VBoxMain/TopBar/HBox" unique_id=56354671]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.88, 0.91, 0.94, 1)
 theme_override_font_sizes/font_size = 22
 text = "REPLAY ANALYSIS"
 
-[node name="Spacer" type="Control" parent="VBoxMain/TopBar/HBox"]
+[node name="Spacer" type="Control" parent="VBoxMain/TopBar/HBox" unique_id=1717787059]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="SessionInfoLabel" type="Label" parent="VBoxMain/TopBar/HBox"]
+[node name="SessionInfoLabel" type="Label" parent="VBoxMain/TopBar/HBox" unique_id=280271903]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.4, 0.5, 0.67, 1)
@@ -131,151 +125,149 @@ theme_override_font_sizes/font_size = 14
 text = "No session loaded"
 horizontal_alignment = 2
 
-[node name="MainContent" type="HBoxContainer" parent="VBoxMain"]
+[node name="MainContent" type="HBoxContainer" parent="VBoxMain" unique_id=315688440]
 layout_mode = 2
 size_flags_vertical = 3
 theme_override_constants/separation = 0
 
-[node name="LeftPanel" type="PanelContainer" parent="VBoxMain/MainContent"]
+[node name="LeftPanel" type="PanelContainer" parent="VBoxMain/MainContent" unique_id=1342339487]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(280, 0)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
 
-[node name="MarginContainer" type="MarginContainer" parent="VBoxMain/MainContent/LeftPanel"]
+[node name="MarginContainer" type="MarginContainer" parent="VBoxMain/MainContent/LeftPanel" unique_id=992382559]
 layout_mode = 2
 theme_override_constants/margin_left = 12
 theme_override_constants/margin_top = 12
 theme_override_constants/margin_right = 12
 theme_override_constants/margin_bottom = 12
 
-[node name="DataScroll" type="ScrollContainer" parent="VBoxMain/MainContent/LeftPanel/MarginContainer"]
+[node name="DataScroll" type="ScrollContainer" parent="VBoxMain/MainContent/LeftPanel/MarginContainer" unique_id=248877950]
 layout_mode = 2
 
-[node name="DataVBox" type="VBoxContainer" parent="VBoxMain/MainContent/LeftPanel/MarginContainer/DataScroll"]
+[node name="DataVBox" type="VBoxContainer" parent="VBoxMain/MainContent/LeftPanel/MarginContainer/DataScroll" unique_id=517308132]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 6
 
-[node name="PieceInfoTitle" type="Label" parent="VBoxMain/MainContent/LeftPanel/MarginContainer/DataScroll/DataVBox"]`r`nunique_name_in_owner = true
+[node name="PieceInfoTitle" type="Label" parent="VBoxMain/MainContent/LeftPanel/MarginContainer/DataScroll/DataVBox" unique_id=1390880620]
 layout_mode = 2
 theme_override_colors/font_color = Color(0, 0.83, 1, 1)
 theme_override_font_sizes/font_size = 14
 text = "▸ PIECE INFO"
 
-[node name="PieceTypeLabel" type="Label" parent="VBoxMain/MainContent/LeftPanel/MarginContainer/DataScroll/DataVBox"]
+[node name="PieceTypeLabel" type="Label" parent="VBoxMain/MainContent/LeftPanel/MarginContainer/DataScroll/DataVBox" unique_id=694778809]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.88, 0.91, 0.94, 1)
 text = "Type: —"
 
-[node name="PositionLabel" type="Label" parent="VBoxMain/MainContent/LeftPanel/MarginContainer/DataScroll/DataVBox"]
+[node name="PositionLabel" type="Label" parent="VBoxMain/MainContent/LeftPanel/MarginContainer/DataScroll/DataVBox" unique_id=1247914030]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.88, 0.91, 0.94, 1)
 text = "Position: —"
 
-[node name="ClearTypeLabel" type="Label" parent="VBoxMain/MainContent/LeftPanel/MarginContainer/DataScroll/DataVBox"]
+[node name="ClearTypeLabel" type="Label" parent="VBoxMain/MainContent/LeftPanel/MarginContainer/DataScroll/DataVBox" unique_id=1376327729]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.88, 0.91, 0.94, 1)
 text = "Clear: —"
 
-[node name="LinesLabel" type="Label" parent="VBoxMain/MainContent/LeftPanel/MarginContainer/DataScroll/DataVBox"]
+[node name="LinesLabel" type="Label" parent="VBoxMain/MainContent/LeftPanel/MarginContainer/DataScroll/DataVBox" unique_id=1529857897]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.88, 0.91, 0.94, 1)
 text = "Lines: —"
 
-[node name="DamageLabel" type="Label" parent="VBoxMain/MainContent/LeftPanel/MarginContainer/DataScroll/DataVBox"]
+[node name="DamageLabel" type="Label" parent="VBoxMain/MainContent/LeftPanel/MarginContainer/DataScroll/DataVBox" unique_id=1593042845]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.88, 0.91, 0.94, 1)
 text = "Damage: —"
 
-[node name="ComboLabel" type="Label" parent="VBoxMain/MainContent/LeftPanel/MarginContainer/DataScroll/DataVBox"]
+[node name="ComboLabel" type="Label" parent="VBoxMain/MainContent/LeftPanel/MarginContainer/DataScroll/DataVBox" unique_id=1615087737]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.88, 0.91, 0.94, 1)
 text = "Combo: —"
 
-[node name="TimeLabel" type="Label" parent="VBoxMain/MainContent/LeftPanel/MarginContainer/DataScroll/DataVBox"]
+[node name="TimeLabel" type="Label" parent="VBoxMain/MainContent/LeftPanel/MarginContainer/DataScroll/DataVBox" unique_id=838296781]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.88, 0.91, 0.94, 1)
 text = "Time: —"
 
-[node name="Sep1" type="HSeparator" parent="VBoxMain/MainContent/LeftPanel/MarginContainer/DataScroll/DataVBox"]
+[node name="Sep1" type="HSeparator" parent="VBoxMain/MainContent/LeftPanel/MarginContainer/DataScroll/DataVBox" unique_id=1634530264]
 layout_mode = 2
-theme_override_colors/separator_color = Color(0.1, 0.165, 0.25, 1)
 
-[node name="TerrainTitle" type="Label" parent="VBoxMain/MainContent/LeftPanel/MarginContainer/DataScroll/DataVBox"]`r`nunique_name_in_owner = true
+[node name="TerrainTitle" type="Label" parent="VBoxMain/MainContent/LeftPanel/MarginContainer/DataScroll/DataVBox" unique_id=1504266053]
 layout_mode = 2
 theme_override_colors/font_color = Color(0, 0.83, 1, 1)
 theme_override_font_sizes/font_size = 14
 text = "▸ TERRAIN METRICS"
 
-[node name="HolesLabel" type="Label" parent="VBoxMain/MainContent/LeftPanel/MarginContainer/DataScroll/DataVBox"]
+[node name="HolesLabel" type="Label" parent="VBoxMain/MainContent/LeftPanel/MarginContainer/DataScroll/DataVBox" unique_id=765685074]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.88, 0.91, 0.94, 1)
 text = "Holes: —"
 
-[node name="BumpinessLabel" type="Label" parent="VBoxMain/MainContent/LeftPanel/MarginContainer/DataScroll/DataVBox"]
+[node name="BumpinessLabel" type="Label" parent="VBoxMain/MainContent/LeftPanel/MarginContainer/DataScroll/DataVBox" unique_id=499597432]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.88, 0.91, 0.94, 1)
 text = "Bumpiness: —"
 
-[node name="HeightLabel" type="Label" parent="VBoxMain/MainContent/LeftPanel/MarginContainer/DataScroll/DataVBox"]
+[node name="HeightLabel" type="Label" parent="VBoxMain/MainContent/LeftPanel/MarginContainer/DataScroll/DataVBox" unique_id=802629194]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.88, 0.91, 0.94, 1)
 text = "Total Height: —"
 
-[node name="Sep2" type="HSeparator" parent="VBoxMain/MainContent/LeftPanel/MarginContainer/DataScroll/DataVBox"]
+[node name="Sep2" type="HSeparator" parent="VBoxMain/MainContent/LeftPanel/MarginContainer/DataScroll/DataVBox" unique_id=1864125742]
 layout_mode = 2
-theme_override_colors/separator_color = Color(0.1, 0.165, 0.25, 1)
 
-[node name="AiTitle" type="Label" parent="VBoxMain/MainContent/LeftPanel/MarginContainer/DataScroll/DataVBox"]`r`nunique_name_in_owner = true
+[node name="AiTitle" type="Label" parent="VBoxMain/MainContent/LeftPanel/MarginContainer/DataScroll/DataVBox" unique_id=1847444087]
 layout_mode = 2
 theme_override_colors/font_color = Color(0, 0.83, 1, 1)
 theme_override_font_sizes/font_size = 14
 text = "▸ AI EVALUATION"
 
-[node name="AiScoreLabel" type="Label" parent="VBoxMain/MainContent/LeftPanel/MarginContainer/DataScroll/DataVBox"]
+[node name="AiScoreLabel" type="Label" parent="VBoxMain/MainContent/LeftPanel/MarginContainer/DataScroll/DataVBox" unique_id=1740275354]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0, 1, 0.53, 1)
 theme_override_font_sizes/font_size = 20
 text = "— —"
 
-[node name="CenterPanel" type="PanelContainer" parent="VBoxMain/MainContent"]
+[node name="CenterPanel" type="PanelContainer" parent="VBoxMain/MainContent" unique_id=818357823]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_styles/panel = SubResource("StyleBoxFlat_bg")
 
-[node name="CenterVBox" type="VBoxContainer" parent="VBoxMain/MainContent/CenterPanel"]
+[node name="CenterVBox" type="VBoxContainer" parent="VBoxMain/MainContent/CenterPanel" unique_id=586056842]
 layout_mode = 2
 alignment = 1
 
-[node name="BoardContainer" type="CenterContainer" parent="VBoxMain/MainContent/CenterPanel/CenterVBox"]
+[node name="BoardContainer" type="CenterContainer" parent="VBoxMain/MainContent/CenterPanel/CenterVBox" unique_id=2076468767]
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="ReplayBoard" type="Node2D" parent="VBoxMain/MainContent/CenterPanel/CenterVBox/BoardContainer"]
+[node name="ReplayBoard" type="Node2D" parent="VBoxMain/MainContent/CenterPanel/CenterVBox/BoardContainer" unique_id=821938914]
 unique_name_in_owner = true
 
-[node name="StepNav" type="HBoxContainer" parent="VBoxMain/MainContent/CenterPanel/CenterVBox"]
+[node name="StepNav" type="HBoxContainer" parent="VBoxMain/MainContent/CenterPanel/CenterVBox" unique_id=1403333353]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(0, 40)
 layout_mode = 2
 theme_override_constants/separation = 8
 alignment = 1
 
-[node name="BtnFirst" type="Button" parent="VBoxMain/MainContent/CenterPanel/CenterVBox/StepNav"]
+[node name="BtnFirst" type="Button" parent="VBoxMain/MainContent/CenterPanel/CenterVBox/StepNav" unique_id=56031678]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(40, 0)
 layout_mode = 2
@@ -284,7 +276,7 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
 theme_override_styles/hover = SubResource("StyleBoxFlat_btn_hover")
 text = "|◀"
 
-[node name="BtnPrev" type="Button" parent="VBoxMain/MainContent/CenterPanel/CenterVBox/StepNav"]
+[node name="BtnPrev" type="Button" parent="VBoxMain/MainContent/CenterPanel/CenterVBox/StepNav" unique_id=879281083]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(40, 0)
 layout_mode = 2
@@ -293,16 +285,14 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
 theme_override_styles/hover = SubResource("StyleBoxFlat_btn_hover")
 text = "◀"
 
-[node name="StepSlider" type="HSlider" parent="VBoxMain/MainContent/CenterPanel/CenterVBox/StepNav"]
+[node name="StepSlider" type="HSlider" parent="VBoxMain/MainContent/CenterPanel/CenterVBox/StepNav" unique_id=2079602479]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(200, 0)
 layout_mode = 2
 size_flags_horizontal = 3
-min_value = 0.0
 max_value = 1.0
-step = 1.0
 
-[node name="BtnNext" type="Button" parent="VBoxMain/MainContent/CenterPanel/CenterVBox/StepNav"]
+[node name="BtnNext" type="Button" parent="VBoxMain/MainContent/CenterPanel/CenterVBox/StepNav" unique_id=1577043054]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(40, 0)
 layout_mode = 2
@@ -311,7 +301,7 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
 theme_override_styles/hover = SubResource("StyleBoxFlat_btn_hover")
 text = "▶"
 
-[node name="BtnLast" type="Button" parent="VBoxMain/MainContent/CenterPanel/CenterVBox/StepNav"]
+[node name="BtnLast" type="Button" parent="VBoxMain/MainContent/CenterPanel/CenterVBox/StepNav" unique_id=1662868982]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(40, 0)
 layout_mode = 2
@@ -320,47 +310,47 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_btn")
 theme_override_styles/hover = SubResource("StyleBoxFlat_btn_hover")
 text = "▶|"
 
-[node name="StepLabel" type="Label" parent="VBoxMain/MainContent/CenterPanel/CenterVBox/StepNav"]
+[node name="StepLabel" type="Label" parent="VBoxMain/MainContent/CenterPanel/CenterVBox/StepNav" unique_id=823923655]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.4, 0.5, 0.67, 1)
 theme_override_font_sizes/font_size = 14
 text = "Step 0 / 0"
 
-[node name="RightPanel" type="PanelContainer" parent="VBoxMain/MainContent"]
+[node name="RightPanel" type="PanelContainer" parent="VBoxMain/MainContent" unique_id=1245499402]
 unique_name_in_owner = true
 custom_minimum_size = Vector2(260, 0)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
 
-[node name="MarginContainer" type="MarginContainer" parent="VBoxMain/MainContent/RightPanel"]
+[node name="MarginContainer" type="MarginContainer" parent="VBoxMain/MainContent/RightPanel" unique_id=1095541977]
 layout_mode = 2
 theme_override_constants/margin_left = 10
 theme_override_constants/margin_top = 10
 theme_override_constants/margin_right = 10
 theme_override_constants/margin_bottom = 10
 
-[node name="VBox" type="VBoxContainer" parent="VBoxMain/MainContent/RightPanel/MarginContainer"]
+[node name="VBox" type="VBoxContainer" parent="VBoxMain/MainContent/RightPanel/MarginContainer" unique_id=278881684]
 layout_mode = 2
 theme_override_constants/separation = 6
 
-[node name="TimelineTitle" type="Label" parent="VBoxMain/MainContent/RightPanel/MarginContainer/VBox"]`r`nunique_name_in_owner = true
+[node name="TimelineTitle" type="Label" parent="VBoxMain/MainContent/RightPanel/MarginContainer/VBox" unique_id=79472967]
 layout_mode = 2
 theme_override_colors/font_color = Color(0, 0.83, 1, 1)
 theme_override_font_sizes/font_size = 14
 text = "▸ TIMELINE"
 
-[node name="TimelineScroll" type="ScrollContainer" parent="VBoxMain/MainContent/RightPanel/MarginContainer/VBox"]
+[node name="TimelineScroll" type="ScrollContainer" parent="VBoxMain/MainContent/RightPanel/MarginContainer/VBox" unique_id=573572601]
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="TimelineList" type="VBoxContainer" parent="VBoxMain/MainContent/RightPanel/MarginContainer/VBox/TimelineScroll"]
+[node name="TimelineList" type="VBoxContainer" parent="VBoxMain/MainContent/RightPanel/MarginContainer/VBox/TimelineScroll" unique_id=1579046816]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 2
 
-[node name="SessionListPopup" type="PanelContainer" parent="."]
+[node name="SessionListPopup" type="PanelContainer" parent="." unique_id=1535496796]
 unique_name_in_owner = true
 visible = false
 layout_mode = 1
@@ -377,30 +367,38 @@ grow_horizontal = 2
 grow_vertical = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_popup")
 
-[node name="MarginContainer" type="MarginContainer" parent="SessionListPopup"]
+[node name="MarginContainer" type="MarginContainer" parent="SessionListPopup" unique_id=133404596]
 layout_mode = 2
 theme_override_constants/margin_left = 16
 theme_override_constants/margin_top = 16
 theme_override_constants/margin_right = 16
 theme_override_constants/margin_bottom = 16
 
-[node name="VBox" type="VBoxContainer" parent="SessionListPopup/MarginContainer"]
+[node name="VBox" type="VBoxContainer" parent="SessionListPopup/MarginContainer" unique_id=1904431380]
 layout_mode = 2
 theme_override_constants/separation = 12
 
-[node name="PopupTitle" type="Label" parent="SessionListPopup/MarginContainer/VBox"]`r`nunique_name_in_owner = true
+[node name="PopupTitle" type="Label" parent="SessionListPopup/MarginContainer/VBox" unique_id=822805416]
 layout_mode = 2
 theme_override_colors/font_color = Color(0, 0.83, 1, 1)
 theme_override_font_sizes/font_size = 18
 text = "SELECT SESSION"
 horizontal_alignment = 1
 
-[node name="SessionScroll" type="ScrollContainer" parent="SessionListPopup/MarginContainer/VBox"]
+[node name="SessionScroll" type="ScrollContainer" parent="SessionListPopup/MarginContainer/VBox" unique_id=303723338]
 layout_mode = 2
 size_flags_vertical = 3
 
-[node name="SessionList" type="VBoxContainer" parent="SessionListPopup/MarginContainer/VBox/SessionScroll"]
+[node name="SessionList" type="VBoxContainer" parent="SessionListPopup/MarginContainer/VBox/SessionScroll" unique_id=491088677]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 4
+
+[node name="BtnSettings" parent="." unique_id=2113850122 instance=ExtResource("2_sf7a6")]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 337.0
+offset_top = 5.0
+offset_right = 377.0
+offset_bottom = 45.0

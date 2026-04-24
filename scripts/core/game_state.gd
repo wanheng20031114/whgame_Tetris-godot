@@ -8,7 +8,7 @@ var player_name: String = ""
 func _ready() -> void:
 	_ensure_ui_gamepad_actions()
 	PlayerDataStore.ensure_data_dirs()
-	MlpEnvironment.ensure_environment(true)
+	MlpEnvironment.start_environment_setup_background(true)
 
 func _ensure_ui_gamepad_actions() -> void:
 	_ensure_action_with_joy_buttons("ui_accept", [JOY_BUTTON_A])

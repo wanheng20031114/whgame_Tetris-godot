@@ -80,5 +80,4 @@ echo   Setup complete.
 echo   AI analysis is now available in-game.
 echo ============================================
 echo.
-pause
 exit /b 0
