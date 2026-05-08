@@ -1,0 +1,12 @@
+[package]
+name = "replay-analysis"
+version = "0.1.0"
+authors = ["MinusKelvin <minuskelvin.carlson@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+cold-clear = { path = "../bot" }
+libtetris = { path = "../libtetris" }
+enumset = "1.0.4"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"

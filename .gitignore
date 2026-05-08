@@ -5,3 +5,6 @@
 userdata/
 # Node.js server dependencies
 server/node_modules/
+
+# Rust build outputs
+replay-ai-core/target/

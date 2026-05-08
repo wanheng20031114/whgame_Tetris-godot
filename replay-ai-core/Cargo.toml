@@ -1,0 +1,11 @@
+[workspace]
+
+members = [
+    "libtetris",
+    "opening-book",
+    "bot",
+    "replay-analysis",
+]
+
+[profile.release]
+lto = true

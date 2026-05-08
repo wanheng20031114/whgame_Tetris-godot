@@ -76,6 +76,8 @@ const TIMELINE_PIECE_ROW_H: int = 18
 var _session_data: Dictionary = {}
 var _snapshots: Array = []
 var _ai_scores: Array = []
+var _ai_details: Array = []
+var _ai_recommendations: Array = []
 var _current_step: int = -1
 
 
@@ -222,8 +224,11 @@ func _load_session(file_name: String) -> void:
 
 func _load_ai_scores(session_file_name: String) -> void:
 	_ai_scores = []
+	_ai_details = []
+	_ai_recommendations = []
 	var analyzed_name: String = session_file_name.replace(".json", "_analyzed.json")
 	var analyzed_path: String = PlayerDataStore.get_sessions_dir().path_join(analyzed_name)
+	var needs_analysis: bool = true
 
 	if FileAccess.file_exists(analyzed_path):
 		var file := FileAccess.open(analyzed_path, FileAccess.READ)
@@ -231,32 +236,33 @@ func _load_ai_scores(session_file_name: String) -> void:
 			var json := JSON.new()
 			if json.parse(file.get_as_text()) == OK:
 				var data: Dictionary = json.data as Dictionary
-				_ai_scores = data.get("ai_scores", [])
-	else:
-		# 尝试自动调用 Python 分析
+				if str(data.get("ai_model_used", "")) == "cold-clear-standard" and data.has("ai_details"):
+					_ai_scores = data.get("ai_scores", [])
+					_ai_details = data.get("ai_details", [])
+					_ai_recommendations = data.get("recommendations", [])
+					needs_analysis = false
+
+	if needs_analysis:
+		print("[ReplaySystem] Running replay-ai-core analysis for %s" % session_file_name)
 		_run_ai_analysis(session_file_name)
 
 
 func _run_ai_analysis(session_file_name: String) -> void:
-	if not MlpEnvironment.ensure_environment(true):
-		push_warning("[ReplaySystem] MLP environment is not ready, skipping AI analysis")
-		return
-
-	var mlp_dir: String = MlpEnvironment.get_mlp_dir()
-	var python_path: String = MlpEnvironment.find_python(mlp_dir)
-	if python_path.is_empty():
-		push_warning("[ReplaySystem] 未找到 Python 环境，跳过 AI 分析")
-		return
-
-	var script_path: String = mlp_dir.path_join("analyze_session.py")
 	var session_path: String = ProjectSettings.globalize_path(
 		PlayerDataStore.get_sessions_dir().path_join(session_file_name)
 	)
 	var output_path: String = session_path.replace(".json", "_analyzed.json")
 
-	var args: PackedStringArray = [script_path, session_path, output_path, "--model", "dqn"]
+	var analyzer_path: String = _find_replay_ai_analyzer()
 	var output: Array = []
-	var exit_code: int = OS.execute(python_path, args, output, true)
+	var exit_code: int = -1
+	if not analyzer_path.is_empty():
+		print("[ReplaySystem] Analyzer path: %s" % analyzer_path)
+		var args: PackedStringArray = [session_path, output_path]
+		exit_code = OS.execute(analyzer_path, args, output, true)
+	else:
+		print("[ReplaySystem] Analyzer executable not found; trying cargo fallback")
+		exit_code = _run_replay_ai_with_cargo(session_path, output_path, output)
 
 	if exit_code == 0:
 		# 重新加载分析结果
@@ -267,30 +273,33 @@ func _run_ai_analysis(session_file_name: String) -> void:
 				if json.parse(file.get_as_text()) == OK:
 					var data: Dictionary = json.data as Dictionary
 					_ai_scores = data.get("ai_scores", [])
-					print("[ReplaySystem] AI 分析完成: %d 步" % _ai_scores.size())
+					_ai_details = data.get("ai_details", [])
+					_ai_recommendations = data.get("recommendations", [])
+					print("[ReplaySystem] Replay AI analysis complete: %d steps" % _ai_scores.size())
 	else:
-		push_warning("[ReplaySystem] AI 分析失败 (exit code %d)" % exit_code)
+		push_warning("[ReplaySystem] Replay AI analysis failed (exit code %d): %s" % [exit_code, "\n".join(output)])
 
 
-func _find_python(mlp_dir: String) -> String:
-	# 优先使用 MLP 目录下的 venv
-	var venv_python: String = mlp_dir.path_join(".venv/Scripts/python.exe")
-	if FileAccess.file_exists(venv_python):
-		return venv_python
+func _find_replay_ai_analyzer() -> String:
+	return ReplayAiEnvironment.ensure_analyzer_available()
 
-	# Linux/Mac venv
-	var venv_python_unix: String = mlp_dir.path_join(".venv/bin/python")
-	if FileAccess.file_exists(venv_python_unix):
-		return venv_python_unix
 
-	# 系统 Python
-	var output: Array = []
-	if OS.execute("python", ["--version"], output, true) == 0:
-		return "python"
-	if OS.execute("python3", ["--version"], output, true) == 0:
-		return "python3"
+func _run_replay_ai_with_cargo(session_path: String, output_path: String, output: Array) -> int:
+	var manifest_path: String = ProjectSettings.globalize_path("res://replay-ai-core/Cargo.toml")
+	if not FileAccess.file_exists(manifest_path):
+		push_warning("[ReplaySystem] replay-ai-core Cargo.toml is missing: %s" % manifest_path)
+		return -1
 
-	return ""
+	var args: PackedStringArray = [
+		"run",
+		"--manifest-path", manifest_path,
+		"-p", "replay-analysis",
+		"--bin", "analyze_session",
+		"--",
+		session_path,
+		output_path
+	]
+	return OS.execute("cargo", args, output, true)
 
 
 # ==============================================================================
@@ -428,8 +437,13 @@ func _update_data_panel(index: int) -> void:
 	if index < _ai_scores.size():
 		var score_val: float = float(_ai_scores[index])
 		var delta: float = _timeline_score_delta(index)
-		ai_score_label.text = "%.2f\n(%+d)" % [score_val, roundi(delta)]
-		ai_score_label.add_theme_color_override("font_color", _ai_score_color(score_val))
+		var detail: Dictionary = _get_ai_detail(index)
+		var rank_text: String = "rank ?"
+		if detail.has("rank") and detail["rank"] != null:
+			rank_text = "rank %d/%d" % [int(detail["rank"]), int(detail.get("legal_moves", 0))]
+		var advice_text: String = _format_best_move(detail)
+		ai_score_label.text = "%d\n(%+d) %s\n%s" % [roundi(score_val), roundi(delta), rank_text, advice_text]
+		ai_score_label.add_theme_color_override("font_color", _ai_detail_color(detail, score_val))
 	else:
 		ai_score_label.text = "%s\n(-)" % tr("TXT_NA")
 		ai_score_label.add_theme_color_override("font_color", Color(0.4, 0.5, 0.67))
@@ -448,6 +462,44 @@ func _ai_score_color(score_val: float) -> Color:
 	if score_val >= 0.0:
 		return Color(1.0, 0.85, 0.2)
 	return Color(1.0, 0.3, 0.3)
+
+
+func _get_ai_detail(index: int) -> Dictionary:
+	if index >= 0 and index < _ai_details.size() and _ai_details[index] is Dictionary:
+		return _ai_details[index] as Dictionary
+	return {}
+
+
+func _ai_detail_color(detail: Dictionary, score_val: float) -> Color:
+	var quality: String = str(detail.get("quality", ""))
+	match quality:
+		"best":
+			return Color(0.0, 0.95, 0.45)
+		"good":
+			return Color(0.62, 0.95, 0.62)
+		"ok":
+			return Color(1.0, 0.85, 0.2)
+		"mistake":
+			return Color(1.0, 0.45, 0.18)
+		"blunder":
+			return Color(1.0, 0.22, 0.22)
+	return _ai_score_color(score_val)
+
+
+func _format_best_move(detail: Dictionary) -> String:
+	if detail.is_empty() or not detail.has("best") or detail["best"] == null:
+		return "best: -"
+	var best: Dictionary = detail["best"] as Dictionary
+	var placement: Dictionary = best.get("placement", {}) as Dictionary
+	var piece: String = str(placement.get("piece", "?"))
+	var col: int = int(placement.get("col", 0))
+	var row: int = int(placement.get("visible_row", placement.get("row", 0)))
+	var rot: int = int(placement.get("rotation", 0))
+	var hold_mark: String = "H " if bool(best.get("used_hold", false)) else ""
+	var kind: String = str(best.get("placement_kind", ""))
+	if kind.is_empty():
+		kind = "place"
+	return "best: %s%s c%d r%d rot%d %s" % [hold_mark, piece, col, row, rot, kind]
 
 
 func _timeline_score_delta(index: int) -> float:
@@ -539,8 +591,15 @@ func _build_timeline() -> void:
 
 		# AI 分数
 		var ai_text: String = ""
+		var rank_text: String = ""
 		if i < _ai_scores.size():
-			ai_text = "%.1f" % float(_ai_scores[i])
+			ai_text = "%d" % roundi(float(_ai_scores[i]))
+			var detail: Dictionary = _get_ai_detail(i)
+			if detail.has("rank") and detail["rank"] != null:
+				rank_text = " r%d" % int(detail["rank"])
+			var quality: String = str(detail.get("quality", ""))
+			if quality == "mistake" or quality == "blunder":
+				rank_text += " " + quality
 		else:
 			ai_text = "-"
 
@@ -549,7 +608,7 @@ func _build_timeline() -> void:
 		if elapsed_ms >= 1000:
 			time_text = "%.1fs" % (elapsed_ms / 1000.0)
 
-		btn.text = "#%d  %s %s  %s" % [i + 1, ai_text, delta_text, time_text]
+		btn.text = "#%d  %s %s%s  %s" % [i + 1, ai_text, delta_text, rank_text, time_text]
 		btn.pressed.connect(_go_to_step.bind(i))
 		hbox.add_child(btn)
 
