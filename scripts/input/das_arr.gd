@@ -15,10 +15,10 @@ extends RefCounted
 # ==============================================================================
 
 ## DAS 延迟（秒）：首次按下到开始重复的等待时间
-var das_delay: float = 0.180
+var das_delay: float = 10.0 / 60.0
 
 ## ARR 间隔（秒）：重复移动之间的间隔。0 = 瞬移到墙
-var arr_interval: float = 0.020
+var arr_interval: float = 2.0 / 60.0
 
 # ==============================================================================
 # 内部状态
@@ -63,7 +63,7 @@ func update(delta: float) -> int:
 	if not _das_charged:
 		if _das_timer >= das_delay:
 			_das_charged = true
-			_arr_timer = 0.0
+			_arr_timer = _das_timer - das_delay
 			# DAS 刚充满的瞬间，触发第一次重复移动
 			if arr_interval <= 0.001:
 				# ARR=0 模式：返回一个很大的数，外部会移动到墙边

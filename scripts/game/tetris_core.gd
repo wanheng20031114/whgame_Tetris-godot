@@ -18,12 +18,18 @@ signal board_updated()
 # @export 配置
 # ==============================================================================
 
+const T99_DAS_DELAY: float = 10.0 / 60.0
+const T99_ARR_INTERVAL: float = 2.0 / 60.0
+const T99_LOCK_DELAY: float = 0.5
+const T99_SOFT_DROP_SPEED: float = 20.0
+
 @export_group("核心参数")
 @export var spawn_col: int = 4
 @export var starting_level: int = 1
-@export var das_delay: float = 0.180
-@export var arr_interval: float = 0.020
-@export var soft_drop_multiplier: float = 20.0
+@export var das_delay: float = T99_DAS_DELAY
+@export var arr_interval: float = T99_ARR_INTERVAL
+@export var soft_drop_multiplier: float = T99_SOFT_DROP_SPEED
+@export var lock_delay_seconds: float = T99_LOCK_DELAY
 @export var max_lock_resets: int = 15
 
 # ==============================================================================
@@ -83,6 +89,7 @@ func _ready() -> void:
 	das.arr_interval = arr_interval
 	scoring = Scoring.new()
 	scoring.level = starting_level
+	lock_timer.wait_time = lock_delay_seconds
 
 	# 收集预览节点
 	for child in next_container.get_children():
@@ -165,10 +172,17 @@ func _handle_core_input(delta: float) -> void:
 			_try_move(-1, 0)
 			das.start(-1)
 
+	_stop_stale_das_direction()
 	var repeat_count: int = das.update(delta)
 	for i in range(mini(repeat_count, 20)):
 		if not _try_move(das.direction, 0):
 			break
+
+func _stop_stale_das_direction() -> void:
+	if das.direction == -1 and not Input.is_action_pressed("move_left"):
+		das.stop()
+	elif das.direction == 1 and not Input.is_action_pressed("move_right"):
+		das.stop()
 
 func _update_gravity(delta: float) -> void:
 	var speed: float = scoring.get_gravity_speed()
@@ -397,6 +411,8 @@ func _spawn_next_piece() -> void:
 	_update_danger_warning_state()
 
 func _reset_piece_state() -> void:
+	if das != null:
+		_stop_stale_das_direction()
 	gravity_timer = 0.0
 	lock_timer.stop()
 	lock_resets = 0
