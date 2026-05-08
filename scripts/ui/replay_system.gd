@@ -44,6 +44,53 @@ const MINI_CELL: int = 18  # 预览方块格子大小
 const TIMELINE_PIECE_CELL: int = 6
 const TIMELINE_PIECE_ROW_H: int = 18
 
+# cold-clear 兼容形状表（visible 坐标系，y 向下）
+# 从 libtetris gen_cells! 宏精确转换：North=(x,-y), East=(-y,-x), South=(-x,y), West=(y,x)
+const CC_SHAPES: Dictionary = {
+	"I": {
+		0: [Vector2(-1, 0), Vector2(0, 0), Vector2(1, 0), Vector2(2, 0)],
+		1: [Vector2(0, -1), Vector2(0, 0), Vector2(0, 1), Vector2(0, 2)],
+		2: [Vector2(1, 0), Vector2(0, 0), Vector2(-1, 0), Vector2(-2, 0)],
+		3: [Vector2(0, 1), Vector2(0, 0), Vector2(0, -1), Vector2(0, -2)]
+	},
+	"O": {
+		0: [Vector2(0, 0), Vector2(1, 0), Vector2(0, -1), Vector2(1, -1)],
+		1: [Vector2(0, 0), Vector2(0, -1), Vector2(-1, 0), Vector2(-1, -1)],
+		2: [Vector2(0, 0), Vector2(-1, 0), Vector2(0, 1), Vector2(-1, 1)],
+		3: [Vector2(0, 0), Vector2(0, 1), Vector2(1, 0), Vector2(1, 1)]
+	},
+	"T": {
+		0: [Vector2(-1, 0), Vector2(0, 0), Vector2(1, 0), Vector2(0, -1)],
+		1: [Vector2(0, -1), Vector2(0, 0), Vector2(0, 1), Vector2(1, 0)],
+		2: [Vector2(1, 0), Vector2(0, 0), Vector2(-1, 0), Vector2(0, 1)],
+		3: [Vector2(0, 1), Vector2(0, 0), Vector2(0, -1), Vector2(-1, 0)]
+	},
+	"L": {
+		0: [Vector2(-1, 0), Vector2(0, 0), Vector2(1, 0), Vector2(1, -1)],
+		1: [Vector2(0, -1), Vector2(0, 0), Vector2(0, 1), Vector2(1, 1)],
+		2: [Vector2(1, 0), Vector2(0, 0), Vector2(-1, 0), Vector2(-1, 1)],
+		3: [Vector2(0, 1), Vector2(0, 0), Vector2(0, -1), Vector2(-1, -1)]
+	},
+	"J": {
+		0: [Vector2(-1, 0), Vector2(0, 0), Vector2(1, 0), Vector2(-1, -1)],
+		1: [Vector2(0, -1), Vector2(0, 0), Vector2(0, 1), Vector2(1, -1)],
+		2: [Vector2(1, 0), Vector2(0, 0), Vector2(-1, 0), Vector2(1, 1)],
+		3: [Vector2(0, 1), Vector2(0, 0), Vector2(0, -1), Vector2(-1, 1)]
+	},
+	"S": {
+		0: [Vector2(-1, 0), Vector2(0, 0), Vector2(0, -1), Vector2(1, -1)],
+		1: [Vector2(0, -1), Vector2(0, 0), Vector2(1, 0), Vector2(1, 1)],
+		2: [Vector2(1, 0), Vector2(0, 0), Vector2(0, 1), Vector2(-1, 1)],
+		3: [Vector2(0, 1), Vector2(0, 0), Vector2(-1, 0), Vector2(-1, -1)]
+	},
+	"Z": {
+		0: [Vector2(-1, -1), Vector2(0, -1), Vector2(0, 0), Vector2(1, 0)],
+		1: [Vector2(1, -1), Vector2(1, 0), Vector2(0, 0), Vector2(0, 1)],
+		2: [Vector2(1, 1), Vector2(0, 1), Vector2(0, 0), Vector2(-1, 0)],
+		3: [Vector2(-1, 1), Vector2(-1, 0), Vector2(0, 0), Vector2(0, -1)]
+	}
+}
+
 # 节点引用
 @onready var btn_back: Button = %BtnBack
 @onready var session_info_label: Label = %SessionInfoLabel
@@ -79,6 +126,10 @@ var _ai_scores: Array = []
 var _ai_details: Array = []
 var _ai_recommendations: Array = []
 var _current_step: int = -1
+var _showing_ai_plan: bool = false
+var _ai_plan_reveal_count: int = 0
+var _ai_plan_simulated_board: Array = []
+var _ai_plan_board_history: Array = []  # 每步锁定前的棋盘快照，用于回退
 
 
 func _ready() -> void:
@@ -310,9 +361,13 @@ func _go_to_step(index: int) -> void:
 	if _snapshots.is_empty():
 		return
 	index = clampi(index, 0, _snapshots.size() - 1)
-	if index == _current_step:
+	if index == _current_step and not _showing_ai_plan:
 		return
 
+	_showing_ai_plan = false
+	_ai_plan_reveal_count = 0
+	_ai_plan_simulated_board.clear()
+	_ai_plan_board_history.clear()
 	_current_step = index
 	step_slider.set_value_no_signal(index)
 	_update_step_label()
@@ -374,6 +429,9 @@ func _render_step(index: int) -> void:
 
 	# 高亮本步新落下的方块（锁定时的 piece_type/rotation/col/row）
 	_draw_locked_piece_highlight(snap, index)
+
+	# 在高亮方块旁添加 "?" 按钮（仅当有 AI 推荐数据时）
+	_draw_ai_plan_button(snap, index)
 
 	# 棋盘外框（4条薄线，不再用填充矩形）
 	var bw: float = BOARD_COLS * CELL_SIZE
@@ -438,11 +496,12 @@ func _update_data_panel(index: int) -> void:
 		var score_val: float = float(_ai_scores[index])
 		var detail: Dictionary = _get_ai_detail(index)
 		var loss: int = _timeline_score_loss(index)
-		var loss_text: String = "loss %d" % loss if loss > 0 else "AI best"
-		ai_score_label.text = "%d\n%s" % [roundi(score_val), loss_text]
+		# 左下主大数字改为：-loss 或 AI BEST（不再显示复杂度总分）
+		var primary_text: String = "-%d" % loss if loss > 0 else "AI BEST"
+		ai_score_label.text = primary_text
 		ai_score_label.add_theme_color_override("font_color", _ai_detail_color(detail, score_val))
 	else:
-		ai_score_label.text = "%s\n(-)" % tr("TXT_NA")
+		ai_score_label.text = tr("TXT_NA")
 		ai_score_label.add_theme_color_override("font_color", Color(0.4, 0.5, 0.67))
 
 
@@ -575,13 +634,11 @@ func _build_timeline() -> void:
 		btn.add_theme_color_override("font_color", row_color)
 		_set_timeline_button_border(btn, row_color, i == _current_step)
 
-		# AI 分数
+		# AI 表现：始终占位显示（AI BEST 或 -loss）
 		var ai_text: String = ""
 		if i < _ai_scores.size():
 			var loss: int = _timeline_score_loss(i)
-			ai_text = "%d" % roundi(float(_ai_scores[i]))
-			if loss > 0:
-				ai_text += " -%d" % loss
+			ai_text = "-%d" % loss if loss > 0 else "AI BEST"
 		else:
 			ai_text = "-"
 
@@ -860,3 +917,423 @@ func _add_glow_strip(pos: Vector2, size: Vector2, glow_col: Color, alpha: float)
 	strip.size = size
 	strip.color = Color(glow_col.r, glow_col.g, glow_col.b, clampf(alpha, 0.0, 1.0))
 	replay_board.add_child(strip)
+
+
+# ==============================================================================
+# AI 计划幽灵方块可视化（渐进式引导）
+# ==============================================================================
+
+func _get_recommendation(step_index: int) -> Dictionary:
+	for rec in _ai_recommendations:
+		if rec is Dictionary and int(rec.get("step", -1)) == step_index:
+			return rec
+	return {}
+
+func _draw_ai_plan_button(snap: Dictionary, step_index: int) -> void:
+	var rec: Dictionary = _get_recommendation(step_index)
+	if rec.is_empty():
+		return
+	var piece_name: String = str(snap.get("piece_type", ""))
+	if not PIECE_NAME_TYPE.has(piece_name):
+		return
+	var piece_type: int = int(PIECE_NAME_TYPE[piece_name])
+	var rot: int = posmod(int(snap.get("rotation", 0)), 4)
+	var center_col: int = int(snap.get("col", 0))
+	var center_row_raw: int = int(snap.get("row", 0))
+	var center_row: int = center_row_raw - BOARD_ROWS if center_row_raw >= BOARD_ROWS else center_row_raw
+	var shape: Array = PieceData.SHAPES[piece_type][rot]
+	var min_y: int = 999
+	var max_x: int = -999
+	for offset in shape:
+		var gx: int = center_col + int(offset.x)
+		var gy: int = center_row + int(offset.y)
+		min_y = mini(min_y, gy)
+		max_x = maxi(max_x, gx)
+	var btn_size: float = 22.0
+	var btn_x: float = (max_x + 1) * CELL_SIZE + 2
+	var btn_y: float = min_y * CELL_SIZE - btn_size * 0.5
+	var btn := Button.new()
+	btn.text = "?"
+	btn.position = Vector2(btn_x, btn_y)
+	btn.size = Vector2(btn_size, btn_size)
+	btn.add_theme_font_size_override("font_size", 18)
+	btn.add_theme_color_override("font_color", Color(0, 0.83, 1, 1))
+	btn.add_theme_color_override("font_hover_color", Color(0.4, 0.95, 1, 1))
+	btn.add_theme_constant_override("outline_size", 1)
+	btn.add_theme_color_override("font_outline_color", Color(0, 0.2, 0.3, 0.95))
+	var sb_normal := StyleBoxFlat.new()
+	sb_normal.bg_color = Color(0.06, 0.06, 0.12, 0.9)
+	sb_normal.border_width_left = 2
+	sb_normal.border_width_top = 2
+	sb_normal.border_width_right = 2
+	sb_normal.border_width_bottom = 2
+	sb_normal.border_color = Color(0, 0.83, 1, 0.7)
+	sb_normal.corner_radius_top_left = 11
+	sb_normal.corner_radius_top_right = 11
+	sb_normal.corner_radius_bottom_left = 11
+	sb_normal.corner_radius_bottom_right = 11
+	btn.add_theme_stylebox_override("normal", sb_normal)
+	var sb_hover := sb_normal.duplicate()
+	sb_hover.border_color = Color(0.4, 0.95, 1, 1)
+	sb_hover.bg_color = Color(0, 0.2, 0.3, 0.9)
+	btn.add_theme_stylebox_override("hover", sb_hover)
+	btn.add_theme_stylebox_override("pressed", sb_hover)
+	btn.add_theme_stylebox_override("focus", sb_normal)
+	btn.mouse_filter = Control.MOUSE_FILTER_STOP
+	btn.pressed.connect(_toggle_ai_plan.bind(step_index))
+	replay_board.add_child(btn)
+
+func _toggle_ai_plan(step_index: int) -> void:
+	if _showing_ai_plan:
+		_showing_ai_plan = false
+		_ai_plan_reveal_count = 0
+		_ai_plan_simulated_board.clear()
+		_ai_plan_board_history.clear()
+		_render_step(_current_step)
+		_update_data_panel(_current_step)
+	else:
+		_showing_ai_plan = true
+		_ai_plan_reveal_count = 1
+		_ai_plan_board_history.clear()
+		_init_ai_plan_board(step_index)
+		_render_ai_plan_progressive(step_index)
+
+func _advance_ai_plan(step_index: int) -> void:
+	var rec: Dictionary = _get_recommendation(step_index)
+	if rec.is_empty():
+		return
+	var plan: Dictionary = rec.get("plan", {}) as Dictionary
+	var steps: Array = plan.get("steps", [])
+	var max_steps: int = mini(steps.size(), 5)
+	if _ai_plan_reveal_count >= max_steps:
+		return
+	# 保存当前棋盘快照以便回退
+	var snapshot: Array = []
+	for row in _ai_plan_simulated_board:
+		snapshot.append(row.duplicate())
+	_ai_plan_board_history.append(snapshot)
+	_simulate_lock_piece_on_board(steps[_ai_plan_reveal_count - 1])
+	_ai_plan_reveal_count += 1
+	_render_ai_plan_progressive(step_index)
+
+func _retreat_ai_plan(step_index: int) -> void:
+	if _ai_plan_reveal_count <= 1:
+		return
+	if _ai_plan_board_history.is_empty():
+		return
+	# 恢复上一步的棋盘快照
+	_ai_plan_simulated_board = _ai_plan_board_history.pop_back()
+	_ai_plan_reveal_count -= 1
+	_render_ai_plan_progressive(step_index)
+
+func _init_ai_plan_board(step_index: int) -> void:
+	_ai_plan_simulated_board.clear()
+	if step_index > 0:
+		var prev_snap: Dictionary = _snapshots[step_index - 1]
+		var bd: Array = prev_snap.get("board_state_after_clear", [])
+		if bd.is_empty():
+			bd = prev_snap.get("board_state", [])
+		for row in bd:
+			_ai_plan_simulated_board.append(row.duplicate())
+	if _ai_plan_simulated_board.is_empty():
+		for _r in range(BOARD_ROWS):
+			var empty_row: Array = []
+			for _c in range(BOARD_COLS):
+				empty_row.append(0)
+			_ai_plan_simulated_board.append(empty_row)
+
+func _simulate_lock_piece_on_board(plan_step: Dictionary) -> void:
+	var placement: Dictionary = plan_step.get("placement", {}) as Dictionary
+	if placement.is_empty():
+		return
+	var piece_name: String = str(placement.get("piece", ""))
+	if not CC_SHAPES.has(piece_name):
+		return
+	var rot: int = posmod(int(placement.get("rotation", 0)), 4)
+	var center_col: int = int(placement.get("col", 0))
+	var visible_row: int = int(placement.get("visible_row", 0))
+	var cidx: int = PIECE_NAME_COLOR.get(piece_name, 1)
+	var shape: Array = CC_SHAPES[piece_name][rot]
+	for offset in shape:
+		var gx: int = center_col + int(offset.x)
+		var gy: int = visible_row + int(offset.y)
+		if gx >= 0 and gx < BOARD_COLS and gy >= 0 and gy < _ai_plan_simulated_board.size():
+			_ai_plan_simulated_board[gy][gx] = cidx
+	# 使用 cold-clear 的 lock.cleared_lines 来消行（比自己判断更准确）
+	var lock_data: Variant = plan_step.get("lock", null)
+	var cleared_lines_cc: Array = []
+	if lock_data is Dictionary:
+		cleared_lines_cc = lock_data.get("cleared_lines", [])
+	if not cleared_lines_cc.is_empty():
+		# cold-clear 的 cleared_lines 是 y 坐标（0=底部），转为 visible（0=顶部）
+		var rows_to_remove: Array[int] = []
+		for cc_y in cleared_lines_cc:
+			var vis_row: int = BOARD_ROWS - 1 - int(cc_y)
+			if vis_row >= 0 and vis_row < _ai_plan_simulated_board.size():
+				rows_to_remove.append(vis_row)
+		rows_to_remove.sort()
+		rows_to_remove.reverse()
+		for r_idx in rows_to_remove:
+			if r_idx < _ai_plan_simulated_board.size():
+				_ai_plan_simulated_board.remove_at(r_idx)
+		for _i in range(rows_to_remove.size()):
+			var empty_row: Array = []
+			for _c in range(BOARD_COLS):
+				empty_row.append(0)
+			_ai_plan_simulated_board.insert(0, empty_row)
+	else:
+		# 没有 lock 数据时回退到自动检测满行
+		var new_board: Array = []
+		for row in _ai_plan_simulated_board:
+			var full: bool = true
+			for cell in row:
+				if int(cell) == 0:
+					full = false
+					break
+			if not full:
+				new_board.append(row)
+		var cleared: int = _ai_plan_simulated_board.size() - new_board.size()
+		for _i in range(cleared):
+			var empty_row: Array = []
+			for _c in range(BOARD_COLS):
+				empty_row.append(0)
+			new_board.insert(0, empty_row)
+		_ai_plan_simulated_board = new_board
+
+func _render_ai_plan_progressive(step_index: int) -> void:
+	var rec: Dictionary = _get_recommendation(step_index)
+	if rec.is_empty():
+		return
+	var plan: Dictionary = rec.get("plan", {}) as Dictionary
+	var steps: Array = plan.get("steps", [])
+	var max_steps: int = mini(steps.size(), 5)
+	for child in replay_board.get_children():
+		child.queue_free()
+	for r in range(mini(_ai_plan_simulated_board.size(), BOARD_ROWS)):
+		var row: Array = _ai_plan_simulated_board[r]
+		for c in range(mini(row.size(), BOARD_COLS)):
+			var cell_val: int = int(row[c])
+			var rect := ColorRect.new()
+			rect.size = Vector2(CELL_SIZE - 1, CELL_SIZE - 1)
+			rect.position = Vector2(c * CELL_SIZE, r * CELL_SIZE)
+			if cell_val > 0 and cell_val < CELL_COLORS.size():
+				var col: Color = CELL_COLORS[cell_val]
+				rect.color = Color(col.r * 0.65, col.g * 0.65, col.b * 0.65, 1.0)
+			elif cell_val > 0:
+				rect.color = Color(0.3, 0.3, 0.3, 1)
+			else:
+				rect.color = CELL_COLORS[0]
+			rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			replay_board.add_child(rect)
+	var grid_color := Color(0.15, 0.15, 0.22, 0.5)
+	for r in range(BOARD_ROWS + 1):
+		var line := ColorRect.new()
+		line.size = Vector2(BOARD_COLS * CELL_SIZE, 1)
+		line.position = Vector2(0, r * CELL_SIZE)
+		line.color = grid_color
+		line.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		replay_board.add_child(line)
+	for c in range(BOARD_COLS + 1):
+		var line := ColorRect.new()
+		line.size = Vector2(1, BOARD_ROWS * CELL_SIZE)
+		line.position = Vector2(c * CELL_SIZE, 0)
+		line.color = grid_color
+		line.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		replay_board.add_child(line)
+	var bw: float = BOARD_COLS * CELL_SIZE
+	var bh: float = BOARD_ROWS * CELL_SIZE
+	var bc := Color(0.8, 0.5, 0, 0.5)
+	for edge in [
+		[Vector2(-1, -1), Vector2(bw + 2, 2)],
+		[Vector2(-1, bh - 1), Vector2(bw + 2, 2)],
+		[Vector2(-1, -1), Vector2(2, bh + 2)],
+		[Vector2(bw - 1, -1), Vector2(2, bh + 2)],
+	]:
+		var e := ColorRect.new()
+		e.position = edge[0]
+		e.size = edge[1]
+		e.color = bc
+		e.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		replay_board.add_child(e)
+	var ghost_max_x: int = -1
+	var ghost_min_x: int = BOARD_COLS
+	var ghost_min_y: int = BOARD_ROWS
+	if _ai_plan_reveal_count > 0 and _ai_plan_reveal_count <= steps.size():
+		var cur_plan_step: Dictionary = steps[_ai_plan_reveal_count - 1] as Dictionary
+		var ghost_info: Dictionary = _draw_single_ghost_piece(cur_plan_step, _ai_plan_reveal_count)
+		ghost_max_x = int(ghost_info.get("max_x", -1))
+		ghost_min_x = int(ghost_info.get("min_x", BOARD_COLS))
+		ghost_min_y = int(ghost_info.get("min_y", BOARD_ROWS))
+	if _ai_plan_reveal_count < max_steps:
+		_draw_next_step_button(step_index, ghost_max_x, ghost_min_y)
+	if _ai_plan_reveal_count > 1:
+		_draw_retreat_button(step_index, ghost_min_x, ghost_min_y)
+	_center_board()
+	var snap: Dictionary = _snapshots[step_index]
+	_draw_hold_piece(snap)
+	_draw_next_pieces(snap)
+
+func _draw_single_ghost_piece(plan_step: Dictionary, step_number: int) -> Dictionary:
+	var result: Dictionary = {"max_x": -1, "min_x": BOARD_COLS, "min_y": BOARD_ROWS}
+	var placement: Dictionary = plan_step.get("placement", {}) as Dictionary
+	if placement.is_empty():
+		return result
+	var piece_name: String = str(placement.get("piece", ""))
+	if not CC_SHAPES.has(piece_name):
+		return result
+	var rot: int = posmod(int(placement.get("rotation", 0)), 4)
+	var center_col: int = int(placement.get("col", 0))
+	var visible_row: int = int(placement.get("visible_row", 0))
+	var cidx: int = PIECE_NAME_COLOR.get(piece_name, 0)
+	var piece_col: Color = CELL_COLORS[cidx] if cidx < CELL_COLORS.size() else Color.WHITE
+	var shape: Array = CC_SHAPES[piece_name][rot]
+	var ghost_cells: Array[Vector2i] = []
+	var min_gy: int = 999
+	var max_gx: int = -1
+	var min_gx: int = BOARD_COLS
+	for offset in shape:
+		var gx: int = center_col + int(offset.x)
+		var gy: int = visible_row + int(offset.y)
+		if gx < 0 or gx >= BOARD_COLS or gy < 0 or gy >= BOARD_ROWS:
+			continue
+		ghost_cells.append(Vector2i(gx, gy))
+		min_gy = mini(min_gy, gy)
+		max_gx = maxi(max_gx, gx)
+		min_gx = mini(min_gx, gx)
+	for cell in ghost_cells:
+		_draw_ghost_cell(cell.x, cell.y, piece_col)
+	if not ghost_cells.is_empty():
+		_draw_step_badge(ghost_cells, step_number, piece_col, min_gy)
+	result["max_x"] = max_gx
+	result["min_x"] = min_gx
+	result["min_y"] = min_gy
+	return result
+
+func _draw_next_step_button(step_index: int, ghost_max_x: int = -1, ghost_min_y: int = 10) -> void:
+	var btn_w: float = 28.0
+	var btn_h: float = 24.0
+	# 按钮跟随幽灵方块的右上方
+	var btn_x: float
+	var btn_y: float
+	if ghost_max_x >= 0:
+		btn_x = (ghost_max_x + 1) * CELL_SIZE + 4
+		btn_y = ghost_min_y * CELL_SIZE
+	else:
+		btn_x = BOARD_COLS * CELL_SIZE * 0.5 - btn_w * 0.5
+		btn_y = 4.0
+	var btn := Button.new()
+	btn.text = "▶"
+	btn.position = Vector2(btn_x, btn_y)
+	btn.size = Vector2(btn_w, btn_h)
+	btn.add_theme_font_size_override("font_size", 16)
+	btn.add_theme_color_override("font_color", Color(1, 0.85, 0, 1))
+	btn.add_theme_color_override("font_hover_color", Color(1, 0.95, 0.4, 1))
+	var sb_n := StyleBoxFlat.new()
+	sb_n.bg_color = Color(0.08, 0.06, 0.02, 0.9)
+	sb_n.border_width_left = 2
+	sb_n.border_width_top = 2
+	sb_n.border_width_right = 2
+	sb_n.border_width_bottom = 2
+	sb_n.border_color = Color(1, 0.7, 0, 0.7)
+	sb_n.corner_radius_top_left = 6
+	sb_n.corner_radius_top_right = 6
+	sb_n.corner_radius_bottom_left = 6
+	sb_n.corner_radius_bottom_right = 6
+	btn.add_theme_stylebox_override("normal", sb_n)
+	var sb_h := sb_n.duplicate()
+	sb_h.border_color = Color(1, 0.9, 0.3, 1)
+	sb_h.bg_color = Color(0.15, 0.12, 0.02, 0.95)
+	btn.add_theme_stylebox_override("hover", sb_h)
+	btn.add_theme_stylebox_override("pressed", sb_h)
+	btn.add_theme_stylebox_override("focus", sb_n)
+	btn.mouse_filter = Control.MOUSE_FILTER_STOP
+	btn.pressed.connect(_advance_ai_plan.bind(step_index))
+	replay_board.add_child(btn)
+
+func _draw_retreat_button(step_index: int, ghost_min_x: int = BOARD_COLS, ghost_min_y: int = 10) -> void:
+	var btn_w: float = 28.0
+	var btn_h: float = 24.0
+	var btn_x: float
+	var btn_y: float
+	if ghost_min_x < BOARD_COLS:
+		btn_x = ghost_min_x * CELL_SIZE - btn_w - 4
+		btn_y = ghost_min_y * CELL_SIZE
+	else:
+		btn_x = BOARD_COLS * CELL_SIZE * 0.5 - btn_w * 0.5
+		btn_y = 4.0
+	var btn := Button.new()
+	btn.text = "◀"
+	btn.position = Vector2(btn_x, btn_y)
+	btn.size = Vector2(btn_w, btn_h)
+	btn.add_theme_font_size_override("font_size", 16)
+	btn.add_theme_color_override("font_color", Color(0.6, 0.75, 1, 1))
+	btn.add_theme_color_override("font_hover_color", Color(0.8, 0.9, 1, 1))
+	var sb_n := StyleBoxFlat.new()
+	sb_n.bg_color = Color(0.04, 0.04, 0.1, 0.9)
+	sb_n.border_width_left = 2
+	sb_n.border_width_top = 2
+	sb_n.border_width_right = 2
+	sb_n.border_width_bottom = 2
+	sb_n.border_color = Color(0.4, 0.5, 0.8, 0.7)
+	sb_n.corner_radius_top_left = 6
+	sb_n.corner_radius_top_right = 6
+	sb_n.corner_radius_bottom_left = 6
+	sb_n.corner_radius_bottom_right = 6
+	btn.add_theme_stylebox_override("normal", sb_n)
+	var sb_h := sb_n.duplicate()
+	sb_h.border_color = Color(0.6, 0.7, 1, 1)
+	sb_h.bg_color = Color(0.08, 0.08, 0.18, 0.95)
+	btn.add_theme_stylebox_override("hover", sb_h)
+	btn.add_theme_stylebox_override("pressed", sb_h)
+	btn.add_theme_stylebox_override("focus", sb_n)
+	btn.mouse_filter = Control.MOUSE_FILTER_STOP
+	btn.pressed.connect(_retreat_ai_plan.bind(step_index))
+	replay_board.add_child(btn)
+
+func _draw_ghost_cell(col: int, row: int, piece_col: Color) -> void:
+	var panel := Panel.new()
+	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.position = Vector2(col * CELL_SIZE, row * CELL_SIZE)
+	panel.size = Vector2(CELL_SIZE - 1, CELL_SIZE - 1)
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(piece_col.r, piece_col.g, piece_col.b, 0.08)
+	sb.border_width_left = 3
+	sb.border_width_top = 3
+	sb.border_width_right = 3
+	sb.border_width_bottom = 3
+	sb.border_color = Color(piece_col.r, piece_col.g, piece_col.b, 0.70)
+	panel.add_theme_stylebox_override("panel", sb)
+	replay_board.add_child(panel)
+
+func _draw_step_badge(cells: Array[Vector2i], number: int, piece_col: Color, min_row: int) -> void:
+	var sum_x: float = 0.0
+	for cell in cells:
+		sum_x += cell.x * CELL_SIZE + CELL_SIZE * 0.5
+	var center_x: float = sum_x / cells.size()
+	var badge_size: float = 20.0
+	var badge_x: float = center_x - badge_size * 0.5
+	var badge_y: float = min_row * CELL_SIZE - badge_size - 3.0
+	var badge_panel := Panel.new()
+	badge_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	badge_panel.position = Vector2(badge_x, badge_y)
+	badge_panel.size = Vector2(badge_size, badge_size)
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(piece_col.r, piece_col.g, piece_col.b, 0.85)
+	sb.corner_radius_top_left = 10
+	sb.corner_radius_top_right = 10
+	sb.corner_radius_bottom_left = 10
+	sb.corner_radius_bottom_right = 10
+	badge_panel.add_theme_stylebox_override("panel", sb)
+	replay_board.add_child(badge_panel)
+	var lbl := Label.new()
+	lbl.text = str(number)
+	lbl.add_theme_font_size_override("font_size", 16)
+	lbl.add_theme_color_override("font_color", Color.WHITE)
+	lbl.add_theme_constant_override("outline_size", 1)
+	lbl.add_theme_color_override("font_outline_color", Color(0.05, 0.08, 0.18, 0.95))
+	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	lbl.position = Vector2(badge_x, badge_y)
+	lbl.size = Vector2(badge_size, badge_size)
+	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	replay_board.add_child(lbl)

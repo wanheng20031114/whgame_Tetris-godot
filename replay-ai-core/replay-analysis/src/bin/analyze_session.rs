@@ -3,14 +3,20 @@ use std::fs;
 use std::path::Path;
 
 use cold_clear::evaluation::{Evaluator, Standard};
-use libtetris::{Board, FallingPiece, LockResult, Piece, PieceState, PlacementKind, RotationState, TspinStatus};
-use replay_analysis::{make_board, rank_current_moves, AnalysisState, RankedMove};
+use libtetris::{
+    Board, FallingPiece, LockResult, Piece, PieceState, PlacementKind, RotationState, TspinStatus,
+};
+use replay_analysis::{
+    make_board, rank_current_moves, recommend_plan, AnalysisState, PlanStep, RankedMove,
+};
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 
 const VISIBLE_ROWS: usize = 20;
 const BOARD_COLS: usize = 10;
 const DEFAULT_TOP_MOVES: usize = 3;
+const DEFAULT_PLAN_STEPS: usize = 6;
+const DEFAULT_PLAN_NODES: u32 = 8_000;
 
 #[derive(Debug, Deserialize)]
 struct Session {
@@ -24,6 +30,10 @@ struct Session {
 struct Output {
     session_id: String,
     ai_model_used: String,
+    score_method: String,
+    recommendation_method: String,
+    plan_steps_requested: usize,
+    plan_nodes: u32,
     ai_scores: Vec<i32>,
     ai_details: Vec<Value>,
     recommendations: Vec<Value>,
@@ -67,7 +77,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         });
 
         let direct = if actual_ranked.is_none() {
-            actual.and_then(|placement| direct_score(&state, snap, placement, previous_score, &weights))
+            actual.and_then(|placement| {
+                direct_score(&state, snap, placement, previous_score, &weights)
+            })
         } else {
             None
         };
@@ -111,6 +123,17 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         recommendations.push(json!({
             "step": index,
+            "method": "cold-clear-search-visible-queue",
+            "uses_visible_queue_only": true,
+            "known_queue": state.next.iter().map(|piece| piece.to_char().to_string()).collect::<Vec<_>>(),
+            "plan": recommend_plan(
+                &state,
+                Standard::default(),
+                DEFAULT_PLAN_NODES,
+                0,
+                DEFAULT_PLAN_STEPS,
+            )
+            .map(recommendation_json),
             "top_moves": ranked.iter().take(top_moves).map(ranked_move_json).collect::<Vec<_>>(),
         }));
 
@@ -133,6 +156,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             session.session_id
         },
         ai_model_used: "cold-clear-standard".to_owned(),
+        score_method: "single-step-cold-clear-standard-evaluation".to_owned(),
+        recommendation_method: "cold-clear-search-visible-queue".to_owned(),
+        plan_steps_requested: DEFAULT_PLAN_STEPS,
+        plan_nodes: DEFAULT_PLAN_NODES,
         ai_scores: scores,
         ai_details: details,
         recommendations,
@@ -152,7 +179,11 @@ fn parse_top_moves(args: &[String]) -> Option<usize> {
         .and_then(|pair| pair[1].parse::<usize>().ok())
 }
 
-fn build_state(board_before: &[Vec<bool>], snap: &Value, current_piece: Option<Piece>) -> AnalysisState {
+fn build_state(
+    board_before: &[Vec<bool>],
+    snap: &Value,
+    current_piece: Option<Piece>,
+) -> AnalysisState {
     let mut state = AnalysisState::default();
     state.field = visible_to_cold_field(board_before);
     state.combo = snap
@@ -165,12 +196,19 @@ fn build_state(board_before: &[Vec<bool>], snap: &Value, current_piece: Option<P
         .and_then(Value::as_i64)
         .map(|v| v > 0)
         .unwrap_or(false);
-    state.hold = snap.get("hold_piece").and_then(Value::as_str).and_then(parse_piece);
+    state.hold = snap
+        .get("hold_piece")
+        .and_then(Value::as_str)
+        .and_then(parse_piece);
     if let Some(piece) = current_piece {
         state.next.push(piece);
     }
     if let Some(next) = snap.get("next_pieces").and_then(Value::as_array) {
-        for item in next.iter().filter_map(Value::as_str).filter_map(parse_piece) {
+        for item in next
+            .iter()
+            .filter_map(Value::as_str)
+            .filter_map(parse_piece)
+        {
             state.next.push(item);
         }
     }
@@ -194,7 +232,11 @@ fn direct_score(
 
     let mut board: Board = make_board(state);
     let mut placement = placement;
-    if snap.get("is_t_spin").and_then(Value::as_bool).unwrap_or(false) {
+    if snap
+        .get("is_t_spin")
+        .and_then(Value::as_bool)
+        .unwrap_or(false)
+    {
         placement.tspin = TspinStatus::Full;
     }
     let lock = board.lock_piece(placement);
@@ -221,7 +263,9 @@ fn direct_score(
 }
 
 fn piece_from_snapshot(snap: &Value) -> Option<Piece> {
-    snap.get("piece_type").and_then(Value::as_str).and_then(parse_piece)
+    snap.get("piece_type")
+        .and_then(Value::as_str)
+        .and_then(parse_piece)
 }
 
 fn parse_piece(name: &str) -> Option<Piece> {
@@ -240,7 +284,12 @@ fn parse_piece(name: &str) -> Option<Piece> {
 fn falling_piece_from_snapshot(snap: &Value, piece: Piece) -> Option<FallingPiece> {
     let col = snap.get("col")?.as_i64()? as i32;
     let godot_row = snap.get("row")?.as_i64()? as i32;
-    let rotation = match snap.get("rotation").and_then(Value::as_i64).unwrap_or(0).rem_euclid(4) {
+    let rotation = match snap
+        .get("rotation")
+        .and_then(Value::as_i64)
+        .unwrap_or(0)
+        .rem_euclid(4)
+    {
         0 => RotationState::North,
         1 => RotationState::East,
         2 => RotationState::South,
@@ -250,7 +299,11 @@ fn falling_piece_from_snapshot(snap: &Value, piece: Piece) -> Option<FallingPiec
         kind: PieceState(piece, rotation),
         x: col,
         y: 39 - godot_row,
-        tspin: if snap.get("is_t_spin").and_then(Value::as_bool).unwrap_or(false) {
+        tspin: if snap
+            .get("is_t_spin")
+            .and_then(Value::as_bool)
+            .unwrap_or(false)
+        {
             TspinStatus::Full
         } else {
             TspinStatus::None
@@ -324,6 +377,27 @@ fn ranked_move_json(mv: &RankedMove) -> Value {
         "garbage_sent": mv.score.garbage_sent,
         "placement_kind": placement_kind_name(mv.score.placement_kind),
         "lock": lock_json(&mv.score.lock),
+    })
+}
+
+fn recommendation_json(recommendation: replay_analysis::Recommendation) -> Value {
+    json!({
+        "searched_nodes": recommendation.searched_nodes,
+        "depth": recommendation.depth,
+        "steps": recommendation.steps.iter().enumerate().map(|(index, step)| {
+            plan_step_json(index, step)
+        }).collect::<Vec<_>>(),
+    })
+}
+
+fn plan_step_json(index: usize, step: &PlanStep) -> Value {
+    json!({
+        "step": index,
+        "used_hold": step.mv.hold,
+        "input_count": step.mv.inputs.len(),
+        "inputs": step.mv.inputs.iter().map(|input| format!("{:?}", input)).collect::<Vec<_>>(),
+        "placement": placement_json(step.mv.expected_location),
+        "lock": step.lock.as_ref().map(lock_json),
     })
 }
 

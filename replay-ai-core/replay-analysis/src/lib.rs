@@ -197,21 +197,29 @@ pub fn recommend_plan(
     }
 
     let (mv, info) = bot.suggest_move(&weights, None, incoming_garbage)?;
-    let mut steps = vec![PlanStep { mv, lock: None }];
-    for (placement, lock) in info
-        .plan()
-        .iter()
-        .skip(1)
-        .take(max_steps.saturating_sub(1))
-    {
+    let mut board = make_board(state);
+    let mut steps = Vec::new();
+    let plan = info.plan();
+    for (index, (placement, lock)) in plan.iter().take(max_steps).enumerate() {
+        let hold = consume_piece_for_plan(&mut board, *placement, state.use_hold).unwrap_or(false);
+        let inputs = if index == 0 && placement.same_location(&mv.expected_location) {
+            mv.inputs.clone()
+        } else {
+            Default::default()
+        };
         steps.push(PlanStep {
             mv: Move {
-                inputs: Default::default(),
+                inputs,
                 expected_location: *placement,
-                hold: false,
+                hold,
             },
             lock: Some(lock.clone()),
         });
+        let _ = board.lock_piece(*placement);
+    }
+
+    if steps.is_empty() {
+        steps.push(PlanStep { mv, lock: None });
     }
 
     let (searched_nodes, depth) = match info {
@@ -227,10 +235,34 @@ pub fn recommend_plan(
     })
 }
 
+fn consume_piece_for_plan(
+    board: &mut Board,
+    placement: FallingPiece,
+    use_hold: bool,
+) -> Option<bool> {
+    let next = board.advance_queue()?;
+    if next == placement.kind.0 {
+        return Some(false);
+    }
+    if !use_hold {
+        return None;
+    }
+    let held = board
+        .hold(next)
+        .unwrap_or_else(|| board.advance_queue().unwrap());
+    if held == placement.kind.0 {
+        Some(true)
+    } else {
+        None
+    }
+}
+
 fn apply_queue_and_hold(board: &mut Board, placement: FallingPiece, used_hold: bool) -> Option<()> {
     let next = board.advance_queue()?;
     if used_hold {
-        let held = board.hold(next).unwrap_or_else(|| board.advance_queue().unwrap());
+        let held = board
+            .hold(next)
+            .unwrap_or_else(|| board.advance_queue().unwrap());
         if held != placement.kind.0 {
             return None;
         }
@@ -258,8 +290,8 @@ fn add_ranked_moves(
     for placement in find_moves(board, spawned, movement_mode) {
         let mut result = board.clone();
         let lock = result.lock_piece(placement.location);
-        let can_be_hd =
-            board.above_stack(&placement.location) && board.column_heights().iter().all(|&y| y < 18);
+        let can_be_hd = board.above_stack(&placement.location)
+            && board.column_heights().iter().all(|&y| y < 18);
         if lock.locked_out || can_be_hd && lock.placement_kind == PlacementKind::MiniTspin {
             continue;
         }
