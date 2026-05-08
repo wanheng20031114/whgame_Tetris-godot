@@ -436,13 +436,10 @@ func _update_data_panel(index: int) -> void:
 	# AI 评分
 	if index < _ai_scores.size():
 		var score_val: float = float(_ai_scores[index])
-		var delta: float = _timeline_score_delta(index)
 		var detail: Dictionary = _get_ai_detail(index)
-		var rank_text: String = "rank ?"
-		if detail.has("rank") and detail["rank"] != null:
-			rank_text = "rank %d/%d" % [int(detail["rank"]), int(detail.get("legal_moves", 0))]
-		var advice_text: String = _format_best_move(detail)
-		ai_score_label.text = "%d\n(%+d) %s\n%s" % [roundi(score_val), roundi(delta), rank_text, advice_text]
+		var loss: int = _timeline_score_loss(index)
+		var loss_text: String = "loss %d" % loss if loss > 0 else "AI best"
+		ai_score_label.text = "%d\n%s" % [roundi(score_val), loss_text]
 		ai_score_label.add_theme_color_override("font_color", _ai_detail_color(detail, score_val))
 	else:
 		ai_score_label.text = "%s\n(-)" % tr("TXT_NA")
@@ -471,18 +468,8 @@ func _get_ai_detail(index: int) -> Dictionary:
 
 
 func _ai_detail_color(detail: Dictionary, score_val: float) -> Color:
-	var quality: String = str(detail.get("quality", ""))
-	match quality:
-		"best":
-			return Color(0.0, 0.95, 0.45)
-		"good":
-			return Color(0.62, 0.95, 0.62)
-		"ok":
-			return Color(1.0, 0.85, 0.2)
-		"mistake":
-			return Color(1.0, 0.45, 0.18)
-		"blunder":
-			return Color(1.0, 0.22, 0.22)
+	if detail.has("score_loss") and detail["score_loss"] != null:
+		return _timeline_loss_color(maxi(0, int(detail["score_loss"])))
 	return _ai_score_color(score_val)
 
 
@@ -502,29 +489,32 @@ func _format_best_move(detail: Dictionary) -> String:
 	return "best: %s%s c%d r%d rot%d %s" % [hold_mark, piece, col, row, rot, kind]
 
 
-func _timeline_score_delta(index: int) -> float:
-	if index < 0 or index >= _ai_scores.size():
-		return 0.0
-	if index == 0:
-		return 0.0
-	return float(_ai_scores[index]) - float(_ai_scores[index - 1])
+func _timeline_score_loss(index: int) -> int:
+	var detail: Dictionary = _get_ai_detail(index)
+	if detail.has("score_loss") and detail["score_loss"] != null:
+		return maxi(0, int(detail["score_loss"]))
+	return 0
 
 
-func _timeline_delta_color(delta: float) -> Color:
-	if delta < -150.0:
-		return Color(0.65, 0.0, 0.0) # 深红
-	if delta <= -100.0:
-		return Color(1.0, 0.22, 0.22) # 红
-	if delta <= -50.0:
-		return Color(1.0, 0.84, 0.2) # 黄
-	if delta <= 50.0:
-		return Color(0.62, 0.95, 0.62) # 淡绿
-	return Color(0.1, 1.0, 0.25) # 鲜绿
+func _timeline_loss_color(loss: int) -> Color:
+	if loss <= 0:
+		return Color(0.0, 1.0, 0.32)
+	if loss <= 80:
+		return Color(0.18, 1.0, 0.46)
+	if loss <= 180:
+		return Color(0.42, 0.96, 0.48)
+	if loss <= 300:
+		return Color(0.70, 0.95, 0.56)
+	if loss <= 600:
+		return Color(1.0, 0.88, 0.26)
+	if loss <= 800:
+		return Color(1.0, 0.55, 0.18)
+	return Color(1.0, 0.20, 0.18)
 
 
 func _timeline_row_color(index: int) -> Color:
 	if index >= 0 and index < _ai_scores.size():
-		return _timeline_delta_color(_timeline_score_delta(index))
+		return _timeline_loss_color(_timeline_score_loss(index))
 	return Color(0.6, 0.65, 0.75)
 
 
@@ -582,24 +572,16 @@ func _build_timeline() -> void:
 		btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		btn.add_theme_font_size_override("font_size", 11)
 		var row_color: Color = _timeline_row_color(i)
-		var delta_text: String = "(+0)"
-		if i < _ai_scores.size():
-			var delta: float = _timeline_score_delta(i)
-			delta_text = "(%+d)" % roundi(delta)
 		btn.add_theme_color_override("font_color", row_color)
 		_set_timeline_button_border(btn, row_color, i == _current_step)
 
 		# AI 分数
 		var ai_text: String = ""
-		var rank_text: String = ""
 		if i < _ai_scores.size():
+			var loss: int = _timeline_score_loss(i)
 			ai_text = "%d" % roundi(float(_ai_scores[i]))
-			var detail: Dictionary = _get_ai_detail(i)
-			if detail.has("rank") and detail["rank"] != null:
-				rank_text = " r%d" % int(detail["rank"])
-			var quality: String = str(detail.get("quality", ""))
-			if quality == "mistake" or quality == "blunder":
-				rank_text += " " + quality
+			if loss > 0:
+				ai_text += " -%d" % loss
 		else:
 			ai_text = "-"
 
@@ -608,7 +590,7 @@ func _build_timeline() -> void:
 		if elapsed_ms >= 1000:
 			time_text = "%.1fs" % (elapsed_ms / 1000.0)
 
-		btn.text = "#%d  %s %s%s  %s" % [i + 1, ai_text, delta_text, rank_text, time_text]
+		btn.text = "#%d  %s  %s  %s" % [i + 1, piece_name, ai_text, time_text]
 		btn.pressed.connect(_go_to_step.bind(i))
 		hbox.add_child(btn)
 
