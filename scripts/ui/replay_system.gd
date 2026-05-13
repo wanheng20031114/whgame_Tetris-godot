@@ -43,6 +43,11 @@ const MINI_SHAPES: Dictionary = {
 const MINI_CELL: int = 18  # 预览方块格子大小
 const TIMELINE_PIECE_CELL: int = 6
 const TIMELINE_PIECE_ROW_H: int = 18
+const TIMELINE_STEP_W: int = 48
+const TIMELINE_NAME_W: int = 14
+const TIMELINE_AI_W: int = 48
+const TIMELINE_TIME_W: int = 48
+const TIMELINE_TAG_W: int = 58
 
 # cold-clear 兼容形状表（visible 坐标系，y 向下）
 # 从 libtetris gen_cells! 宏精确转换：North=(x,-y), East=(-y,-x), South=(-x,y), West=(y,x)
@@ -1161,6 +1166,23 @@ func _set_timeline_button_border(btn: Button, border_color: Color, selected: boo
 	btn.add_theme_stylebox_override("focus", sb)
 
 
+func _set_timeline_row_style(row: PanelContainer, border_color: Color, selected: bool) -> void:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0, 0, 0, 0)
+	if selected:
+		sb.bg_color = Color(border_color.r, border_color.g, border_color.b, 0.06)
+		sb.border_width_left = 2
+		sb.border_width_top = 2
+		sb.border_width_right = 2
+		sb.border_width_bottom = 2
+		sb.border_color = border_color
+		sb.corner_radius_top_left = 3
+		sb.corner_radius_top_right = 3
+		sb.corner_radius_bottom_left = 3
+		sb.corner_radius_bottom_right = 3
+	row.add_theme_stylebox_override("panel", sb)
+
+
 # ==============================================================================
 # 时间线
 # ==============================================================================
@@ -1173,6 +1195,8 @@ func _build_timeline() -> void:
 		var snap: Dictionary = _snapshots[i]
 		var piece_name: String = str(snap.get("piece_type", "?"))
 		var elapsed_ms: int = int(snap.get("elapsed_since_last_piece_ms", 0))
+		timeline_list.add_child(_create_timeline_row(i, snap, piece_name, elapsed_ms))
+		continue
 
 		# 行容器
 		var hbox := HBoxContainer.new()
@@ -1200,31 +1224,33 @@ func _build_timeline() -> void:
 		_set_timeline_button_border(btn, row_color, i == _current_step)
 
 		# AI 表现：始终占位显示（AI BEST 或 -loss）
-		var ai_text: String = ""
-		if i < _ai_scores.size():
-			var loss: int = _timeline_score_loss(i)
-			ai_text = "-%d" % loss if loss > 0 else "AI BEST"
-		else:
-			ai_text = "-"
+		var ai_text: String = _timeline_ai_text(i)
 
 		# 用时
-		var time_text: String = "%dms" % elapsed_ms
-		if elapsed_ms >= 1000:
-			time_text = "%.1fs" % (elapsed_ms / 1000.0)
+		var time_text: String = _timeline_time_text(elapsed_ms)
 
-		btn.text = "#%d  %s  %s  %s" % [i + 1, piece_name, ai_text, time_text]
+		btn.text = "#%04d  %s  %-6s  %-6s" % [mini(i + 1, 9999), piece_name, ai_text, time_text]
 		btn.pressed.connect(_go_to_step.bind(i))
 		hbox.add_child(btn)
+
+		var special_text := _timeline_special_clear_text(snap)
+		var tag := _create_timeline_tag_label(special_text)
+		tag.add_theme_color_override("font_color", _timeline_special_clear_color(special_text))
+		hbox.add_child(tag)
 
 		timeline_list.add_child(hbox)
 
 
 func _highlight_timeline_item(index: int) -> void:
 	for i in range(timeline_list.get_child_count()):
+		var row: PanelContainer = timeline_list.get_child(i) as PanelContainer
+		if row != null:
+			_set_timeline_row_style(row, _timeline_row_color(i), i == index)
+			continue
 		var hbox: HBoxContainer = timeline_list.get_child(i) as HBoxContainer
 		if hbox == null or hbox.get_child_count() < 2:
 			continue
-		var btn: Button = hbox.get_child(hbox.get_child_count() - 1) as Button
+		var btn: Button = hbox.get_child(hbox.get_child_count() - 2) as Button
 		if btn == null:
 			continue
 		var row_color: Color = _timeline_row_color(i)
@@ -1236,6 +1262,113 @@ func _highlight_timeline_item(index: int) -> void:
 	if scroll and index < timeline_list.get_child_count():
 		var target_btn: Control = timeline_list.get_child(index)
 		scroll.ensure_control_visible(target_btn)
+
+
+func _create_timeline_row(index: int, snap: Dictionary, piece_name: String, elapsed_ms: int) -> PanelContainer:
+	var row := PanelContainer.new()
+	row.custom_minimum_size.y = 26
+	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.mouse_filter = Control.MOUSE_FILTER_STOP
+	row.gui_input.connect(_on_timeline_row_gui_input.bind(index))
+
+	var row_color := _timeline_row_color(index)
+	_set_timeline_row_style(row, row_color, index == _current_step)
+
+	var hbox := HBoxContainer.new()
+	hbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	hbox.add_theme_constant_override("separation", 4)
+	hbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	row.add_child(hbox)
+
+	var cidx: int = PIECE_NAME_COLOR.get(piece_name, 0)
+	var indicator := ColorRect.new()
+	indicator.custom_minimum_size = Vector2(4, 20)
+	indicator.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	indicator.color = CELL_COLORS[cidx] if cidx > 0 and cidx < CELL_COLORS.size() else Color(0.3, 0.3, 0.4)
+	hbox.add_child(indicator)
+	hbox.add_child(_create_timeline_piece_icon(piece_name))
+
+	hbox.add_child(_create_timeline_text_label("#%04d" % mini(index + 1, 9999), TIMELINE_STEP_W, row_color))
+	hbox.add_child(_create_timeline_text_label(piece_name, TIMELINE_NAME_W, row_color))
+	hbox.add_child(_create_timeline_text_label(_timeline_ai_text(index), TIMELINE_AI_W, row_color))
+	hbox.add_child(_create_timeline_text_label(_timeline_time_text(elapsed_ms), TIMELINE_TIME_W, row_color))
+
+	var special_text := _timeline_special_clear_text(snap)
+	var tag := _create_timeline_tag_label(special_text)
+	tag.add_theme_color_override("font_color", _timeline_special_clear_color(special_text))
+	hbox.add_child(tag)
+
+	return row
+
+
+func _on_timeline_row_gui_input(event: InputEvent, index: int) -> void:
+	if event is InputEventMouseButton:
+		var mouse_event := event as InputEventMouseButton
+		if mouse_event.button_index == MOUSE_BUTTON_LEFT and mouse_event.pressed:
+			_go_to_step(index)
+
+
+func _create_timeline_text_label(text: String, width: float, color: Color) -> Label:
+	var label := Label.new()
+	label.text = text
+	label.custom_minimum_size = Vector2(width, 0)
+	label.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.clip_text = true
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	label.add_theme_font_size_override("font_size", 11)
+	label.add_theme_color_override("font_color", color)
+	return label
+
+
+func _create_timeline_tag_label(text: String) -> Label:
+	var label := Label.new()
+	label.text = text
+	label.custom_minimum_size = Vector2(TIMELINE_TAG_W, 0)
+	label.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.clip_text = true
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	label.add_theme_font_size_override("font_size", 10)
+	return label
+
+
+func _timeline_ai_text(index: int) -> String:
+	if index >= _ai_scores.size():
+		return "-"
+	var loss: int = _timeline_score_loss(index)
+	if loss <= 0:
+		return "BEST"
+	return "-%d" % mini(loss, 99999)
+
+
+func _timeline_time_text(elapsed_ms: int) -> String:
+	if elapsed_ms > 9999:
+		return "9999+"
+	return "%dms" % maxi(0, elapsed_ms)
+
+
+func _timeline_special_clear_text(snap: Dictionary) -> String:
+	var lines := int(snap.get("lines_cleared_this_lock", 0))
+	if lines <= 0:
+		return ""
+	if bool(snap.get("is_t_spin", false)):
+		return "T-SPIN"
+	if lines >= 4:
+		return "TETRIS"
+	return ""
+
+
+func _timeline_special_clear_color(text: String) -> Color:
+	match text:
+		"T-SPIN":
+			return Color(1.0, 0.45, 1.0)
+		"TETRIS":
+			return Color(0.0, 0.86, 1.0)
+		_:
+			return Color(0.42, 0.48, 0.58)
 
 
 # ==============================================================================
