@@ -130,6 +130,21 @@ var _showing_ai_plan: bool = false
 var _ai_plan_reveal_count: int = 0
 var _ai_plan_simulated_board: Array = []
 var _ai_plan_board_history: Array = []  # 每步锁定前的棋盘快照，用于回退
+var _analysis_active: bool = false
+var _analysis_pid: int = -1
+var _analysis_session_file_name: String = ""
+var _analysis_output_path: String = ""
+var _analysis_progress_path: String = ""
+var _analysis_started_msec: int = 0
+var _analysis_last_worker_current: int = 0
+var _analysis_overlay: Control = null
+var _analysis_progress_bar: ProgressBar = null
+var _analysis_status_label: Label = null
+var _analysis_detail_label: Label = null
+var _session_overview_panel: Control = null
+var _session_radar_chart: Control = null
+var _summary_value_labels: Dictionary = {}
+var _metric_tooltip_controls: Dictionary = {}
 
 
 func _ready() -> void:
@@ -139,18 +154,31 @@ func _ready() -> void:
 	btn_next.pressed.connect(func(): _go_to_step(_current_step + 1))
 	btn_last.pressed.connect(func(): _go_to_step(_snapshots.size() - 1))
 	step_slider.value_changed.connect(func(val): _go_to_step(int(val)))
-	ai_score_label.add_theme_font_size_override("font_size", 44)
+	ai_score_label.custom_minimum_size = Vector2(0, 76)
+	ai_score_label.add_theme_font_size_override("font_size", 50)
+	set_process(false)
 
 	_update_texts()
+	_ensure_session_overview_panel()
+	_update_session_overview()
 	_show_session_list()
 
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_TRANSLATION_CHANGED and is_node_ready():
 		_update_texts()
+		_update_analysis_overlay_text()
 		if _current_step >= 0:
 			_update_step_label()
 			_update_data_panel(_current_step)
+
+
+func _process(_delta: float) -> void:
+	if not _analysis_active:
+		return
+	_update_analysis_progress_overlay()
+	if _analysis_pid > 0 and not OS.is_process_running(_analysis_pid):
+		_finish_ai_analysis_process()
 
 
 func _update_texts() -> void:
@@ -160,17 +188,17 @@ func _update_texts() -> void:
 	if title_lbl:
 		title_lbl.text = tr("TXT_REPLAY_ANALYSIS")
 		
-	var pinfo_lbl = get_node_or_null("%PieceInfoTitle")
+	var pinfo_lbl = data_vbox.get_node_or_null("PieceInfoTitle")
 	if pinfo_lbl:
 		pinfo_lbl.text = "▸ " + tr("TXT_PIECE_INFO")
 		
-	var ter_lbl = get_node_or_null("%TerrainTitle")
+	var ter_lbl = data_vbox.get_node_or_null("TerrainTitle")
 	if ter_lbl:
 		ter_lbl.text = "▸ " + tr("TXT_TERRAIN_METRICS")
 		
-	var ai_lbl = get_node_or_null("%AiTitle")
+	var ai_lbl = data_vbox.get_node_or_null("AiTitle")
 	if ai_lbl:
-		ai_lbl.text = "▸ " + tr("TXT_AI_EVALUATION")
+		ai_lbl.text = "▸ " + tr("TXT_AI_CURRENT_STEP")
 		
 	var tl_lbl = get_node_or_null("%TimelineTitle")
 	if tl_lbl:
@@ -182,6 +210,332 @@ func _update_texts() -> void:
 		
 	if session_list.get_child_count() == 1 and session_list.get_child(0) is Label:
 		(session_list.get_child(0) as Label).text = tr("TXT_NO_SESSIONS_FOUND")
+	_update_session_overview_texts()
+
+
+func _ensure_session_overview_panel() -> void:
+	if _session_overview_panel != null:
+		return
+
+	_hide_legacy_step_stats()
+
+	var root := VBoxContainer.new()
+	root.name = "SessionOverview"
+	root.add_theme_constant_override("separation", 9)
+	data_vbox.add_child(root)
+	data_vbox.move_child(root, 0)
+	_session_overview_panel = root
+
+	var title := Label.new()
+	title.name = "OverviewTitle"
+	title.add_theme_font_size_override("font_size", 17)
+	title.add_theme_color_override("font_color", Color(0.38, 0.92, 1.0))
+	root.add_child(title)
+
+	var radar_wrap := CenterContainer.new()
+	root.add_child(radar_wrap)
+
+	var radar := RadarChart.new()
+	radar.auto_minimum_size = false
+	radar.custom_minimum_size = Vector2(166, 156)
+	radar.chart_radius = 50.0
+	radar.grid_color = Color(0.23, 0.30, 0.42, 0.42)
+	radar.axis_color = Color(0.45, 0.55, 0.72, 0.55)
+	radar.fill_color = Color(0.0, 0.78, 1.0, 0.20)
+	radar.outline_color = Color(0.1, 0.9, 1.0, 0.92)
+	radar.outline_width = 2.0
+	radar.vertex_dot_radius = 2.4
+	radar.vertex_dot_color = Color(1.0, 0.86, 0.24, 1.0)
+	radar.label_font_size = 11
+	radar.label_offset = 20.0
+	radar.label_color = Color(0.70, 0.77, 0.88, 0.95)
+	radar.show_value_labels = false
+	radar.grid_levels = 3
+	radar.animation_duration = 0.45
+	radar_wrap.add_child(radar)
+	_session_radar_chart = radar
+
+	var core_grid := GridContainer.new()
+	core_grid.name = "CoreMetrics"
+	core_grid.columns = 2
+	core_grid.add_theme_constant_override("h_separation", 10)
+	core_grid.add_theme_constant_override("v_separation", 9)
+	root.add_child(core_grid)
+	for metric in [
+		["pps", "PPS", Color(0.10, 0.84, 1.0)],
+		["apm", "APM", Color(1.0, 0.46, 0.34)],
+		["app", "APP", Color(0.50, 0.90, 0.42)],
+		["kpp", "KPP", Color(1.0, 0.82, 0.30)],
+	]:
+		core_grid.add_child(_create_metric_block(metric[0], metric[1], metric[2]))
+
+	var line := HSeparator.new()
+	root.add_child(line)
+
+	var stat_grid := GridContainer.new()
+	stat_grid.name = "SessionStats"
+	stat_grid.columns = 2
+	stat_grid.add_theme_constant_override("h_separation", 10)
+	stat_grid.add_theme_constant_override("v_separation", 7)
+	root.add_child(stat_grid)
+	for stat in [
+		["score", "TXT_SCORE"],
+		["duration", "TXT_DURATION"],
+		["pieces", "TXT_PIECES"],
+		["lines", "TXT_LINES"],
+		["damage", "TXT_DAMAGE"],
+		["keys", "TXT_KEYS"],
+		["quads", "TXT_REPLAY_QUADS"],
+		["tspins", "TXT_REPLAY_TSPINS"],
+		["combo", "TXT_MAX_COMBO"],
+		["b2b", "TXT_MAX_B2B"],
+		["clears", "TXT_REPLAY_CLEAR_MIX"],
+		["ai_score", "TXT_REPLAY_AI_SCORE"],
+	]:
+		stat_grid.add_child(_create_stat_row(stat[0], stat[1]))
+
+	var separator := HSeparator.new()
+	root.add_child(separator)
+
+	_update_session_overview_texts()
+
+
+func _hide_legacy_step_stats() -> void:
+	for node_name in [
+		"PieceInfoTitle",
+		"PieceTypeLabel",
+		"PositionLabel",
+		"ClearTypeLabel",
+		"LinesLabel",
+		"DamageLabel",
+		"ComboLabel",
+		"TimeLabel",
+		"Sep1",
+		"TerrainTitle",
+		"HolesLabel",
+		"BumpinessLabel",
+		"HeightLabel",
+		"Sep2",
+	]:
+		var node := data_vbox.get_node_or_null(node_name)
+		if node is CanvasItem:
+			(node as CanvasItem).visible = false
+
+
+func _create_metric_block(key: String, title: String, accent: Color) -> VBoxContainer:
+	var box := VBoxContainer.new()
+	box.custom_minimum_size = Vector2(0, 56)
+	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_theme_constant_override("separation", 0)
+
+	var value_wrap := CenterContainer.new()
+	value_wrap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_child(value_wrap)
+
+	var value := Label.new()
+	value.name = "Value"
+	value.mouse_filter = Control.MOUSE_FILTER_STOP
+	value.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	value.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	value.add_theme_font_size_override("font_size", 24)
+	value.add_theme_color_override("font_color", accent)
+	value_wrap.add_child(value)
+	_summary_value_labels[key] = value
+
+	var label_wrap := CenterContainer.new()
+	label_wrap.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	box.add_child(label_wrap)
+
+	var label := Label.new()
+	label.name = "Label"
+	label.mouse_filter = Control.MOUSE_FILTER_STOP
+	label.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	label.text = title
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.add_theme_font_size_override("font_size", 12)
+	label.add_theme_color_override("font_color", Color(0.56, 0.63, 0.75))
+	label_wrap.add_child(label)
+	_metric_tooltip_controls[key] = [value, label]
+	_apply_metric_tooltip(key)
+
+	return box
+
+
+func _create_stat_row(key: String, title_key: String) -> HBoxContainer:
+	var row := HBoxContainer.new()
+	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_theme_constant_override("separation", 4)
+
+	var title := Label.new()
+	title.name = "Title"
+	title.text = tr(title_key)
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	title.add_theme_font_size_override("font_size", 13)
+	title.add_theme_color_override("font_color", Color(0.56, 0.63, 0.75))
+	row.add_child(title)
+
+	var value := Label.new()
+	value.name = "Value"
+	value.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	value.add_theme_font_size_override("font_size", 14)
+	value.add_theme_color_override("font_color", Color(0.90, 0.94, 1.0))
+	row.add_child(value)
+	_summary_value_labels[key] = value
+	_summary_value_labels["title_%s" % key] = title
+
+	return row
+
+
+func _update_session_overview_texts() -> void:
+	if _session_overview_panel == null:
+		return
+	var title := _session_overview_panel.get_node_or_null("OverviewTitle") as Label
+	if title != null:
+		title.text = "▸ " + tr("TXT_REPLAY_SESSION_OVERVIEW")
+	var title_keys := {
+		"score": "TXT_SCORE",
+		"duration": "TXT_DURATION",
+		"pieces": "TXT_PIECES",
+		"lines": "TXT_LINES",
+		"damage": "TXT_DAMAGE",
+		"keys": "TXT_KEYS",
+		"quads": "TXT_REPLAY_QUADS",
+		"tspins": "TXT_REPLAY_TSPINS",
+		"combo": "TXT_MAX_COMBO",
+		"b2b": "TXT_MAX_B2B",
+		"clears": "TXT_REPLAY_CLEAR_MIX",
+		"ai_score": "TXT_REPLAY_AI_SCORE",
+	}
+	for key in title_keys.keys():
+		var lbl := _summary_value_labels.get("title_%s" % key, null) as Label
+		if lbl != null:
+			lbl.text = tr(title_keys[key])
+	_refresh_metric_tooltips()
+
+
+func _refresh_metric_tooltips() -> void:
+	for key in _metric_tooltip_controls.keys():
+		_apply_metric_tooltip(str(key))
+
+
+func _apply_metric_tooltip(key: String) -> void:
+	var controls: Array = _metric_tooltip_controls.get(key, [])
+	if controls.is_empty():
+		return
+	var text := tr("TXT_REPLAY_%s_TOOLTIP" % key.to_upper())
+	for control in controls:
+		if control is Control:
+			(control as Control).tooltip_text = text
+
+
+func _update_session_overview() -> void:
+	_ensure_session_overview_panel()
+	var radar: Dictionary = _session_data.get("radar_scores", {})
+	if _session_radar_chart != null and _session_radar_chart.has_method("set_data"):
+		_session_radar_chart.set_data(radar, is_inside_tree())
+
+	if _session_data.is_empty():
+		for key in [
+			"pps",
+			"apm",
+			"app",
+			"kpp",
+			"score",
+			"duration",
+			"pieces",
+			"lines",
+			"damage",
+			"keys",
+			"quads",
+			"tspins",
+			"combo",
+			"b2b",
+			"clears",
+			"ai_score",
+		]:
+			_set_summary_value(key, "—")
+		return
+
+	_set_summary_value("pps", "%.2f" % _session_float("pps"))
+	_set_summary_value("apm", "%.1f" % _session_float("apm"))
+	_set_summary_value("app", "%.2f" % _session_float("app"))
+	_set_summary_value("kpp", "%.2f" % _session_float("kpp"))
+	_set_summary_value("score", _format_number(int(_session_data.get("final_score", 0))))
+	_set_summary_value("duration", _format_duration(float(_session_data.get("duration_seconds", 0.0))))
+	_set_summary_value("pieces", _format_number(int(_session_data.get("pieces_placed", 0))))
+	_set_summary_value("lines", _format_number(int(_session_data.get("final_lines", 0))))
+	_set_summary_value("damage", _format_number(int(_session_data.get("total_damage", 0))))
+	_set_summary_value("keys", _format_number(int(_session_data.get("total_key_presses", 0))))
+	_set_summary_value("quads", str(int(_session_data.get("tetrises", 0))))
+	_set_summary_value("tspins", str(int(_session_data.get("t_spin_clears", 0))))
+	_set_summary_value("combo", str(int(_session_data.get("max_combo", 0))))
+	_set_summary_value("b2b", str(int(_session_data.get("max_b2b", 0))))
+	_set_summary_value("clears", "%d/%d/%d/%d" % [
+		int(_session_data.get("singles", 0)),
+		int(_session_data.get("doubles", 0)),
+		int(_session_data.get("triples", 0)),
+		int(_session_data.get("tetrises", 0)),
+	])
+	var ai_summary_score := _ai_summary_score()
+	_set_summary_value("ai_score", "%.1f" % ai_summary_score if ai_summary_score >= 0.0 else tr("TXT_NA"))
+
+
+func _set_summary_value(key: String, value: String) -> void:
+	var label := _summary_value_labels.get(key, null) as Label
+	if label != null:
+		label.text = value
+
+
+func _session_float(key: String) -> float:
+	return float(_session_data.get(key, 0.0))
+
+
+func _format_duration(seconds: float) -> String:
+	var total_sec: int = int(seconds)
+	var hours: int = int(total_sec / 3600)
+	var mins: int = int((total_sec % 3600) / 60)
+	var secs: int = total_sec % 60
+	if hours > 0:
+		return "%d:%02d:%02d" % [hours, mins, secs]
+	return "%02d:%02d" % [mins, secs]
+
+
+func _format_number(value: int) -> String:
+	var s: String = str(absi(value))
+	var result: String = ""
+	var count: int = 0
+	for i in range(s.length() - 1, -1, -1):
+		if count > 0 and count % 3 == 0:
+			result = "," + result
+		result = s[i] + result
+		count += 1
+	if value < 0:
+		result = "-" + result
+	return result
+
+
+func _average_ai_loss() -> float:
+	if _ai_details.is_empty():
+		return -1.0
+	var total_loss: float = 0.0
+	var count: int = 0
+	for item in _ai_details:
+		if item is Dictionary:
+			var detail := item as Dictionary
+			if detail.has("score_loss") and detail["score_loss"] != null:
+				total_loss += maxf(0.0, float(detail["score_loss"]))
+				count += 1
+	if count <= 0:
+		return -1.0
+	return total_loss / float(count)
+
+
+func _ai_summary_score() -> float:
+	var avg_loss := _average_ai_loss()
+	if avg_loss < 0.0:
+		return -1.0
+	return clampf(100.0 - avg_loss * 0.1, 0.0, 100.0)
 
 
 # ==============================================================================
@@ -256,9 +610,11 @@ func _load_session(file_name: String) -> void:
 	var pieces: int = int(_session_data.get("pieces_placed", 0))
 	var score: int = int(_session_data.get("final_score", 0))
 	session_info_label.text = "%s  |  %d pieces  |  Score: %d" % [session_id, pieces, score]
+	_update_session_overview()
 
 	# 尝试加载 AI 分析结果
 	_load_ai_scores(file_name)
+	_update_session_overview()
 
 	# 设置滑块范围
 	if _snapshots.size() > 0:
@@ -281,17 +637,8 @@ func _load_ai_scores(session_file_name: String) -> void:
 	var analyzed_path: String = PlayerDataStore.get_sessions_dir().path_join(analyzed_name)
 	var needs_analysis: bool = true
 
-	if FileAccess.file_exists(analyzed_path):
-		var file := FileAccess.open(analyzed_path, FileAccess.READ)
-		if file != null:
-			var json := JSON.new()
-			if json.parse(file.get_as_text()) == OK:
-				var data: Dictionary = json.data as Dictionary
-				if str(data.get("ai_model_used", "")) == "cold-clear-standard" and data.has("ai_details"):
-					_ai_scores = data.get("ai_scores", [])
-					_ai_details = data.get("ai_details", [])
-					_ai_recommendations = data.get("recommendations", [])
-					needs_analysis = false
+	if _try_load_ai_scores_from_path(analyzed_path):
+		needs_analysis = false
 
 	if needs_analysis:
 		print("[ReplaySystem] Running replay-ai-core analysis for %s" % session_file_name)
@@ -303,54 +650,272 @@ func _run_ai_analysis(session_file_name: String) -> void:
 		PlayerDataStore.get_sessions_dir().path_join(session_file_name)
 	)
 	var output_path: String = session_path.replace(".json", "_analyzed.json")
+	var progress_path: String = output_path + ".progress"
 
 	var analyzer_path: String = _find_replay_ai_analyzer()
-	var output: Array = []
-	var exit_code: int = -1
+	var executable_path: String = analyzer_path
+	var args: PackedStringArray = []
 	if not analyzer_path.is_empty():
 		print("[ReplaySystem] Analyzer path: %s" % analyzer_path)
-		var args: PackedStringArray = [session_path, output_path]
-		exit_code = OS.execute(analyzer_path, args, output, true)
+		args = [session_path, output_path, "--progress-file", progress_path]
 	else:
 		print("[ReplaySystem] Analyzer executable not found; trying cargo fallback")
-		exit_code = _run_replay_ai_with_cargo(session_path, output_path, output)
+		executable_path = "cargo"
+		args = _make_replay_ai_cargo_args(session_path, output_path, progress_path)
 
-	if exit_code == 0:
-		# 重新加载分析结果
-		if FileAccess.file_exists(output_path):
-			var file := FileAccess.open(output_path, FileAccess.READ)
-			if file != null:
-				var json := JSON.new()
-				if json.parse(file.get_as_text()) == OK:
-					var data: Dictionary = json.data as Dictionary
-					_ai_scores = data.get("ai_scores", [])
-					_ai_details = data.get("ai_details", [])
-					_ai_recommendations = data.get("recommendations", [])
-					print("[ReplaySystem] Replay AI analysis complete: %d steps" % _ai_scores.size())
-	else:
-		push_warning("[ReplaySystem] Replay AI analysis failed (exit code %d): %s" % [exit_code, "\n".join(output)])
+	if args.is_empty():
+		_show_ai_analysis_failed("Analyzer executable and Cargo fallback are unavailable.")
+		return
+
+	_prepare_analysis_progress_file(progress_path)
+	_analysis_session_file_name = session_file_name
+	_analysis_output_path = output_path
+	_analysis_progress_path = progress_path
+	_analysis_started_msec = Time.get_ticks_msec()
+	_analysis_last_worker_current = 0
+	_show_analysis_overlay()
+	var pid: int = OS.create_process(executable_path, args, false)
+	if pid <= 0:
+		_hide_analysis_overlay()
+		_analysis_session_file_name = ""
+		_analysis_output_path = ""
+		_analysis_progress_path = ""
+		_show_ai_analysis_failed("Failed to start analyzer process: %s" % executable_path)
+		return
+
+	_analysis_active = true
+	_analysis_pid = pid
+	_set_replay_controls_enabled(false)
+	set_process(true)
 
 
 func _find_replay_ai_analyzer() -> String:
 	return ReplayAiEnvironment.ensure_analyzer_available()
 
 
-func _run_replay_ai_with_cargo(session_path: String, output_path: String, output: Array) -> int:
+func _make_replay_ai_cargo_args(session_path: String, output_path: String, progress_path: String) -> PackedStringArray:
 	var manifest_path: String = ProjectSettings.globalize_path("res://replay-ai-core/Cargo.toml")
 	if not FileAccess.file_exists(manifest_path):
 		push_warning("[ReplaySystem] replay-ai-core Cargo.toml is missing: %s" % manifest_path)
-		return -1
+		return PackedStringArray()
 
-	var args: PackedStringArray = [
+	return [
 		"run",
 		"--manifest-path", manifest_path,
 		"-p", "replay-analysis",
 		"--bin", "analyze_session",
 		"--",
 		session_path,
-		output_path
+		output_path,
+		"--progress-file", progress_path
 	]
-	return OS.execute("cargo", args, output, true)
+
+
+func _try_load_ai_scores_from_path(path: String) -> bool:
+	if not FileAccess.file_exists(path):
+		return false
+
+	var file := FileAccess.open(path, FileAccess.READ)
+	if file == null:
+		return false
+
+	var json := JSON.new()
+	if json.parse(file.get_as_text()) != OK:
+		return false
+
+	var data: Dictionary = json.data as Dictionary
+	if str(data.get("ai_model_used", "")) != "cold-clear-standard" or not data.has("ai_details"):
+		return false
+
+	_ai_scores = data.get("ai_scores", [])
+	_ai_details = data.get("ai_details", [])
+	_ai_recommendations = data.get("recommendations", [])
+	return true
+
+
+func _prepare_analysis_progress_file(progress_path: String) -> void:
+	var file := FileAccess.open(progress_path, FileAccess.WRITE)
+	if file == null:
+		return
+	file.store_string("0,%d" % _snapshots.size())
+
+
+func _finish_ai_analysis_process() -> void:
+	_analysis_pid = -1
+	_analysis_active = false
+	set_process(false)
+	_set_replay_controls_enabled(true)
+
+	var output_path := _analysis_output_path
+	var progress_path := _analysis_progress_path
+	_hide_analysis_overlay()
+
+	if _try_load_ai_scores_from_path(output_path):
+		print("[ReplaySystem] Replay AI analysis complete: %d steps" % _ai_scores.size())
+		_refresh_replay_after_ai_analysis()
+	else:
+		_show_ai_analysis_failed("Analyzer finished but did not produce a valid analysis JSON.")
+
+	if not progress_path.is_empty() and FileAccess.file_exists(progress_path):
+		DirAccess.remove_absolute(progress_path)
+
+	_analysis_session_file_name = ""
+	_analysis_output_path = ""
+	_analysis_progress_path = ""
+
+
+func _refresh_replay_after_ai_analysis() -> void:
+	if _current_step < 0:
+		return
+	_update_session_overview()
+	_render_step(_current_step)
+	_update_data_panel(_current_step)
+	_build_timeline()
+	_highlight_timeline_item(_current_step)
+
+
+func _show_ai_analysis_failed(message: String) -> void:
+	push_warning("[ReplaySystem] Replay AI analysis failed: %s" % message)
+	ai_score_label.text = tr("TXT_AI_ANALYSIS_FAILED")
+	ai_score_label.add_theme_color_override("font_color", Color(1.0, 0.35, 0.25))
+
+
+func _show_analysis_overlay() -> void:
+	_ensure_analysis_overlay()
+	_analysis_overlay.visible = true
+	_analysis_overlay.move_to_front()
+	_update_analysis_overlay_text()
+	_update_analysis_progress_overlay()
+
+
+func _hide_analysis_overlay() -> void:
+	if _analysis_overlay != null:
+		_analysis_overlay.visible = false
+
+
+func _ensure_analysis_overlay() -> void:
+	if _analysis_overlay != null:
+		return
+
+	var overlay := PanelContainer.new()
+	overlay.name = "AnalysisOverlay"
+	overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	overlay.anchor_right = 1.0
+	overlay.anchor_bottom = 1.0
+	overlay.visible = false
+	var overlay_style := StyleBoxFlat.new()
+	overlay_style.bg_color = Color(0.015, 0.016, 0.024, 0.82)
+	overlay.add_theme_stylebox_override("panel", overlay_style)
+	add_child(overlay)
+	_analysis_overlay = overlay
+
+	var center := CenterContainer.new()
+	center.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	center.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	overlay.add_child(center)
+
+	var panel := PanelContainer.new()
+	panel.custom_minimum_size = Vector2(440, 156)
+	var panel_style := StyleBoxFlat.new()
+	panel_style.bg_color = Color(0.055, 0.058, 0.09, 0.96)
+	panel_style.border_width_left = 1
+	panel_style.border_width_top = 1
+	panel_style.border_width_right = 1
+	panel_style.border_width_bottom = 1
+	panel_style.border_color = Color(0.0, 0.83, 1.0, 0.55)
+	panel_style.corner_radius_top_left = 8
+	panel_style.corner_radius_top_right = 8
+	panel_style.corner_radius_bottom_left = 8
+	panel_style.corner_radius_bottom_right = 8
+	panel.add_theme_stylebox_override("panel", panel_style)
+	center.add_child(panel)
+
+	var margin := MarginContainer.new()
+	margin.add_theme_constant_override("margin_left", 22)
+	margin.add_theme_constant_override("margin_top", 18)
+	margin.add_theme_constant_override("margin_right", 22)
+	margin.add_theme_constant_override("margin_bottom", 18)
+	panel.add_child(margin)
+
+	var vbox := VBoxContainer.new()
+	vbox.add_theme_constant_override("separation", 10)
+	margin.add_child(vbox)
+
+	var status := Label.new()
+	status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	status.add_theme_font_size_override("font_size", 20)
+	status.add_theme_color_override("font_color", Color(0.88, 0.93, 1.0))
+	vbox.add_child(status)
+	_analysis_status_label = status
+
+	var bar := ProgressBar.new()
+	bar.custom_minimum_size = Vector2(380, 22)
+	bar.min_value = 0
+	bar.max_value = maxi(1, _snapshots.size())
+	bar.value = 0
+	bar.show_percentage = true
+	vbox.add_child(bar)
+	_analysis_progress_bar = bar
+
+	var detail := Label.new()
+	detail.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	detail.add_theme_font_size_override("font_size", 13)
+	detail.add_theme_color_override("font_color", Color(0.55, 0.65, 0.82))
+	vbox.add_child(detail)
+	_analysis_detail_label = detail
+
+
+func _update_analysis_overlay_text() -> void:
+	if _analysis_status_label != null:
+		_analysis_status_label.text = tr("TXT_AI_ANALYZING")
+	if _analysis_detail_label != null:
+		_analysis_detail_label.text = tr("TXT_AI_ANALYSIS_WAIT")
+
+
+func _update_analysis_progress_overlay() -> void:
+	if _analysis_progress_bar == null:
+		return
+
+	var total := maxi(1, _snapshots.size())
+	var current := 0
+	if not _analysis_progress_path.is_empty() and FileAccess.file_exists(_analysis_progress_path):
+		var file := FileAccess.open(_analysis_progress_path, FileAccess.READ)
+		if file != null:
+			var parts := file.get_as_text().strip_edges().split(",")
+			if parts.size() >= 2:
+				current = maxi(0, int(parts[0]))
+				total = maxi(1, int(parts[1]))
+
+	if current > _analysis_last_worker_current:
+		_analysis_last_worker_current = current
+
+	var elapsed_msec := Time.get_ticks_msec() - _analysis_started_msec
+	if _analysis_last_worker_current == 0 and current == 0 and elapsed_msec > 800:
+		var elapsed_sec := float(elapsed_msec) / 1000.0
+		current = mini(total - 1, int(float(total) * clampf(elapsed_sec / 16.0, 0.0, 0.90)))
+
+	_analysis_progress_bar.max_value = total
+	_analysis_progress_bar.value = clampi(current, 0, total)
+	if _analysis_detail_label != null:
+		var progress_text := tr("TXT_AI_ANALYSIS_PROGRESS") % [current, total]
+		_analysis_detail_label.text = "%s  |  %s" % [progress_text, _format_analysis_elapsed(elapsed_msec)]
+
+
+func _format_analysis_elapsed(elapsed_msec: int) -> String:
+	var total_seconds := maxi(0, int(elapsed_msec / 1000))
+	if total_seconds < 60:
+		return "%.1fs" % (float(elapsed_msec) / 1000.0)
+	return "%dm %02ds" % [total_seconds / 60, total_seconds % 60]
+
+
+func _set_replay_controls_enabled(enabled: bool) -> void:
+	btn_back.disabled = not enabled
+	btn_first.disabled = not enabled
+	btn_prev.disabled = not enabled
+	btn_next.disabled = not enabled
+	btn_last.disabled = not enabled
+	step_slider.editable = enabled
 
 
 # ==============================================================================
@@ -682,6 +1247,9 @@ func _on_back_pressed() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if _analysis_active:
+		get_viewport().set_input_as_handled()
+		return
 	if event.is_action_pressed("ui_cancel"):
 		if session_list_popup.visible:
 			session_list_popup.visible = false

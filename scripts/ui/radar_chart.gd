@@ -33,6 +33,7 @@ const DIMENSION_LABEL_KEYS: Array = [
 @export var value_label_color: Color = Color(0.6, 0.9, 1.0, 0.8)
 @export var grid_levels: int = 3
 @export var animation_duration: float = 0.6
+@export var auto_minimum_size: bool = true
 
 var _current_values: Array = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 var _target_values: Array = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
@@ -151,6 +152,8 @@ func _get_angle(index: int) -> float:
 
 
 func _ready() -> void:
+	if not auto_minimum_size:
+		return
 	var edge_padding: float = maxf(60.0, float(label_font_size) * 1.8)
 	custom_minimum_size = Vector2(
 		(chart_radius + label_offset + edge_padding) * 2.0,

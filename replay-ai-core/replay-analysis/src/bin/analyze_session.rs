@@ -50,9 +50,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let session_path = &args[1];
     let output_path = &args[2];
     let top_moves = parse_top_moves(&args[3..]).unwrap_or(DEFAULT_TOP_MOVES);
+    let progress_path = parse_option_value(&args[3..], "--progress-file");
 
     let session_text = fs::read_to_string(session_path)?;
     let session: Session = serde_json::from_str(&session_text)?;
+    let total_steps = session.snapshots.len();
+    write_progress(progress_path.as_deref(), 0, total_steps);
     let weights = Standard::default();
 
     let mut previous_board: Option<Vec<Vec<bool>>> = None;
@@ -143,6 +146,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         // If the snapshot did not include enough queue information for hold search, keep future
         // steps alive by still moving to the next reconstructed board.
         state.next.clear();
+        write_progress(progress_path.as_deref(), index + 1, total_steps);
     }
 
     let output = Output {
@@ -163,7 +167,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         ai_scores: scores,
         ai_details: details,
         recommendations,
-        total_steps: session.snapshots.len(),
+        total_steps,
     };
 
     let rendered = serde_json::to_string_pretty(&output)?;
@@ -177,6 +181,18 @@ fn parse_top_moves(args: &[String]) -> Option<usize> {
     args.windows(2)
         .find(|pair| pair[0] == "--top")
         .and_then(|pair| pair[1].parse::<usize>().ok())
+}
+
+fn parse_option_value(args: &[String], option: &str) -> Option<String> {
+    args.windows(2)
+        .find(|pair| pair[0] == option)
+        .map(|pair| pair[1].clone())
+}
+
+fn write_progress(path: Option<&str>, current: usize, total: usize) {
+    if let Some(path) = path {
+        let _ = fs::write(path, format!("{},{}", current, total));
+    }
 }
 
 fn build_state(

@@ -43,13 +43,13 @@ TXT_CREATE_ROOM,创建房间,CREATE ROOM,ルーム作成
 TXT_DISCONNECT_BACK,断开并返回,DISCONNECT AND BACK,切断して戻る
 TXT_NO_ROOMS,当前没有房间，点击刷新或创建新房间,No rooms. Refresh or create a new room.,ルームがありません。更新または新規作成してください。
 TXT_FOUND_ROOMS,找到 %d 个房间,Found %d rooms,ルームが %d 件見つかりました
-TXT_ROOM_ENTRY,%s (%s) - 人数: %d/2,%s (%s) - Players: %d/2,%s (%s) - 人数: %d/2
+TXT_ROOM_ENTRY,%s (%s) - 人数: %d/2,%s (%s) - Players: %d/2,%s (%s) - プレイヤー: %d/2
 TXT_JOINING_ROOM,正在加入房间 %s...,Joining room %s...,ルーム %s に参加中...
 TXT_ROOM_CREATED_WAIT,房间创建成功: %s\n等待对手加入...,Room created: %s\nWaiting for opponent...,ルーム作成成功: %s\n対戦相手を待機中...
 TXT_ROOM_JOINED_PREP,成功加入房间: %s\n准备开始游戏...,Joined room: %s\nPreparing game...,ルーム参加成功: %s\nゲーム開始準備中...
 TXT_OPPONENT_FOUND_STARTING,找到对手: %s！游戏即将开始...,Opponent found: %s! Starting soon...,対戦相手: %s が見つかりました。まもなく開始...
 TXT_CREATING_ROOM,正在创建房间...,Creating room...,ルーム作成中...
-TXT_ROOM_NAME_TEMPLATE,%s's room,%s's room,%s's room
+TXT_ROOM_NAME_TEMPLATE,%s's room,%s's room,%s のルーム
 TXT_PLAYER_LOCAL,你 (本地玩家),You (Local),あなた（ローカル）
 TXT_WAITING_CONNECT,等待连接...,Waiting for connection...,接続待ち...
 TXT_BATTLE_IN_PROGRESS,对战中...,Battle in progress...,対戦中...
@@ -71,10 +71,10 @@ TXT_RADAR_EFFICIENCY,效率,EFFICIENCY,効率
 TXT_RADAR_STRUCTURE,结构,STRUCTURE,構造
 TXT_RADAR_STABILITY,稳定,STABILITY,安定
 TXT_RADAR_VISION,视野,VISION,視野
-TXT_STAT_PPS,每秒落块 (PPS),Pieces Per Second (PPS),秒間ピース数 (PPS)
+TXT_STAT_PPS,每秒落块 (PPS),Pieces Per Second (PPS),秒間ブロック数 (PPS)
 TXT_STAT_APM,每分钟攻击 (APM),Attack Per Minute (APM),分間攻撃数 (APM)
-TXT_STAT_APP,每块攻击 (APP),Attack Per Piece (APP),ピースあたりの攻撃 (APP)
-TXT_STAT_KPP,每块按键 (KPP),Keys Per Piece (KPP),ピースあたりのキー入力数 (KPP)
+TXT_STAT_APP,每块攻击 (APP),Attack Per Piece (APP),ブロックあたりの攻撃 (APP)
+TXT_STAT_KPP,每块按键 (KPP),Keys Per Piece (KPP),ブロックあたりのキー入力数 (KPP)
 TXT_TOTAL_GAMES,总游戏数,TOTAL GAMES,総ゲーム数
 TXT_TOTAL_TIME,累计时长,TOTAL TIME,累計時間
 TXT_BEST_SCORE,最高分数,BEST SCORE,ハイスコア
@@ -82,20 +82,20 @@ TXT_RECENT_HISTORY,最近记录,RECENT HISTORY,最近の記録
 TXT_NO_DATA,暂无数据，先去玩一局吧！,No data yet. Play a game first!,データがありません。まずプレイしてください！
 TXT_PLAYER,玩家,PLAYER,プレイヤー
 TXT_TOTAL_LINES,总消行,TOTAL LINES,総消去ライン
-TXT_TOTAL_PIECES,总方块数,TOTAL PIECES,総ピース数
+TXT_TOTAL_PIECES,总方块数,TOTAL PIECES,総ブロック数
 TXT_BEST_LINES,最高消行,BEST LINES,最高ライン
-TXT_BEST_PPS,最大PPS(每秒落块数),BEST PPS(Pieces Per Second),最大PPS(秒間ピース数)
+TXT_BEST_PPS,最大PPS(每秒落块数),BEST PPS(Pieces Per Second),最大PPS(秒間ブロック数)
 TXT_BEST_APM,最大APM(每分钟攻击数),BEST APM(Attacks Per Minute),最大APM(分間攻撃数)
-TXT_AVG_PPS,平均PPS(每秒落块数),AVG PPS(Pieces Per Second),平均PPS(秒間ピース数)
+TXT_AVG_PPS,平均PPS(每秒落块数),AVG PPS(Pieces Per Second),平均PPS(秒間ブロック数)
 TXT_AVG_APM,平均APM(每分钟攻击数),AVG APM(Attacks Per Minute),平均APM(分間攻撃数)
-TXT_AVG_APP,平均APP(每块攻击数),AVG APP(Attacks Per Piece),平均APP(ピースあたりの攻撃)
-TXT_AVG_KPP,平均KPP(每块按键数),AVG KPP(Keys Per Piece),平均KPP(ピースあたりのキー入力数)
+TXT_AVG_APP,平均APP(每块攻击数),AVG APP(Attacks Per Piece),平均APP(ブロックあたりの攻撃)
+TXT_AVG_KPP,平均KPP(每块按键数),AVG KPP(Keys Per Piece),平均KPP(ブロックあたりのキー入力数)
 TXT_AVG_SCORE,平均分,AVG SCORE,平均スコア
 TXT_TIME,时间,TIME,時間
-TXT_SESSION,对局,SESSION,セッション
+TXT_SESSION,对局,SESSION,対局
 TXT_NO_DETAIL_SNAPSHOT,未找到详细快照,No detailed snapshot found,詳細スナップショットが見つかりません
 TXT_DURATION,时长,DURATION,時間
-TXT_PIECES,方块,PIECES,ピース
+TXT_PIECES,方块,PIECES,ブロック
 TXT_KEYS,按键,KEYS,キー
 TXT_DAMAGE,伤害,DAMAGE,ダメージ
 TXT_CLEAR_BREAKDOWN,单消双消三消四消,Single/Double/Triple/Tetris,シングル/ダブル/トリプル/テトリス
@@ -112,10 +112,14 @@ TXT_PPS_SHORT,PPS,PPS,PPS
 TXT_APM_SHORT,APM,APM,APM
 TXT_APP_SHORT,APP,APP,APP
 TXT_KPP_SHORT,KPP,KPP,KPP
-TXT_PPS_EXPLAIN,PPS（每秒落块）,PPS (Pieces Per Second),PPS（秒間ピース数）
+TXT_PPS_EXPLAIN,PPS（每秒落块）,PPS (Pieces Per Second),PPS（秒間ブロック数）
 TXT_APM_EXPLAIN,APM（每分钟攻击）,APM (Attack Per Minute),APM（分間攻撃数）
-TXT_APP_EXPLAIN,APP（每块攻击）,APP (Attack Per Piece),APP（ピースあたり攻撃）
-TXT_KPP_EXPLAIN,KPP（每块按键）,KPP (Keys Per Piece),KPP（ピースあたりキー）
+TXT_APP_EXPLAIN,APP（每块攻击）,APP (Attack Per Piece),APP（ブロックあたり攻撃）
+TXT_KPP_EXPLAIN,KPP（每块按键）,KPP (Keys Per Piece),KPP（ブロックあたりキー）
+TXT_REPLAY_PPS_TOOLTIP,PPS：每秒放置的方块数，越高代表下块速度越快。,PPS: Pieces placed per second. Higher means faster piece placement.,PPS：1秒あたりに置いたブロック数。高いほど配置速度が速いです。
+TXT_REPLAY_APM_TOOLTIP,APM：每分钟造成的攻击行数，越高代表火力越强。,APM: Attack lines sent per minute. Higher means stronger attack output.,APM：1分あたりに送った攻撃ライン数。高いほど火力が高いです。
+TXT_REPLAY_APP_TOOLTIP,APP：平均每个方块造成的攻击，衡量进攻效率。,APP: Attack per piece. It measures how much attack each piece creates on average.,APP：ブロック1個あたりの攻撃量。平均的な攻撃効率を表します。
+TXT_REPLAY_KPP_TOOLTIP,KPP：平均每个方块使用的按键数，越低通常代表操作更简洁。,KPP: Key presses per piece. Lower usually means cleaner input efficiency.,KPP：ブロック1個あたりのキー入力数。低いほど入力が効率的です。
 TXT_KEYBINDINGS,按键设置,KEY BINDINGS,キー設定
 TXT_BIND_TIP,点击一个槽位后按下键盘或手柄按键进行绑定（每个操作最多3个输入，按 ESC 取消监听）,Click a slot then press a keyboard or gamepad button to bind (up to 3 per action; press ESC to cancel).,スロットを押してからキーボードまたはゲームパッドのボタンを入力してください（各操作最大3つ、ESCでキャンセル）
 TXT_BIND_RESET_DEFAULT,恢复默认按键,RESET TO DEFAULT,デフォルトに戻す
@@ -142,7 +146,7 @@ TXT_ACTION_PAUSE,暂停,Pause,一時停止
 TXT_REPLAY,复盘系统,REPLAY SYSTEM,リプレイシステム
 TXT_REPLAY_DESC,AI辅助局后分析,AI ASSISTED ANALYSIS,AI支援リプレイ分析
 TXT_REPLAY_ANALYSIS,复盘分析,REPLAY ANALYSIS,リプレイ分析
-TXT_PIECE_INFO,方块信息,PIECE INFO,ピース情報
+TXT_PIECE_INFO,方块信息,PIECE INFO,ブロック情報
 TXT_TYPE,种类:,Type:,種類:
 TXT_POSITION,位置:,Position:,位置:
 TXT_CLEAR,消除:,Clear:,消去:
@@ -156,7 +160,17 @@ TXT_HOLES,空洞:,Holes:,穴:
 TXT_BUMPINESS,凹凸度:,Bumpiness:,凹凸度:
 TXT_TOTAL_HEIGHT,总高度:,Total Height:,総高さ:
 TXT_AI_EVALUATION,AI 评分,AI EVALUATION,AI評価
+TXT_AI_CURRENT_STEP,当前步 AI 评分,CURRENT MOVE AI,現在手 AI 評価
 TXT_TIMELINE,时间线,TIMELINE,タイムライン
-TXT_NO_SESSIONS_FOUND,未找到对局记录,No sessions found,セッションが見つかりません
-TXT_SELECT_SESSION,选择一个对局进行分析,Select a session to analyze,分析するセッションを選択
+TXT_NO_SESSIONS_FOUND,未找到对局记录,No sessions found,対局記録が見つかりません
+TXT_SELECT_SESSION,选择一个对局进行分析,Select a session to analyze,分析する対局を選択
+TXT_REPLAY_SESSION_OVERVIEW,本局总览,SESSION OVERVIEW,この対局の概要
+TXT_REPLAY_QUADS,四消,QUADS,テトリス
+TXT_REPLAY_TSPINS,T-Spin,T-SPINS,T-Spin
+TXT_REPLAY_CLEAR_MIX,1/2/3/Tetris,1/2/3/Tetris,1/2/3/テトリス
+TXT_REPLAY_AI_SCORE,AI 评分,AI SCORE,AI評価
+TXT_AI_ANALYZING,AI 分析中...,AI ANALYZING...,AI分析中...
+TXT_AI_ANALYSIS_WAIT,分析耗时可能较长，请稍候,This can take a while. Please wait.,分析に時間がかかる場合があります。お待ちください
+TXT_AI_ANALYSIS_PROGRESS,正在生成分析文件 %d / %d,Generating analysis %d / %d,分析ファイル生成中 %d / %d
+TXT_AI_ANALYSIS_FAILED,AI 分析失败,AI analysis failed,AI分析に失敗
 TXT_STEP_FORMAT,步数 %d / %d,Step %d / %d,ステップ %d / %d

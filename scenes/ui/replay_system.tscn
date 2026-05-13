@@ -132,7 +132,7 @@ theme_override_constants/separation = 0
 
 [node name="LeftPanel" type="PanelContainer" parent="VBoxMain/MainContent" unique_id=1342339487]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(280, 0)
+custom_minimum_size = Vector2(340, 0)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
 
@@ -233,14 +233,15 @@ layout_mode = 2
 [node name="AiTitle" type="Label" parent="VBoxMain/MainContent/LeftPanel/MarginContainer/DataScroll/DataVBox" unique_id=1847444087]
 layout_mode = 2
 theme_override_colors/font_color = Color(0, 0.83, 1, 1)
-theme_override_font_sizes/font_size = 14
+theme_override_font_sizes/font_size = 16
 text = "▸ AI EVALUATION"
 
 [node name="AiScoreLabel" type="Label" parent="VBoxMain/MainContent/LeftPanel/MarginContainer/DataScroll/DataVBox" unique_id=1740275354]
 unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 76)
 layout_mode = 2
 theme_override_colors/font_color = Color(0, 1, 0.53, 1)
-theme_override_font_sizes/font_size = 20
+theme_override_font_sizes/font_size = 50
 text = "— —"
 
 [node name="CenterPanel" type="PanelContainer" parent="VBoxMain/MainContent" unique_id=818357823]
@@ -319,7 +320,7 @@ text = "Step 0 / 0"
 
 [node name="RightPanel" type="PanelContainer" parent="VBoxMain/MainContent" unique_id=1245499402]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(260, 0)
+custom_minimum_size = Vector2(300, 0)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
 
