@@ -33,6 +33,7 @@ const CARD_NORMAL_MODULATE := Color(1.0, 1.0, 1.0, 1.0)
 # 为每张卡缓存“默认样式”和“发光样式”，避免重复构建对象
 var _card_base_styles: Dictionary = {}
 var _card_glow_styles: Dictionary = {}
+var _cards: Array[PanelContainer] = []
 
 
 func _ready() -> void:
@@ -56,6 +57,7 @@ func _ready() -> void:
 	card_replay.focus_exited.connect(_on_card_hover.bind(card_replay, false))
 
 	# 焦点导航配置（手柄/键盘）
+	_cards = [card_marathon, card_multiplayer, card_replay]
 	card_marathon.focus_mode = Control.FOCUS_ALL
 	card_multiplayer.focus_mode = Control.FOCUS_ALL
 	card_replay.focus_mode = Control.FOCUS_ALL
@@ -63,6 +65,11 @@ func _ready() -> void:
 	card_multiplayer.focus_neighbor_left = card_marathon.get_path()
 	card_multiplayer.focus_neighbor_right = card_replay.get_path()
 	card_replay.focus_neighbor_left = card_multiplayer.get_path()
+	if btn_stats:
+		card_marathon.focus_neighbor_bottom = btn_stats.get_path()
+		card_multiplayer.focus_neighbor_bottom = btn_stats.get_path()
+		card_replay.focus_neighbor_bottom = btn_stats.get_path()
+		btn_stats.focus_neighbor_top = card_multiplayer.get_path()
 
 	# 缩放动画基准点设为卡片中心
 	card_marathon.pivot_offset = card_marathon.size / 2.0
@@ -228,20 +235,54 @@ func _on_card_input(event: InputEvent, card: Control, mode: String) -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_left"):
-		card_marathon.grab_focus()
-		_refresh_card_visuals()
+		_focus_card_by_delta(-1)
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("ui_right"):
-		card_multiplayer.grab_focus()
-		_refresh_card_visuals()
+		_focus_card_by_delta(1)
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("ui_accept"):
-		if card_marathon.has_focus():
-			_activate_mode(card_marathon, "marathon")
+		var focused_card := _get_focused_card()
+		var focused_mode := _get_focused_card_mode(focused_card)
+		if focused_card != null and not focused_mode.is_empty():
+			_activate_mode(focused_card, focused_mode)
 			get_viewport().set_input_as_handled()
-		elif card_multiplayer.has_focus():
-			_activate_mode(card_multiplayer, "multiplayer")
-			get_viewport().set_input_as_handled()
+
+
+func _focus_card_by_delta(delta: int) -> void:
+	if _cards.is_empty():
+		return
+	var focused_index := _get_focused_card_index()
+	if focused_index < 0:
+		focused_index = 1 if delta > 0 else 0
+	else:
+		focused_index = clampi(focused_index + delta, 0, _cards.size() - 1)
+	var card := _cards[focused_index]
+	card.grab_focus()
+	_refresh_card_visuals()
+
+
+func _get_focused_card_index() -> int:
+	for i in range(_cards.size()):
+		if _cards[i].has_focus():
+			return i
+	return -1
+
+
+func _get_focused_card() -> PanelContainer:
+	var focused_index := _get_focused_card_index()
+	if focused_index < 0:
+		return null
+	return _cards[focused_index]
+
+
+func _get_focused_card_mode(card: Control) -> String:
+	if card == card_marathon:
+		return "marathon"
+	if card == card_multiplayer:
+		return "multiplayer"
+	if card == card_replay:
+		return "replay"
+	return ""
 
 
 func _activate_mode(card: Control, mode: String) -> void:

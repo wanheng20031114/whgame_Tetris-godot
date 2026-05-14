@@ -27,6 +27,7 @@ var ready_garbage: int = 0
 var game_over_panel: PanelContainer
 var btn_restart: Button
 var btn_return: Button
+var _game_over_focus_ready_msec: int = 0
 
 var spin_text_tween: Tween
 var combo_text_tween: Tween
@@ -92,6 +93,18 @@ func _process(delta: float) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	# 仅在结算面板显示时拦截取消键，避免误退出。
 	if game_over_panel == null or not game_over_panel.visible:
+		return
+
+	if Time.get_ticks_msec() < _game_over_focus_ready_msec and (
+		event.is_action_pressed("ui_up")
+		or event.is_action_pressed("ui_down")
+		or event.is_action_pressed("ui_left")
+		or event.is_action_pressed("ui_right")
+		or event.is_action_pressed("ui_accept")
+	):
+		var vp_ready := get_viewport()
+		if vp_ready:
+			vp_ready.set_input_as_handled()
 		return
 
 	if event.is_action_pressed("ui_cancel"):
@@ -253,7 +266,8 @@ func _on_game_over() -> void:
 		label_game_over.visible = true
 	if game_over_panel:
 		game_over_panel.show()
-		btn_restart.grab_focus()
+		_game_over_focus_ready_msec = Time.get_ticks_msec() + 160
+		call_deferred("_focus_game_over_default")
 	bgm.stop()
 	sfx_death.play()
 
@@ -323,6 +337,15 @@ func _initialize_ui() -> void:
 	go_center.add_child(go_vbox)
 	game_over_panel.add_child(go_center)
 	$HUD.add_child(game_over_panel)
+	btn_restart.focus_neighbor_top = btn_restart.get_path()
+	btn_restart.focus_neighbor_bottom = btn_return.get_path()
+	btn_return.focus_neighbor_top = btn_restart.get_path()
+	btn_return.focus_neighbor_bottom = btn_return.get_path()
+
+
+func _focus_game_over_default() -> void:
+	if game_over_panel and game_over_panel.visible and btn_restart:
+		btn_restart.grab_focus()
 
 func _update_texts() -> void:
 	# 兼容两种可能路径（HUD 与独立面板层级）。

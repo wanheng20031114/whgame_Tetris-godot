@@ -36,6 +36,12 @@ func _enter_tree() -> void:
 func _ready() -> void:
 	btn_rematch.pressed.connect(_on_rematch_pressed)
 	btn_lobby.pressed.connect(_on_lobby_pressed)
+	btn_rematch.focus_mode = Control.FOCUS_ALL
+	btn_lobby.focus_mode = Control.FOCUS_ALL
+	btn_rematch.focus_neighbor_left = btn_rematch.get_path()
+	btn_rematch.focus_neighbor_right = btn_lobby.get_path()
+	btn_lobby.focus_neighbor_left = btn_rematch.get_path()
+	btn_lobby.focus_neighbor_right = btn_lobby.get_path()
 
 	NetworkManager.rematch_status_received.connect(_on_rematch_status_received)
 	NetworkManager.game_started.connect(_on_game_restarted)
@@ -66,10 +72,14 @@ func show_result(msg_key: String, opponent_name: String) -> void:
 
 	btn_rematch.disabled = false
 	visible = true
-	btn_rematch.grab_focus()
+	call_deferred("_focus_default_button")
 
 func hide_panel() -> void:
 	visible = false
+
+func _focus_default_button() -> void:
+	if visible and btn_rematch and not btn_rematch.disabled:
+		btn_rematch.grab_focus()
 
 func _update_button_texts() -> void:
 	if btn_rematch:

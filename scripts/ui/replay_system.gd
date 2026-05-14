@@ -167,6 +167,7 @@ func _ready() -> void:
 	_ensure_session_overview_panel()
 	_update_session_overview()
 	_show_session_list()
+	call_deferred("_focus_default_control")
 
 
 func _notification(what: int) -> void:
@@ -558,6 +559,7 @@ func _show_session_list() -> void:
 		lbl.add_theme_color_override("font_color", Color(0.4, 0.5, 0.67))
 		session_list.add_child(lbl)
 		session_list_popup.visible = true
+		call_deferred("_focus_default_control")
 		return
 
 	# 过滤掉 _analyzed.json 文件，按时间倒序显示（最新在前）
@@ -577,17 +579,30 @@ func _show_session_list() -> void:
 			display_name = parts[0] + " " + parts[1].replace("-", ":")
 		btn.text = display_name
 		btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		btn.focus_mode = Control.FOCUS_ALL
 		btn.add_theme_color_override("font_color", Color(0.88, 0.91, 0.94))
 		btn.add_theme_color_override("font_hover_color", Color(0, 0.83, 1))
 		btn.pressed.connect(_on_session_selected.bind(fname))
 		session_list.add_child(btn)
 
 	session_list_popup.visible = true
+	call_deferred("_focus_default_control")
+
+
+func _focus_default_control() -> void:
+	if session_list_popup.visible:
+		for child in session_list.get_children():
+			if child is Button and not (child as Button).disabled:
+				(child as Button).grab_focus()
+				return
+	if btn_back:
+		btn_back.grab_focus()
 
 
 func _on_session_selected(file_name: String) -> void:
 	session_list_popup.visible = false
 	_load_session(file_name)
+	call_deferred("_focus_current_timeline_row")
 
 
 # ==============================================================================
@@ -776,6 +791,7 @@ func _refresh_replay_after_ai_analysis() -> void:
 	_update_data_panel(_current_step)
 	_build_timeline()
 	_highlight_timeline_item(_current_step)
+	call_deferred("_focus_current_timeline_row")
 
 
 func _show_ai_analysis_failed(message: String) -> void:
@@ -1268,6 +1284,7 @@ func _create_timeline_row(index: int, snap: Dictionary, piece_name: String, elap
 	row.custom_minimum_size.y = 26
 	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	row.mouse_filter = Control.MOUSE_FILTER_STOP
+	row.focus_mode = Control.FOCUS_ALL
 	row.gui_input.connect(_on_timeline_row_gui_input.bind(index))
 
 	var row_color := _timeline_row_color(index)
@@ -1305,6 +1322,22 @@ func _on_timeline_row_gui_input(event: InputEvent, index: int) -> void:
 		var mouse_event := event as InputEventMouseButton
 		if mouse_event.button_index == MOUSE_BUTTON_LEFT and mouse_event.pressed:
 			_go_to_step(index)
+			(timeline_list.get_child(index) as Control).grab_focus()
+	if event.is_action_pressed("ui_accept"):
+		_go_to_step(index)
+		get_viewport().set_input_as_handled()
+
+
+func _focus_current_timeline_row() -> void:
+	if session_list_popup.visible:
+		return
+	if _current_step < 0 or _current_step >= timeline_list.get_child_count():
+		if btn_back:
+			btn_back.grab_focus()
+		return
+	var row := timeline_list.get_child(_current_step) as Control
+	if row and row.focus_mode != Control.FOCUS_NONE:
+		row.grab_focus()
 
 
 func _create_timeline_text_label(text: String, width: float, color: Color) -> Label:

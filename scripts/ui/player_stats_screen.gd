@@ -55,12 +55,24 @@ func _ready() -> void:
 	btn_back.pressed.connect(_on_back_pressed)
 	_update_texts()
 	_load_and_display_data()
+	call_deferred("_focus_default_control")
 
 
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_TRANSLATION_CHANGED and is_inside_tree() and is_node_ready():
 		_update_texts()
 		_load_and_display_data()
+
+
+func _unhandled_input(event: InputEvent) -> void:
+	if event.is_action_pressed("ui_cancel"):
+		_on_back_pressed()
+		get_viewport().set_input_as_handled()
+
+
+func _focus_default_control() -> void:
+	if btn_back:
+		btn_back.grab_focus()
 
 
 func _load_and_display_data() -> void:
