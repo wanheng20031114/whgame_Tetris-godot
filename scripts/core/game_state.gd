@@ -5,10 +5,39 @@ extends Node
 
 var player_name: String = ""
 
+const SECTION_AUDIO: String = "Audio"
+const DEFAULT_MASTER_VOLUME_PERCENT: float = 60.0
+
 func _ready() -> void:
 	_ensure_ui_gamepad_actions()
+	_apply_saved_master_volume()
 	PlayerDataStore.ensure_data_dirs()
 	ReplayAiEnvironment.ensure_analyzer_available()
+
+func apply_master_volume_percent(percent: float) -> void:
+	var clamped := clampf(percent, 0.0, 100.0)
+	var bus_index := AudioServer.get_bus_index("Master")
+	if bus_index < 0:
+		return
+	AudioServer.set_bus_mute(bus_index, clamped <= 0.0)
+	if clamped <= 0.0:
+		AudioServer.set_bus_volume_db(bus_index, -80.0)
+	else:
+		AudioServer.set_bus_volume_db(bus_index, linear_to_db(clamped / 100.0))
+
+func get_saved_master_volume_percent() -> float:
+	var config := ConfigFile.new()
+	if config.load(_get_settings_path()) != OK:
+		return DEFAULT_MASTER_VOLUME_PERCENT
+	return clampf(float(config.get_value(SECTION_AUDIO, "master_volume", DEFAULT_MASTER_VOLUME_PERCENT)), 0.0, 100.0)
+
+func _apply_saved_master_volume() -> void:
+	apply_master_volume_percent(get_saved_master_volume_percent())
+
+func _get_settings_path() -> String:
+	if OS.has_feature("editor"):
+		return "res://settings.cfg"
+	return OS.get_executable_path().get_base_dir().path_join("settings.cfg")
 
 func _ensure_ui_gamepad_actions() -> void:
 	_ensure_action_with_joy_buttons("ui_accept", [JOY_BUTTON_A])

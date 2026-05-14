@@ -4,6 +4,8 @@ extends Control
 ## 对局复盘系统
 ## 加载历史 session JSON，逐步回放棋盘状态，展示 AI 评分。
 
+const ReplayTimelineGraphScene := preload("res://scripts/ui/replay_timeline_graph.gd")
+
 const BOARD_ROWS: int = 20
 const BOARD_COLS: int = 10
 const CELL_SIZE: int = 30
@@ -106,6 +108,7 @@ const CC_SHAPES: Dictionary = {
 @onready var btn_next: Button = %BtnNext
 @onready var btn_last: Button = %BtnLast
 @onready var step_slider: HSlider = %StepSlider
+@onready var step_nav: HBoxContainer = %StepNav
 @onready var replay_board: Node2D = %ReplayBoard
 @onready var timeline_list: VBoxContainer = %TimelineList
 @onready var session_list_popup: PanelContainer = %SessionListPopup
@@ -149,6 +152,7 @@ var _analysis_status_label: Label = null
 var _analysis_detail_label: Label = null
 var _session_overview_panel: Control = null
 var _session_radar_chart: Control = null
+var _timeline_graph = null
 var _summary_value_labels: Dictionary = {}
 var _metric_tooltip_controls: Dictionary = {}
 
@@ -159,7 +163,11 @@ func _ready() -> void:
 	btn_prev.pressed.connect(func(): _go_to_step(_current_step - 1))
 	btn_next.pressed.connect(func(): _go_to_step(_current_step + 1))
 	btn_last.pressed.connect(func(): _go_to_step(_snapshots.size() - 1))
+	_style_step_nav()
+	step_label.custom_minimum_size = Vector2(104, 0)
+	step_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	step_slider.value_changed.connect(func(val): _go_to_step(int(val)))
+	_setup_timeline_graph()
 	ai_score_label.custom_minimum_size = Vector2(0, 48)
 	ai_score_label.add_theme_font_size_override("font_size", 40)
 	set_process(false)
@@ -178,6 +186,79 @@ func _notification(what: int) -> void:
 		if _current_step >= 0:
 			_update_step_label()
 			_update_data_panel(_current_step)
+
+
+func _setup_timeline_graph() -> void:
+	if _timeline_graph != null:
+		return
+	_timeline_graph = ReplayTimelineGraphScene.new()
+	_timeline_graph.name = "StepTimelineGraph"
+	_timeline_graph.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_timeline_graph.step_selected.connect(_go_to_step)
+	step_nav.add_child(_timeline_graph)
+	step_nav.move_child(_timeline_graph, step_slider.get_index())
+	step_slider.visible = false
+
+
+func _style_step_nav() -> void:
+	step_nav.custom_minimum_size = Vector2(0, 42)
+	step_nav.add_theme_constant_override("separation", 3)
+	for button in [btn_first, btn_prev, btn_next, btn_last]:
+		_style_step_nav_button(button)
+
+
+func _make_step_nav_style(active: bool = false) -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.08, 0.10, 0.15, 0.96) if active else Color(0.055, 0.065, 0.095, 0.95)
+	sb.border_color = Color(0.0, 0.83, 1.0, 0.72) if active else Color(0.13, 0.24, 0.38, 0.95)
+	sb.border_width_left = 1
+	sb.border_width_top = 1
+	sb.border_width_right = 1
+	sb.border_width_bottom = 1
+	sb.corner_radius_top_left = 4
+	sb.corner_radius_top_right = 4
+	sb.corner_radius_bottom_left = 4
+	sb.corner_radius_bottom_right = 4
+	return sb
+
+
+func _style_step_nav_button(button: Button) -> void:
+	if button == null:
+		return
+	button.custom_minimum_size = Vector2(26, 34)
+	button.flat = false
+	button.add_theme_font_size_override("font_size", 14)
+	button.add_theme_color_override("font_color", Color(0.0, 0.83, 1.0, 1.0))
+	button.add_theme_color_override("font_hover_color", Color(0.72, 0.95, 1.0, 1.0))
+	button.add_theme_color_override("font_focus_color", Color(0.72, 0.95, 1.0, 1.0))
+	button.add_theme_stylebox_override("normal", _make_step_nav_style(false))
+	button.add_theme_stylebox_override("hover", _make_step_nav_style(true))
+	button.add_theme_stylebox_override("pressed", _make_step_nav_style(true))
+	button.add_theme_stylebox_override("focus", _make_step_nav_style(true))
+
+
+func _refresh_timeline_graph() -> void:
+	if _timeline_graph == null:
+		return
+	var base_complexities: Array[float] = []
+	var complexities: Array[float] = []
+	var losses: Array[int] = []
+	var pieces: Array[String] = []
+	var elapsed: Array[int] = []
+	for i in range(_snapshots.size()):
+		var snap: Dictionary = _snapshots[i]
+		base_complexities.append(_snapshot_complexity(snap))
+		losses.append(_timeline_score_loss(i))
+		pieces.append(str(snap.get("piece_type", "?")))
+		elapsed.append(int(snap.get("elapsed_since_last_piece_ms", 0)))
+	for i2 in range(base_complexities.size()):
+		var local_peak := 0
+		for j in range(maxi(0, i2 - 2), mini(losses.size(), i2 + 3)):
+			local_peak = maxi(local_peak, losses[j])
+		var loss_pressure := sqrt(clampf(float(local_peak) / 1800.0, 0.0, 1.0)) * 22.0
+		complexities.append(clampf(base_complexities[i2] + loss_pressure, 0.0, 100.0))
+	_timeline_graph.set_timeline_data(complexities, losses, pieces, elapsed)
+	_timeline_graph.set_current_step(_current_step)
 
 
 func _process(_delta: float) -> void:
@@ -521,6 +602,113 @@ func _format_number(value: int) -> String:
 	return result
 
 
+func _snapshot_complexity(snap: Dictionary) -> float:
+	if snap.has("complexity"):
+		return clampf(float(snap.get("complexity", 0.0)), 0.0, 100.0)
+	if snap.has("board_complexity"):
+		return clampf(float(snap.get("board_complexity", 0.0)), 0.0, 100.0)
+
+	var board_data := _snapshot_board_data(snap)
+	var metrics := _compute_board_complexity_metrics(board_data)
+	var holes := float(snap.get("holes", metrics["holes"]))
+	var bumpiness := float(snap.get("bumpiness", metrics["bumpiness"]))
+	var total_height := float(snap.get("total_height", metrics["total_height"]))
+	var max_height := float(metrics["max_height"])
+	var transitions := float(metrics["row_transitions"] + metrics["column_transitions"])
+	var wells := float(metrics["wells"])
+	var covered_holes := float(metrics["covered_holes"])
+
+	var raw := holes * 5.4 + covered_holes * 0.9 + bumpiness * 0.78 + total_height * 0.24 + max_height * 0.95 + transitions * 0.12 + wells * 1.05
+	return 100.0 * (1.0 - exp(-raw / 92.0))
+
+
+func _snapshot_board_data(snap: Dictionary) -> Array:
+	var board_data: Array = snap.get("board_state_after_drop", [])
+	if board_data.is_empty():
+		board_data = snap.get("board_state", [])
+	if board_data.is_empty():
+		board_data = snap.get("board_state_after_clear", [])
+	return board_data
+
+
+func _compute_board_complexity_metrics(board_data: Array) -> Dictionary:
+	var heights: Array[int] = []
+	var holes := 0
+	var covered_holes := 0
+	var row_transitions := 0
+	var column_transitions := 0
+	var wells := 0
+
+	for c in range(BOARD_COLS):
+		var height := 0
+		var seen_block := false
+		var filled_above := 0
+		var prev_filled := true
+		for r in range(BOARD_ROWS):
+			var filled := _board_cell_filled(board_data, r, c)
+			if filled and not seen_block:
+				height = BOARD_ROWS - r
+				seen_block = true
+			if filled:
+				filled_above += 1
+			elif seen_block:
+				holes += 1
+				covered_holes += filled_above
+			if filled != prev_filled:
+				column_transitions += 1
+			prev_filled = filled
+		if not prev_filled:
+			column_transitions += 1
+		heights.append(height)
+
+	for r2 in range(BOARD_ROWS):
+		var prev_row_filled := true
+		for c2 in range(BOARD_COLS):
+			var row_filled := _board_cell_filled(board_data, r2, c2)
+			if row_filled != prev_row_filled:
+				row_transitions += 1
+			prev_row_filled = row_filled
+		if not prev_row_filled:
+			row_transitions += 1
+
+	var total_height := 0
+	var bumpiness := 0
+	var max_height := 0
+	for i in range(heights.size()):
+		total_height += heights[i]
+		max_height = maxi(max_height, heights[i])
+		if i > 0:
+			bumpiness += absi(heights[i] - heights[i - 1])
+		var left_height := heights[i - 1] if i > 0 else BOARD_ROWS
+		var right_height := heights[i + 1] if i < heights.size() - 1 else BOARD_ROWS
+		var well_depth := mini(left_height, right_height) - heights[i]
+		if well_depth > 1:
+			wells += well_depth
+
+	return {
+		"holes": holes,
+		"covered_holes": covered_holes,
+		"total_height": total_height,
+		"max_height": max_height,
+		"bumpiness": bumpiness,
+		"row_transitions": row_transitions,
+		"column_transitions": column_transitions,
+		"wells": wells,
+	}
+
+
+func _board_cell_filled(board_data: Array, row: int, col: int) -> bool:
+	if row < 0 or row >= board_data.size():
+		return false
+	var board_row = board_data[row]
+	if not (board_row is Array):
+		return false
+	var row_array := board_row as Array
+	if col < 0 or col >= row_array.size():
+		return false
+	return int(row_array[col]) > 0
+
+
 func _average_ai_loss() -> float:
 	if _ai_details.is_empty():
 		return -1.0
@@ -635,6 +823,7 @@ func _load_session(file_name: String) -> void:
 	# 尝试加载 AI 分析结果
 	_load_ai_scores(file_name)
 	_update_session_overview()
+	_refresh_timeline_graph()
 
 	# 设置滑块范围
 	if _snapshots.size() > 0:
@@ -788,6 +977,7 @@ func _refresh_replay_after_ai_analysis() -> void:
 	if _current_step < 0:
 		return
 	_update_session_overview()
+	_refresh_timeline_graph()
 	_render_step(_current_step)
 	_update_data_panel(_current_step)
 	_build_timeline()
@@ -937,6 +1127,8 @@ func _set_replay_controls_enabled(enabled: bool) -> void:
 	btn_next.disabled = not enabled
 	btn_last.disabled = not enabled
 	step_slider.editable = enabled
+	if _timeline_graph:
+		_timeline_graph.set_editable(enabled)
 
 
 # ==============================================================================
@@ -956,6 +1148,8 @@ func _go_to_step(index: int) -> void:
 	_ai_plan_board_history.clear()
 	_current_step = index
 	step_slider.set_value_no_signal(index)
+	if _timeline_graph:
+		_timeline_graph.set_current_step(index)
 	_update_step_label()
 
 	_render_step(index)

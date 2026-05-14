@@ -26,6 +26,11 @@ const SECTION_SETTINGS: String = "Settings"
 const SECTION_BINDINGS: String = "InputBindings"
 const SECTION_RESOLUTION: String = "Resolution"
 const SECTION_DISPLAY: String = "Display"
+const SECTION_AUDIO: String = "Audio"
+const DEFAULT_MASTER_VOLUME_PERCENT: float = 60.0
+const PANEL_WIDTH: float = 820.0
+const PANEL_MAX_HEIGHT: float = 660.0
+const PANEL_SCREEN_MARGIN: float = 48.0
 
 # 默认分辨率 ID
 const DEFAULT_RESOLUTION_ID: String = "1280x720"
@@ -51,10 +56,13 @@ static var _default_events_by_action: Dictionary = {}
 
 var canvas_layer: CanvasLayer        # 顶层画布，用于悬浮显示菜单
 var panel: PanelContainer           # 菜单主面板
+var settings_scroll: ScrollContainer # 设置菜单整体滚动区
 var option_btn: OptionButton        # 语言选择下拉框
 var resolution_option_btn: OptionButton # 分辨率选择下拉框
 var fullscreen_checkbox: Button     # 全屏开关按钮（模拟复选框）
 var fullscreen_indicator: Panel     # 全屏开关的状态指示器
+var volume_slider: HSlider          # 总体音量滑块
+var volume_value_lbl: Label         # 音量百分比标签
 var close_btn: Button               # 关闭/确定按钮
 var reset_all_btn: Button           # 重置所有按键按钮
 var _last_focus_owner: Control = null
@@ -65,6 +73,7 @@ var title_lbl: Label
 var lang_lbl: Label
 var resolution_lbl: Label
 var fullscreen_lbl: Label
+var volume_lbl: Label
 var keybind_title_lbl: Label
 var keybind_hint_lbl: Label
 
@@ -105,6 +114,72 @@ func _make_fullscreen_indicator_style() -> StyleBoxFlat:
 	sb.corner_radius_bottom_right = 3
 	return sb
 
+func _make_slider_track_style(fill: bool = false) -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.02, 0.76, 1.0, 0.92) if fill else Color(0.10, 0.12, 0.19, 0.96)
+	sb.corner_radius_top_left = 4
+	sb.corner_radius_top_right = 4
+	sb.corner_radius_bottom_left = 4
+	sb.corner_radius_bottom_right = 4
+	sb.content_margin_top = 5
+	sb.content_margin_bottom = 5
+	if not fill:
+		sb.border_width_left = 1
+		sb.border_width_top = 1
+		sb.border_width_right = 1
+		sb.border_width_bottom = 1
+		sb.border_color = Color(0.22, 0.34, 0.52, 0.95)
+	return sb
+
+func _make_slider_grabber_style(active: bool = false) -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.92, 0.98, 1.0, 1.0) if active else Color(0.72, 0.82, 0.95, 1.0)
+	sb.corner_radius_top_left = 5
+	sb.corner_radius_top_right = 5
+	sb.corner_radius_bottom_left = 5
+	sb.corner_radius_bottom_right = 5
+	sb.content_margin_left = 5
+	sb.content_margin_right = 5
+	sb.content_margin_top = 12
+	sb.content_margin_bottom = 12
+	return sb
+
+func _make_scrollbar_track_style() -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.06, 0.07, 0.11, 0.96)
+	sb.corner_radius_top_left = 6
+	sb.corner_radius_top_right = 6
+	sb.corner_radius_bottom_left = 6
+	sb.corner_radius_bottom_right = 6
+	sb.content_margin_left = 4
+	sb.content_margin_right = 4
+	return sb
+
+func _make_scrollbar_grabber_style(active: bool = false) -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.72, 0.80, 0.96, 0.95) if active else Color(0.45, 0.54, 0.72, 0.88)
+	sb.corner_radius_top_left = 5
+	sb.corner_radius_top_right = 5
+	sb.corner_radius_bottom_left = 5
+	sb.corner_radius_bottom_right = 5
+	sb.content_margin_left = 6
+	sb.content_margin_right = 6
+	return sb
+
+func _style_settings_scrollbar() -> void:
+	if settings_scroll == null:
+		return
+	var scrollbar := settings_scroll.get_v_scroll_bar()
+	if scrollbar == null:
+		return
+	scrollbar.custom_minimum_size = Vector2(18, 0)
+	scrollbar.add_theme_constant_override("width", 16)
+	scrollbar.add_theme_stylebox_override("scroll", _make_scrollbar_track_style())
+	scrollbar.add_theme_stylebox_override("scroll_focus", _make_scrollbar_track_style())
+	scrollbar.add_theme_stylebox_override("grabber", _make_scrollbar_grabber_style(false))
+	scrollbar.add_theme_stylebox_override("grabber_highlight", _make_scrollbar_grabber_style(true))
+	scrollbar.add_theme_stylebox_override("grabber_pressed", _make_scrollbar_grabber_style(true))
+
 ## 更新全屏开关的视觉状态
 func _update_fullscreen_checkbox_visual() -> void:
 	if fullscreen_checkbox == null:
@@ -133,6 +208,7 @@ func _ready() -> void:
 	
 	# 应用显示设置（分辨率、全屏）
 	_apply_saved_display_settings(config)
+	_apply_saved_audio_settings(config)
 	
 	# 应用按键绑定
 	_capture_default_bindings_if_needed()
@@ -157,18 +233,28 @@ func _ready() -> void:
 	sb.border_color = Color(0.5, 0.5, 0.8, 1)
 	panel.add_theme_stylebox_override("panel", sb)
 
-	panel.custom_minimum_size = Vector2(820, 620)
+	panel.custom_minimum_size = Vector2(PANEL_WIDTH, 620)
 	panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER, Control.PRESET_MODE_KEEP_SIZE)
 
 	# 垂直布局容器
 	var vbox := VBoxContainer.new()
 	vbox.add_theme_constant_override("separation", 14)
+	vbox.custom_minimum_size = Vector2(PANEL_WIDTH - 62.0, 0)
 	var margin := MarginContainer.new()
 	margin.add_theme_constant_override("margin_left", 20)
-	margin.add_theme_constant_override("margin_right", 20)
+	margin.add_theme_constant_override("margin_right", 14)
 	margin.add_theme_constant_override("margin_top", 20)
 	margin.add_theme_constant_override("margin_bottom", 20)
-	margin.add_child(vbox)
+
+	settings_scroll = ScrollContainer.new()
+	settings_scroll.focus_mode = Control.FOCUS_NONE
+	settings_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	settings_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_ALWAYS
+	settings_scroll.follow_focus = true
+	settings_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	settings_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	settings_scroll.add_child(vbox)
+	margin.add_child(settings_scroll)
 	panel.add_child(margin)
 
 	# 标题
@@ -256,6 +342,40 @@ func _ready() -> void:
 	fullscreen_hbox.add_child(fullscreen_checkbox)
 	vbox.add_child(fullscreen_hbox)
 
+	# --- 总体音量设置行 ---
+	var volume_hbox := HBoxContainer.new()
+	volume_hbox.add_theme_constant_override("separation", 12)
+	volume_lbl = Label.new()
+	volume_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	volume_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	volume_hbox.add_child(volume_lbl)
+
+	volume_slider = HSlider.new()
+	volume_slider.focus_mode = Control.FOCUS_ALL
+	volume_slider.min_value = 0.0
+	volume_slider.max_value = 100.0
+	volume_slider.step = 1.0
+	volume_slider.value = _get_saved_master_volume_percent(config)
+	volume_slider.custom_minimum_size = Vector2(260, 32)
+	volume_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	volume_slider.add_theme_stylebox_override("slider", _make_slider_track_style(false))
+	volume_slider.add_theme_stylebox_override("grabber_area", _make_slider_track_style(true))
+	volume_slider.add_theme_stylebox_override("grabber_area_highlight", _make_slider_track_style(true))
+	volume_slider.add_theme_stylebox_override("grabber", _make_slider_grabber_style(false))
+	volume_slider.add_theme_stylebox_override("grabber_highlight", _make_slider_grabber_style(true))
+	volume_slider.add_theme_stylebox_override("grabber_pressed", _make_slider_grabber_style(true))
+	volume_slider.value_changed.connect(_on_master_volume_changed)
+	volume_hbox.add_child(volume_slider)
+
+	volume_value_lbl = Label.new()
+	volume_value_lbl.custom_minimum_size = Vector2(56, 32)
+	volume_value_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	volume_value_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	volume_value_lbl.add_theme_color_override("font_color", Color(0.88, 0.93, 1.0, 1.0))
+	volume_hbox.add_child(volume_value_lbl)
+	vbox.add_child(volume_hbox)
+	_update_volume_value_label()
+
 	var separator := HSeparator.new()
 	vbox.add_child(separator)
 
@@ -264,14 +384,10 @@ func _ready() -> void:
 	keybind_title_lbl.add_theme_font_size_override("font_size", 19)
 	vbox.add_child(keybind_title_lbl)
 
-	# 滚动区域处理大量的按键映射
-	var scroll := ScrollContainer.new()
-	scroll.custom_minimum_size = Vector2(760, 360)
-	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	var keybind_box := VBoxContainer.new()
 	keybind_box.add_theme_constant_override("separation", 8)
-	scroll.add_child(keybind_box)
-	vbox.add_child(scroll)
+	keybind_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	vbox.add_child(keybind_box)
 
 	# 为每个操作生成绑定行
 	for action in ACTIONS:
@@ -334,6 +450,7 @@ func _ready() -> void:
 	_update_texts()
 	_update_resolution_interactability()
 	_refresh_binding_ui()
+	call_deferred("_style_settings_scrollbar")
 	call_deferred("_recenter_panel")
 
 
@@ -359,6 +476,8 @@ func _on_gear_pressed() -> void:
 ## 显示设置菜单
 func show_menu() -> void:
 	_recenter_panel()
+	if settings_scroll:
+		settings_scroll.scroll_vertical = 0
 	var vp := get_viewport()
 	if vp:
 		_last_focus_owner = vp.gui_get_focus_owner()
@@ -425,6 +544,11 @@ func _update_texts() -> void:
 	if fullscreen_checkbox:
 		fullscreen_checkbox.tooltip_text = tr("TXT_FULLSCREEN")
 	_update_fullscreen_checkbox_visual()
+	if volume_lbl:
+		var localized_volume := tr("TXT_MASTER_VOLUME")
+		volume_lbl.text = localized_volume if localized_volume != "TXT_MASTER_VOLUME" else "MASTER VOLUME"
+	if volume_slider:
+		volume_slider.tooltip_text = tr("TXT_MASTER_VOLUME")
 	if keybind_title_lbl:
 		keybind_title_lbl.text = tr("TXT_KEYBINDINGS")
 	if keybind_hint_lbl and not _capture_active:
@@ -483,6 +607,12 @@ func _on_fullscreen_toggled(enabled: bool) -> void:
 	_update_fullscreen_checkbox_visual()
 	_update_resolution_interactability()
 
+func _on_master_volume_changed(value: float) -> void:
+	var percent := clampf(value, 0.0, 100.0)
+	_apply_master_volume_percent(percent)
+	_save_master_volume_percent(percent)
+	_update_volume_value_label()
+
 ## 点击确定按钮并关闭
 func _on_close_pressed() -> void:
 	if ButtonSfx:
@@ -494,9 +624,12 @@ func _recenter_panel() -> void:
 	if panel == null:
 		return
 	var viewport_size := get_viewport_rect().size
-	var panel_size := panel.size
-	if panel_size.x <= 0.0 or panel_size.y <= 0.0:
-		panel_size = panel.custom_minimum_size
+	var panel_size := Vector2(
+		minf(PANEL_WIDTH, maxf(420.0, viewport_size.x - PANEL_SCREEN_MARGIN)),
+		minf(PANEL_MAX_HEIGHT, maxf(420.0, viewport_size.y - PANEL_SCREEN_MARGIN))
+	)
+	panel.custom_minimum_size = panel_size
+	panel.size = panel_size
 	panel.position = (viewport_size - panel_size) * 0.5
 
 ## 获取配置文件路径（编辑器与导出版本路径不同）
@@ -530,6 +663,40 @@ func _apply_saved_display_settings(config: ConfigFile) -> void:
 
 	_update_fullscreen_checkbox_visual()
 	_update_resolution_interactability()
+
+func _apply_saved_audio_settings(config: ConfigFile) -> void:
+	_apply_master_volume_percent(_get_saved_master_volume_percent(config))
+
+func _get_saved_master_volume_percent(config: ConfigFile) -> float:
+	if config.load(_get_settings_path()) != OK:
+		return DEFAULT_MASTER_VOLUME_PERCENT
+	return clampf(float(config.get_value(SECTION_AUDIO, "master_volume", DEFAULT_MASTER_VOLUME_PERCENT)), 0.0, 100.0)
+
+func _save_master_volume_percent(percent: float) -> void:
+	var config := ConfigFile.new()
+	config.load(_get_settings_path())
+	config.set_value(SECTION_AUDIO, "master_volume", clampf(percent, 0.0, 100.0))
+	config.save(_get_settings_path())
+
+func _apply_master_volume_percent(percent: float) -> void:
+	var clamped := clampf(percent, 0.0, 100.0)
+	if is_instance_valid(GameState) and GameState.has_method("apply_master_volume_percent"):
+		GameState.apply_master_volume_percent(clamped)
+		return
+
+	var bus_index := AudioServer.get_bus_index("Master")
+	if bus_index < 0:
+		return
+	AudioServer.set_bus_mute(bus_index, clamped <= 0.0)
+	if clamped <= 0.0:
+		AudioServer.set_bus_volume_db(bus_index, -80.0)
+	else:
+		AudioServer.set_bus_volume_db(bus_index, linear_to_db(clamped / 100.0))
+
+func _update_volume_value_label() -> void:
+	if volume_value_lbl == null or volume_slider == null:
+		return
+	volume_value_lbl.text = "%d%%" % int(round(volume_slider.value))
 
 ## 获取保存的分辨率索引
 func _get_selected_resolution_index(config: ConfigFile) -> int:
