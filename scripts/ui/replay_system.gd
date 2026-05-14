@@ -771,11 +771,34 @@ func _show_session_list() -> void:
 		btn.focus_mode = Control.FOCUS_ALL
 		btn.add_theme_color_override("font_color", Color(0.88, 0.91, 0.94))
 		btn.add_theme_color_override("font_hover_color", Color(0, 0.83, 1))
+		_style_session_button(btn)
 		btn.pressed.connect(_on_session_selected.bind(fname))
 		session_list.add_child(btn)
 
 	session_list_popup.visible = true
 	call_deferred("_focus_default_control")
+
+func _make_session_button_style(active: bool = false) -> StyleBoxFlat:
+	var sb := StyleBoxFlat.new()
+	sb.bg_color = Color(0.18, 0.19, 0.22, 0.78) if active else Color(0.08, 0.085, 0.11, 0.62)
+	sb.border_width_left = 2
+	sb.border_width_top = 2
+	sb.border_width_right = 2
+	sb.border_width_bottom = 2
+	sb.border_color = Color(0.92, 0.95, 1.0, 0.95) if active else Color(0.0, 0.0, 0.0, 0.0)
+	sb.content_margin_left = 8
+	sb.content_margin_right = 8
+	sb.content_margin_top = 4
+	sb.content_margin_bottom = 4
+	return sb
+
+func _style_session_button(button: Button) -> void:
+	button.custom_minimum_size = Vector2(0, 34)
+	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	button.add_theme_stylebox_override("normal", _make_session_button_style(false))
+	button.add_theme_stylebox_override("hover", _make_session_button_style(true))
+	button.add_theme_stylebox_override("pressed", _make_session_button_style(true))
+	button.add_theme_stylebox_override("focus", _make_session_button_style(true))
 
 
 func _focus_default_control() -> void:
@@ -2273,7 +2296,7 @@ func _draw_step_badge(cells: Array[Vector2i], number: int, piece_col: Color, min
 	lbl.add_theme_color_override("font_outline_color", Color(0.05, 0.08, 0.18, 0.95))
 	lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	lbl.position = Vector2(badge_x, badge_y)
+	lbl.position = Vector2(badge_x, badge_y - 3.0)
 	lbl.size = Vector2(badge_size, badge_size)
 	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	replay_board.add_child(lbl)
