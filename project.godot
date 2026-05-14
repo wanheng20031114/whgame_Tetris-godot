@@ -30,13 +30,13 @@ window/size/viewport_height=720
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
 
-[gui]
-
-timers/tooltip_delay_sec=0.18
-
 [dotnet]
 
 project/assembly_name="WIDE TETRIS"
+
+[gui]
+
+timers/tooltip_delay_sec=0.18
 
 [input]
 
