@@ -8,6 +8,7 @@ const VALUE_HIGHLIGHT_COLOR := Color(0.3, 0.85, 1.0, 1.0)
 const BODY_FONT_SIZE: int = 18
 
 @onready var btn_back: Button = %BtnBack
+@onready var settings_menu: TextureButton = %SettingsMenu
 @onready var lbl_title: Label = %LblTitle
 @onready var lbl_no_data: Label = %LblNoData
 @onready var radar_chart: Control = %RadarChart
@@ -65,14 +66,26 @@ func _notification(what: int) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if _is_settings_menu_open():
+		return
 	if event.is_action_pressed("ui_cancel"):
+		_mark_input_handled()
 		_on_back_pressed()
-		get_viewport().set_input_as_handled()
 
 
 func _focus_default_control() -> void:
 	if btn_back:
 		btn_back.grab_focus()
+
+
+func _is_settings_menu_open() -> bool:
+	return settings_menu != null and settings_menu.has_method("is_menu_open") and bool(settings_menu.call("is_menu_open"))
+
+
+func _mark_input_handled() -> void:
+	var vp := get_viewport()
+	if vp:
+		vp.set_input_as_handled()
 
 
 func _load_and_display_data() -> void:

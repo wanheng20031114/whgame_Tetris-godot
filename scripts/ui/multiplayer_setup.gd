@@ -9,6 +9,7 @@ extends Control
 @onready var edit_name: LineEdit = %NameEdit
 @onready var btn_connect: Button = %ConnectButton
 @onready var btn_back: Button = %BackButton
+@onready var btn_settings: TextureButton = %BtnSettings
 @onready var lbl_status: Label = %StatusLabel
 
 const CONNECT_TIMEOUT_SECONDS := 10.0
@@ -49,11 +50,21 @@ func _focus_default_control() -> void:
 		edit_name.grab_focus()
 
 func _unhandled_input(event: InputEvent) -> void:
+	if _is_settings_menu_open():
+		return
 	if event.is_action_pressed("ui_cancel"):
-		var vp := get_viewport()
-		if vp:
-			vp.set_input_as_handled()
+		_mark_input_handled()
 		_on_back_pressed()
+
+
+func _is_settings_menu_open() -> bool:
+	return btn_settings != null and btn_settings.has_method("is_menu_open") and bool(btn_settings.call("is_menu_open"))
+
+
+func _mark_input_handled() -> void:
+	var vp := get_viewport()
+	if vp:
+		vp.set_input_as_handled()
 
 func _trf(key: String, args: Array = []) -> String:
 	var translated := tr(key)

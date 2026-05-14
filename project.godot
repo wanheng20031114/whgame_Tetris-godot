@@ -36,6 +36,7 @@ project/assembly_name="WIDE TETRIS"
 
 [gui]
 
+theme/custom="res://assets/ui/global_theme.tres"
 timers/tooltip_delay_sec=0.18
 
 [input]

@@ -136,7 +136,9 @@ func _draw() -> void:
 		var dot_color: Color = _get_vertex_dot_color(float(_current_values[i]))
 		draw_circle(data_points[i], vertex_dot_radius, dot_color)
 
-	var font: Font = ThemeDB.fallback_font
+	var font: Font = get_theme_default_font()
+	if font == null:
+		font = ThemeDB.fallback_font
 	for i in range(DIMENSION_COUNT):
 		var angle3: float = _get_angle(i)
 		var label_anchor: Vector2 = center + Vector2(cos(angle3), sin(angle3)) * (chart_radius + label_offset)

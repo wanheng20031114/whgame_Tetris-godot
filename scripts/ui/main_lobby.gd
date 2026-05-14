@@ -17,6 +17,7 @@ signal open_replay()
 @onready var card_multiplayer: PanelContainer = %CardMultiplayer
 @onready var btn_stats: Button = %BtnStats
 @onready var card_replay: PanelContainer = %CardReplay
+@onready var btn_settings: TextureButton = %BtnSettings
 
 var _current_pname: String = ""
 
@@ -70,6 +71,12 @@ func _ready() -> void:
 		card_multiplayer.focus_neighbor_bottom = btn_stats.get_path()
 		card_replay.focus_neighbor_bottom = btn_stats.get_path()
 		btn_stats.focus_neighbor_top = card_multiplayer.get_path()
+		if btn_settings:
+			btn_stats.focus_neighbor_right = btn_settings.get_path()
+	if btn_settings:
+		btn_settings.focus_mode = Control.FOCUS_ALL
+		btn_settings.focus_neighbor_left = btn_stats.get_path() if btn_stats else card_replay.get_path()
+		btn_settings.focus_neighbor_top = card_replay.get_path()
 
 	# 缩放动画基准点设为卡片中心
 	card_marathon.pivot_offset = card_marathon.size / 2.0
@@ -234,6 +241,8 @@ func _on_card_input(event: InputEvent, card: Control, mode: String) -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if _is_settings_menu_open():
+		return
 	if event.is_action_pressed("ui_left"):
 		_focus_card_by_delta(-1)
 		get_viewport().set_input_as_handled()
@@ -246,6 +255,10 @@ func _unhandled_input(event: InputEvent) -> void:
 		if focused_card != null and not focused_mode.is_empty():
 			_activate_mode(focused_card, focused_mode)
 			get_viewport().set_input_as_handled()
+
+
+func _is_settings_menu_open() -> bool:
+	return btn_settings != null and btn_settings.has_method("is_menu_open") and bool(btn_settings.call("is_menu_open"))
 
 
 func _focus_card_by_delta(delta: int) -> void:

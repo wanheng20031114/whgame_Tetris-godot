@@ -57,6 +57,8 @@ var fullscreen_checkbox: Button     # 全屏开关按钮（模拟复选框）
 var fullscreen_indicator: Panel     # 全屏开关的状态指示器
 var close_btn: Button               # 关闭/确定按钮
 var reset_all_btn: Button           # 重置所有按键按钮
+var _last_focus_owner: Control = null
+var _icon_hovered: bool = false
 
 # 各种文本标签
 var title_lbl: Label
@@ -114,6 +116,12 @@ func _update_fullscreen_checkbox_visual() -> void:
 # --- 生命周期回调 ---
 
 func _ready() -> void:
+	focus_mode = Control.FOCUS_ALL
+	focus_entered.connect(queue_redraw)
+	focus_exited.connect(queue_redraw)
+	mouse_entered.connect(_on_icon_hover_changed.bind(true))
+	mouse_exited.connect(_on_icon_hover_changed.bind(false))
+
 	# 1. 初始化设置与应用
 	var config := ConfigFile.new()
 	
@@ -176,6 +184,7 @@ func _ready() -> void:
 	lang_hbox.add_child(lang_lbl)
 
 	option_btn = OptionButton.new()
+	option_btn.focus_mode = Control.FOCUS_ALL
 	option_btn.add_item("English", 0)
 	option_btn.add_item("\u4E2D\u6587", 1)
 	option_btn.add_item("\u65E5\u672C\u8A9E", 2)
@@ -200,6 +209,7 @@ func _ready() -> void:
 	resolution_hbox.add_child(resolution_lbl)
 
 	resolution_option_btn = OptionButton.new()
+	resolution_option_btn.focus_mode = Control.FOCUS_ALL
 	for option in RESOLUTION_OPTIONS:
 		resolution_option_btn.add_item(str(option.get("label", "")))
 	resolution_option_btn.selected = _get_selected_resolution_index(config)
@@ -214,6 +224,7 @@ func _ready() -> void:
 	fullscreen_hbox.add_child(fullscreen_lbl)
 
 	fullscreen_checkbox = Button.new()
+	fullscreen_checkbox.focus_mode = Control.FOCUS_ALL
 	fullscreen_checkbox.toggle_mode = true
 	fullscreen_checkbox.button_pressed = _is_fullscreen_saved(config)
 	fullscreen_checkbox.custom_minimum_size = Vector2(42, 42)
@@ -277,6 +288,7 @@ func _ready() -> void:
 		var slot_buttons: Array[Button] = []
 		for slot_idx in range(MAX_BINDINGS_PER_ACTION):
 			var slot_btn := Button.new()
+			slot_btn.focus_mode = Control.FOCUS_ALL
 			slot_btn.custom_minimum_size = Vector2(150, 32)
 			slot_btn.pressed.connect(_on_bind_slot_pressed.bind(action, slot_idx))
 			row.add_child(slot_btn)
@@ -284,6 +296,7 @@ func _ready() -> void:
 		_action_slot_buttons[action] = slot_buttons
 
 		var reset_btn := Button.new()
+		reset_btn.focus_mode = Control.FOCUS_ALL
 		reset_btn.custom_minimum_size = Vector2(92, 32)
 		reset_btn.pressed.connect(_on_reset_action_pressed.bind(action))
 		row.add_child(reset_btn)
@@ -297,12 +310,14 @@ func _ready() -> void:
 
 	# 重置所有按键按钮
 	reset_all_btn = Button.new()
+	reset_all_btn.focus_mode = Control.FOCUS_ALL
 	reset_all_btn.custom_minimum_size = Vector2(0, 38)
 	reset_all_btn.pressed.connect(_on_reset_all_pressed)
 	vbox.add_child(reset_all_btn)
 
 	# 退出按钮
 	close_btn = Button.new()
+	close_btn.focus_mode = Control.FOCUS_ALL
 	close_btn.text = tr("TXT_OK")
 	close_btn.custom_minimum_size = Vector2(0, 40)
 	close_btn.pressed.connect(_on_close_pressed)
@@ -321,6 +336,14 @@ func _ready() -> void:
 	_refresh_binding_ui()
 	call_deferred("_recenter_panel")
 
+
+func _draw() -> void:
+	if not has_focus() and not _icon_hovered and not is_menu_open():
+		return
+	var ring_rect := Rect2(Vector2(-4.0, -4.0), size + Vector2(8.0, 8.0))
+	draw_rect(ring_rect, Color(0.0, 0.83, 1.0, 0.24), false, 6.0, true)
+	draw_rect(ring_rect.grow(-2.0), Color(0.0, 0.83, 1.0, 0.95), false, 2.0, true)
+
 # --- 信号处理与逻辑 ---
 
 ## 点击齿轮图标：切换菜单显示状态
@@ -336,13 +359,47 @@ func _on_gear_pressed() -> void:
 ## 显示设置菜单
 func show_menu() -> void:
 	_recenter_panel()
+	var vp := get_viewport()
+	if vp:
+		_last_focus_owner = vp.gui_get_focus_owner()
 	canvas_layer.show()
 	_refresh_binding_ui()
+	call_deferred("_focus_menu_default")
+	queue_redraw()
 
 ## 隐藏设置菜单
 func hide_menu() -> void:
 	_stop_capture()
 	canvas_layer.hide()
+	call_deferred("_restore_focus_after_hide")
+	queue_redraw()
+
+
+func is_menu_open() -> bool:
+	return canvas_layer != null and canvas_layer.visible
+
+
+func _focus_menu_default() -> void:
+	if not is_menu_open():
+		return
+	if option_btn and not option_btn.disabled:
+		option_btn.grab_focus()
+	elif close_btn:
+		close_btn.grab_focus()
+
+
+func _restore_focus_after_hide() -> void:
+	if is_menu_open():
+		return
+	if _last_focus_owner != null and is_instance_valid(_last_focus_owner) and _last_focus_owner.is_inside_tree():
+		_last_focus_owner.grab_focus()
+	elif is_inside_tree() and focus_mode != Control.FOCUS_NONE:
+		grab_focus()
+
+
+func _on_icon_hover_changed(hover_active: bool) -> void:
+	_icon_hovered = hover_active
+	queue_redraw()
 
 ## 系统通知处理：处理多语言实时切换和窗口大小调整
 func _notification(what: int) -> void:
@@ -354,6 +411,7 @@ func _notification(what: int) -> void:
 
 ## 更新界面上的所有本地化文本
 func _update_texts() -> void:
+	tooltip_text = tr("TXT_SETTINGS")
 	if title_lbl:
 		title_lbl.text = tr("TXT_SETTINGS")
 	if lang_lbl:
@@ -853,19 +911,30 @@ func _input(event: InputEvent) -> void:
 				_stop_capture()
 				_refresh_binding_ui()
 				keybind_hint_lbl.text = tr("TXT_BIND_CANCELLED")
-				get_viewport().set_input_as_handled()
+				_mark_input_handled()
 				return
 
 		# 尝试提炼录入的按键
 		var captured := _extract_binding_event(event)
 		if captured != null:
 			_assign_capture_event(captured)
-			get_viewport().set_input_as_handled()
+			_mark_input_handled()
 			return
+
+	if event.is_action_pressed("ui_cancel"):
+		hide_menu()
+		_mark_input_handled()
+		return
 
 	# 处理暂停/关闭菜单的快捷键（如果 InputMap 中定义了 pause）
 	if not InputMap.has_action("pause"):
 		return
 	if event.is_action_pressed("pause"):
 		hide_menu()
-		get_viewport().set_input_as_handled()
+		_mark_input_handled()
+
+
+func _mark_input_handled() -> void:
+	var vp := get_viewport()
+	if vp:
+		vp.set_input_as_handled()

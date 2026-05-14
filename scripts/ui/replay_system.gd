@@ -98,6 +98,7 @@ const CC_SHAPES: Dictionary = {
 
 # 节点引用
 @onready var btn_back: Button = %BtnBack
+@onready var btn_settings: TextureButton = %BtnSettings
 @onready var session_info_label: Label = %SessionInfoLabel
 @onready var step_label: Label = %StepLabel
 @onready var btn_first: Button = %BtnFirst
@@ -159,8 +160,8 @@ func _ready() -> void:
 	btn_next.pressed.connect(func(): _go_to_step(_current_step + 1))
 	btn_last.pressed.connect(func(): _go_to_step(_snapshots.size() - 1))
 	step_slider.value_changed.connect(func(val): _go_to_step(int(val)))
-	ai_score_label.custom_minimum_size = Vector2(0, 54)
-	ai_score_label.add_theme_font_size_override("font_size", 44)
+	ai_score_label.custom_minimum_size = Vector2(0, 48)
+	ai_score_label.add_theme_font_size_override("font_size", 40)
 	set_process(false)
 
 	_update_texts()
@@ -227,7 +228,7 @@ func _ensure_session_overview_panel() -> void:
 
 	var root := VBoxContainer.new()
 	root.name = "SessionOverview"
-	root.add_theme_constant_override("separation", 9)
+	root.add_theme_constant_override("separation", 7)
 	data_vbox.add_child(root)
 	data_vbox.move_child(root, 0)
 	_session_overview_panel = root
@@ -243,8 +244,8 @@ func _ensure_session_overview_panel() -> void:
 
 	var radar := RadarChart.new()
 	radar.auto_minimum_size = false
-	radar.custom_minimum_size = Vector2(178, 166)
-	radar.chart_radius = 52.0
+	radar.custom_minimum_size = Vector2(184, 168)
+	radar.chart_radius = 54.0
 	radar.grid_color = Color(0.23, 0.30, 0.42, 0.42)
 	radar.axis_color = Color(0.45, 0.55, 0.72, 0.55)
 	radar.fill_color = Color(0.0, 0.78, 1.0, 0.20)
@@ -264,7 +265,7 @@ func _ensure_session_overview_panel() -> void:
 	core_grid.name = "CoreMetrics"
 	core_grid.columns = 2
 	core_grid.add_theme_constant_override("h_separation", 10)
-	core_grid.add_theme_constant_override("v_separation", 10)
+	core_grid.add_theme_constant_override("v_separation", 7)
 	root.add_child(core_grid)
 	for metric in [
 		["pps", "PPS", Color(0.10, 0.84, 1.0)],
@@ -281,7 +282,7 @@ func _ensure_session_overview_panel() -> void:
 	stat_grid.name = "SessionStats"
 	stat_grid.columns = 2
 	stat_grid.add_theme_constant_override("h_separation", 10)
-	stat_grid.add_theme_constant_override("v_separation", 7)
+	stat_grid.add_theme_constant_override("v_separation", 5)
 	root.add_child(stat_grid)
 	for stat in [
 		["score", "TXT_SCORE"],
@@ -329,7 +330,7 @@ func _hide_legacy_step_stats() -> void:
 
 func _create_metric_block(key: String, title: String, accent: Color) -> VBoxContainer:
 	var box := VBoxContainer.new()
-	box.custom_minimum_size = Vector2(0, 60)
+	box.custom_minimum_size = Vector2(0, 56)
 	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	box.add_theme_constant_override("separation", 0)
@@ -343,7 +344,7 @@ func _create_metric_block(key: String, title: String, accent: Color) -> VBoxCont
 	value.mouse_filter = Control.MOUSE_FILTER_STOP
 	value.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	value.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	value.add_theme_font_size_override("font_size", 27)
+	value.add_theme_font_size_override("font_size", 26)
 	value.add_theme_color_override("font_color", accent)
 	value_wrap.add_child(value)
 	_summary_value_labels[key] = value
@@ -376,14 +377,14 @@ func _create_stat_row(key: String, title_key: String) -> HBoxContainer:
 	title.name = "Title"
 	title.text = tr(title_key)
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	title.add_theme_font_size_override("font_size", 14)
+	title.add_theme_font_size_override("font_size", 13)
 	title.add_theme_color_override("font_color", Color(0.56, 0.63, 0.75))
 	row.add_child(title)
 
 	var value := Label.new()
 	value.name = "Value"
 	value.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	value.add_theme_font_size_override("font_size", 15)
+	value.add_theme_font_size_override("font_size", 14)
 	value.add_theme_color_override("font_color", Color(0.90, 0.94, 1.0))
 	row.add_child(value)
 	_summary_value_labels[key] = value
@@ -498,8 +499,8 @@ func _session_float(key: String) -> float:
 
 func _format_duration(seconds: float) -> String:
 	var total_sec: int = int(seconds)
-	var hours: int = int(total_sec / 3600)
-	var mins: int = int((total_sec % 3600) / 60)
+	var hours: int = floori(float(total_sec) / 3600.0)
+	var mins: int = floori(float(total_sec % 3600) / 60.0)
 	var secs: int = total_sec % 60
 	if hours > 0:
 		return "%d:%02d:%02d" % [hours, mins, secs]
@@ -923,10 +924,10 @@ func _update_analysis_progress_overlay() -> void:
 
 
 func _format_analysis_elapsed(elapsed_msec: int) -> String:
-	var total_seconds := maxi(0, int(elapsed_msec / 1000))
+	var total_seconds := maxi(0, int(float(elapsed_msec) / 1000.0))
 	if total_seconds < 60:
 		return "%.1fs" % (float(elapsed_msec) / 1000.0)
-	return "%dm %02ds" % [total_seconds / 60, total_seconds % 60]
+	return "%dm %02ds" % [floori(float(total_seconds) / 60.0), total_seconds % 60]
 
 
 func _set_replay_controls_enabled(enabled: bool) -> void:
@@ -1412,21 +1413,33 @@ func _on_back_pressed() -> void:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if _is_settings_menu_open():
+		return
 	if _analysis_active:
-		get_viewport().set_input_as_handled()
+		_mark_input_handled()
 		return
 	if event.is_action_pressed("ui_cancel"):
+		_mark_input_handled()
 		if session_list_popup.visible:
 			session_list_popup.visible = false
 		else:
 			_on_back_pressed()
-		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("ui_left") and not session_list_popup.visible:
 		_go_to_step(_current_step - 1)
-		get_viewport().set_input_as_handled()
+		_mark_input_handled()
 	elif event.is_action_pressed("ui_right") and not session_list_popup.visible:
 		_go_to_step(_current_step + 1)
-		get_viewport().set_input_as_handled()
+		_mark_input_handled()
+
+
+func _is_settings_menu_open() -> bool:
+	return btn_settings != null and btn_settings.has_method("is_menu_open") and bool(btn_settings.call("is_menu_open"))
+
+
+func _mark_input_handled() -> void:
+	var vp := get_viewport()
+	if vp:
+		vp.set_input_as_handled()
 
 
 # ==============================================================================
@@ -1643,11 +1656,11 @@ func _cell_key(x: int, y: int) -> String:
 	return "%d,%d" % [x, y]
 
 
-func _add_glow_strip(pos: Vector2, size: Vector2, glow_col: Color, alpha: float) -> void:
+func _add_glow_strip(pos: Vector2, strip_size: Vector2, glow_col: Color, alpha: float) -> void:
 	var strip := ColorRect.new()
 	strip.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	strip.position = pos
-	strip.size = size
+	strip.size = strip_size
 	strip.color = Color(glow_col.r, glow_col.g, glow_col.b, clampf(alpha, 0.0, 1.0))
 	replay_board.add_child(strip)
 

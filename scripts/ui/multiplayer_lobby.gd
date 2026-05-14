@@ -5,6 +5,7 @@ extends Control
 @onready var btn_create: Button = %CreateButton
 @onready var btn_refresh: Button = %RefreshButton
 @onready var btn_back: Button = %BackButton
+@onready var btn_settings: TextureButton = %BtnSettings
 @onready var lbl_info: Label = %InfoLabel
 
 var _rooms_cache: Array = []
@@ -35,9 +36,21 @@ func _focus_default_button() -> void:
 		btn_refresh.grab_focus()
 
 func _unhandled_input(event: InputEvent) -> void:
+	if _is_settings_menu_open():
+		return
 	if event.is_action_pressed("ui_cancel"):
+		_mark_input_handled()
 		_on_back_pressed()
-		get_viewport().set_input_as_handled()
+
+
+func _is_settings_menu_open() -> bool:
+	return btn_settings != null and btn_settings.has_method("is_menu_open") and bool(btn_settings.call("is_menu_open"))
+
+
+func _mark_input_handled() -> void:
+	var vp := get_viewport()
+	if vp:
+		vp.set_input_as_handled()
 
 func _trf(key: String, args: Array = []) -> String:
 	var translated := tr(key)
