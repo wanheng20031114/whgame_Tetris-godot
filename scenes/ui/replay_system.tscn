@@ -140,7 +140,7 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_panel")
 layout_mode = 2
 theme_override_constants/margin_left = 12
 theme_override_constants/margin_top = 12
-theme_override_constants/margin_right = 12
+theme_override_constants/margin_right = 5
 theme_override_constants/margin_bottom = 12
 
 [node name="DataScroll" type="ScrollContainer" parent="VBoxMain/MainContent/LeftPanel/MarginContainer" unique_id=248877950]
@@ -238,10 +238,10 @@ text = "▸ AI EVALUATION"
 
 [node name="AiScoreLabel" type="Label" parent="VBoxMain/MainContent/LeftPanel/MarginContainer/DataScroll/DataVBox" unique_id=1740275354]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(0, 76)
+custom_minimum_size = Vector2(0, 54)
 layout_mode = 2
 theme_override_colors/font_color = Color(0, 1, 0.53, 1)
-theme_override_font_sizes/font_size = 50
+theme_override_font_sizes/font_size = 44
 text = "— —"
 
 [node name="CenterPanel" type="PanelContainer" parent="VBoxMain/MainContent" unique_id=818357823]

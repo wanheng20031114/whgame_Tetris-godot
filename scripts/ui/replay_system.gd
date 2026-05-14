@@ -159,8 +159,8 @@ func _ready() -> void:
 	btn_next.pressed.connect(func(): _go_to_step(_current_step + 1))
 	btn_last.pressed.connect(func(): _go_to_step(_snapshots.size() - 1))
 	step_slider.value_changed.connect(func(val): _go_to_step(int(val)))
-	ai_score_label.custom_minimum_size = Vector2(0, 76)
-	ai_score_label.add_theme_font_size_override("font_size", 50)
+	ai_score_label.custom_minimum_size = Vector2(0, 54)
+	ai_score_label.add_theme_font_size_override("font_size", 44)
 	set_process(false)
 
 	_update_texts()
@@ -233,7 +233,7 @@ func _ensure_session_overview_panel() -> void:
 
 	var title := Label.new()
 	title.name = "OverviewTitle"
-	title.add_theme_font_size_override("font_size", 17)
+	title.add_theme_font_size_override("font_size", 18)
 	title.add_theme_color_override("font_color", Color(0.38, 0.92, 1.0))
 	root.add_child(title)
 
@@ -242,17 +242,16 @@ func _ensure_session_overview_panel() -> void:
 
 	var radar := RadarChart.new()
 	radar.auto_minimum_size = false
-	radar.custom_minimum_size = Vector2(166, 156)
-	radar.chart_radius = 50.0
+	radar.custom_minimum_size = Vector2(178, 166)
+	radar.chart_radius = 52.0
 	radar.grid_color = Color(0.23, 0.30, 0.42, 0.42)
 	radar.axis_color = Color(0.45, 0.55, 0.72, 0.55)
 	radar.fill_color = Color(0.0, 0.78, 1.0, 0.20)
 	radar.outline_color = Color(0.1, 0.9, 1.0, 0.92)
 	radar.outline_width = 2.0
-	radar.vertex_dot_radius = 2.4
-	radar.vertex_dot_color = Color(1.0, 0.86, 0.24, 1.0)
-	radar.label_font_size = 11
-	radar.label_offset = 20.0
+	radar.vertex_dot_radius = 2.8
+	radar.label_font_size = 13
+	radar.label_offset = 22.0
 	radar.label_color = Color(0.70, 0.77, 0.88, 0.95)
 	radar.show_value_labels = false
 	radar.grid_levels = 3
@@ -264,7 +263,7 @@ func _ensure_session_overview_panel() -> void:
 	core_grid.name = "CoreMetrics"
 	core_grid.columns = 2
 	core_grid.add_theme_constant_override("h_separation", 10)
-	core_grid.add_theme_constant_override("v_separation", 9)
+	core_grid.add_theme_constant_override("v_separation", 10)
 	root.add_child(core_grid)
 	for metric in [
 		["pps", "PPS", Color(0.10, 0.84, 1.0)],
@@ -329,7 +328,7 @@ func _hide_legacy_step_stats() -> void:
 
 func _create_metric_block(key: String, title: String, accent: Color) -> VBoxContainer:
 	var box := VBoxContainer.new()
-	box.custom_minimum_size = Vector2(0, 56)
+	box.custom_minimum_size = Vector2(0, 60)
 	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	box.add_theme_constant_override("separation", 0)
@@ -343,7 +342,7 @@ func _create_metric_block(key: String, title: String, accent: Color) -> VBoxCont
 	value.mouse_filter = Control.MOUSE_FILTER_STOP
 	value.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	value.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	value.add_theme_font_size_override("font_size", 24)
+	value.add_theme_font_size_override("font_size", 27)
 	value.add_theme_color_override("font_color", accent)
 	value_wrap.add_child(value)
 	_summary_value_labels[key] = value
@@ -358,7 +357,7 @@ func _create_metric_block(key: String, title: String, accent: Color) -> VBoxCont
 	label.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	label.text = title
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.add_theme_font_size_override("font_size", 12)
+	label.add_theme_font_size_override("font_size", 13)
 	label.add_theme_color_override("font_color", Color(0.56, 0.63, 0.75))
 	label_wrap.add_child(label)
 	_metric_tooltip_controls[key] = [value, label]
@@ -376,14 +375,14 @@ func _create_stat_row(key: String, title_key: String) -> HBoxContainer:
 	title.name = "Title"
 	title.text = tr(title_key)
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	title.add_theme_font_size_override("font_size", 13)
+	title.add_theme_font_size_override("font_size", 14)
 	title.add_theme_color_override("font_color", Color(0.56, 0.63, 0.75))
 	row.add_child(title)
 
 	var value := Label.new()
 	value.name = "Value"
 	value.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	value.add_theme_font_size_override("font_size", 14)
+	value.add_theme_font_size_override("font_size", 15)
 	value.add_theme_color_override("font_color", Color(0.90, 0.94, 1.0))
 	row.add_child(value)
 	_summary_value_labels[key] = value

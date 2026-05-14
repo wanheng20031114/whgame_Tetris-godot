@@ -120,6 +120,12 @@ TXT_REPLAY_PPS_TOOLTIP,PPS：每秒放置的方块数，越高代表下块速度
 TXT_REPLAY_APM_TOOLTIP,APM：每分钟造成的攻击行数，越高代表火力越强。,APM: Attack lines sent per minute. Higher means stronger attack output.,APM：1分あたりに送った攻撃ライン数。高いほど火力が高いです。
 TXT_REPLAY_APP_TOOLTIP,APP：平均每个方块造成的攻击，衡量进攻效率。,APP: Attack per piece. It measures how much attack each piece creates on average.,APP：ブロック1個あたりの攻撃量。平均的な攻撃効率を表します。
 TXT_REPLAY_KPP_TOOLTIP,KPP：平均每个方块使用的按键数，越低通常代表操作更简洁。,KPP: Key presses per piece. Lower usually means cleaner input efficiency.,KPP：ブロック1個あたりのキー入力数。低いほど入力が効率的です。
+TXT_REPLAY_RADAR_SPEED_TOOLTIP,速度：由 PPS 映射为 0-100 分，越高代表整体落块节奏越快。,Speed: PPS mapped to a 0-100 score. Higher means faster overall placement pace.,速度：PPSを0-100点に換算します。高いほど全体の配置ペースが速いです。
+TXT_REPLAY_RADAR_ATTACK_TOOLTIP,火力：由 APM 映射为 0-100 分，越高代表每分钟攻击输出越强。,Attack: APM mapped to a 0-100 score. Higher means stronger attack output per minute.,火力：APMを0-100点に換算します。高いほど1分あたりの攻撃出力が高いです。
+TXT_REPLAY_RADAR_EFFICIENCY_TOOLTIP,效率：由 APP 和 KPP 加权计算，兼顾每块攻击与按键简洁度。,Efficiency: Weighted from APP and KPP. It balances attack per piece with input economy.,効率：APPとKPPの加重計算です。ブロックごとの攻撃量と入力効率を見ます。
+TXT_REPLAY_RADAR_STRUCTURE_TOOLTIP,结构：由地形平整度与空洞质量计算，越高代表堆叠更健康。,Structure: Based on field flatness and hole quality. Higher means a healthier stack.,構造：地形の平らさと穴の質から計算します。高いほど積みが良好です。
+TXT_REPLAY_RADAR_STABILITY_TOOLTIP,稳定：由封闭空洞与空区碎片化计算，越高代表地形风险越低。,Stability: Based on trapped holes and empty-region fragmentation. Higher means lower field risk.,安定：埋まった穴と空白領域の分断から計算します。高いほど地形リスクが低いです。
+TXT_REPLAY_RADAR_VISION_TOOLTIP,视野：由 Spin、Tetris 与三消等高价值消行比例计算。,Vision: Based on the share of high-value clears such as Spin Tetris and triples.,視野：SpinやTetrisやトリプルなど高価値な消去の割合から計算します。
 TXT_KEYBINDINGS,按键设置,KEY BINDINGS,キー設定
 TXT_BIND_TIP,点击一个槽位后按下键盘或手柄按键进行绑定（每个操作最多3个输入，按 ESC 取消监听）,Click a slot then press a keyboard or gamepad button to bind (up to 3 per action; press ESC to cancel).,スロットを押してからキーボードまたはゲームパッドのボタンを入力してください（各操作最大3つ、ESCでキャンセル）
 TXT_BIND_RESET_DEFAULT,恢复默认按键,RESET TO DEFAULT,デフォルトに戻す
