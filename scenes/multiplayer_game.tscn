@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" uid="uid://bimohyvl3nuo7" path="res://scripts/game/multiplayer_game.gd" id="1_mpcore"]
 [ext_resource type="PackedScene" path="res://scenes/core/board.tscn" id="2_board"]
-[ext_resource type="Texture2D" uid="uid://c3lad1jxw7f2p" path="res://assets/images/bg_multiplayer.jpg" id="2_jxfkk"]
+[ext_resource type="Texture2D" uid="uid://5gsqmguec8vv" path="res://assets/images/bg_multiplayer_pixel.png" id="2_jxfkk"]
 [ext_resource type="PackedScene" path="res://scenes/core/piece.tscn" id="3_piece"]
 [ext_resource type="PackedScene" path="res://scenes/ui/garbage_bar.tscn" id="4_gbar"]
 [ext_resource type="PackedScene" uid="uid://drnwu2mscsah3" path="res://scenes/ui/game_over_panel.tscn" id="5_gopanel"]
