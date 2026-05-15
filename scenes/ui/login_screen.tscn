@@ -132,7 +132,7 @@ theme_override_styles/read_only = SubResource("StyleBoxFlat_input_normal")
 theme_override_styles/focus = SubResource("StyleBoxFlat_input_focus")
 placeholder_text = "ENTER NAME"
 alignment = 1
-max_length = 16
+max_length = 12
 caret_blink = true
 
 [node name="LoginButton" type="Button" parent="CenterContainer/VBoxContainer" unique_id=544402641]

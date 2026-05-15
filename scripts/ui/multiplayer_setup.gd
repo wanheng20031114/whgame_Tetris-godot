@@ -13,6 +13,7 @@ extends Control
 @onready var lbl_status: Label = %StatusLabel
 
 const CONNECT_TIMEOUT_SECONDS := 10.0
+const MAX_PLAYER_NAME_LENGTH := 12
 const STATUS_COLOR_NORMAL := Color(0.7, 0.7, 1.0, 1.0)
 const STATUS_COLOR_ERROR := Color(1.0, 0.35, 0.35, 1.0)
 
@@ -26,7 +27,9 @@ func _ready() -> void:
 	edit_port.text = "8998"
 
 	if get_node_or_null("/root/GameState"):
-		edit_name.text = get_node("/root/GameState").player_name
+		edit_name.text = str(get_node("/root/GameState").player_name).strip_edges().substr(0, MAX_PLAYER_NAME_LENGTH)
+	if edit_name:
+		edit_name.max_length = MAX_PLAYER_NAME_LENGTH
 
 	btn_connect.pressed.connect(_on_connect_pressed)
 	btn_back.pressed.connect(_on_back_pressed)
@@ -110,7 +113,8 @@ func _on_connect_pressed() -> void:
 
 	var ip := edit_ip.text.strip_edges()
 	var port := edit_port.text.to_int()
-	var pname := edit_name.text.strip_edges()
+	var pname := edit_name.text.strip_edges().substr(0, MAX_PLAYER_NAME_LENGTH)
+	edit_name.text = pname
 
 	if pname.is_empty():
 		_set_status_key("TXT_ENTER_USERNAME")
@@ -139,7 +143,7 @@ func _on_back_pressed() -> void:
 func _on_network_connected() -> void:
 	_is_connecting = false
 	_set_status_key("TXT_CONNECTED_LOGGING_IN")
-	NetworkManager.login(edit_name.text.strip_edges())
+	NetworkManager.login(edit_name.text.strip_edges().substr(0, MAX_PLAYER_NAME_LENGTH))
 
 func _on_network_disconnected() -> void:
 	if _is_connecting:

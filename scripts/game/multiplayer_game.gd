@@ -496,15 +496,15 @@ func _lock_piece() -> void:
 	score_changed.emit(scoring.score, scoring.level, scoring.lines)
 	piece_locked.emit(cur_type, board.get_grid_state())
 
-	hold_used = false
-	_spawn_next_piece()
-
 	var did_clear_lines: bool = scoring.lines > lines_before_lock
 	if will_receive_garbage and not did_clear_lines and board:
 		board.add_garbage_lines(ready_garbage)
 		ready_garbage = 0
 		_refresh_player_garbage_bar()
 		NetworkManager.sync_board(board.get_grid_state())
+
+	hold_used = false
+	_spawn_next_piece()
 
 	_record_piece_snapshot(
 		locked_piece_type,

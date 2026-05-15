@@ -104,15 +104,15 @@ text = "刷新列表"
 
 [node name="CreateButton" type="Button" parent="CenterContainer/LobbyPanel/VBox/HBox" unique_id=407982475]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(160, 50)
+custom_minimum_size = Vector2(180, 50)
 layout_mode = 2
-text = "创建房间"
+text = "创建1v1房间"
 
 [node name="CreateTetris33Button" type="Button" parent="CenterContainer/LobbyPanel/VBox/HBox" unique_id=588762420]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(190, 50)
+custom_minimum_size = Vector2(220, 50)
 layout_mode = 2
-text = "CREATE TETRIS33"
+text = "创建tetris33房间"
 
 [node name="BackButton" type="Button" parent="CenterContainer/LobbyPanel/VBox" unique_id=760364601]
 unique_name_in_owner = true

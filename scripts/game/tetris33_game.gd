@@ -24,9 +24,12 @@ extends TetrisCore
 @onready var label_action_text: Label = %ActionTextLabel
 @onready var label_combo_text: Label = %ComboTextLabel
 @onready var result_overlay: Control = %ResultOverlay
+@onready var result_card: Panel = %ResultCard
 @onready var result_label: Label = %ResultLabel
+@onready var vote_list: VBoxContainer = %VoteList
 @onready var btn_restart: Button = %RestartButton
 @onready var btn_lobby: Button = %LobbyButton
+@onready var local_ko_name_label: Label = %LocalKONameLabel
 @onready var bgm: AudioStreamPlayer = $BGM
 @onready var sfx_planting: AudioStreamPlayer = $SfxPlanting
 @onready var sfx_line_clear: AudioStreamPlayer = $SfxLineClear
@@ -43,6 +46,12 @@ const SFX_DEATH_STREAM: AudioStream = preload("res://audio/death.ogg")
 const GARBAGE_BAR_GAP: float = 6.0
 const ATTACK_DELAY_SECONDS: float = 12.0
 const WARNING_STAGE_SECONDS: float = 6.0
+const VOTE_COLOR_READY := Color(0.18, 0.82, 0.42, 1.0)
+const VOTE_COLOR_WAITING := Color(0.95, 0.78, 0.24, 1.0)
+const VOTE_COLOR_DECLINED := Color(0.92, 0.18, 0.18, 1.0)
+const SYMBOL_WAITING := "\u25A1"
+const SYMBOL_READY := "\u25CB"
+const SYMBOL_DECLINED := "X"
 
 var _opponent_panels: Array[Tetris33OpponentPanel] = []
 var _opponents: Array[Dictionary] = []
@@ -55,6 +64,13 @@ var _last_target_index: int = -1
 var _alive_count: int = 1
 var _network_opponent_ids: Array[String] = []
 var _network_opponent_names: Array[String] = []
+var _local_eliminated: bool = false
+var _match_finished: bool = false
+var _rematch_requested: bool = false
+var _rematch_declined: bool = false
+var _local_rank: int = 0
+var _last_result_title: String = ""
+var _last_vote_statuses: Array = []
 
 var pending_attacks: Array = []
 var ready_garbage: int = 0
@@ -91,6 +107,9 @@ func _ready() -> void:
 	NetworkManager.tetris33_attack_received.connect(_on_network_attack_received)
 	NetworkManager.tetris33_game_over_received.connect(_on_network_game_over_received)
 	NetworkManager.tetris33_player_left.connect(_on_network_player_left)
+	NetworkManager.tetris33_match_finished.connect(_on_tetris33_match_finished)
+	NetworkManager.rematch_status_payload_received.connect(_on_rematch_status_received)
+	NetworkManager.tetris33_game_started.connect(_on_tetris33_rematch_started)
 
 	if not paused:
 		_spawn_next_piece()
@@ -104,9 +123,10 @@ func _process(delta: float) -> void:
 		_count_key_presses()
 	if not game_over and not paused:
 		_update_player_garbage(delta)
-		_update_opponent_samples(delta)
-		_update_bot_pressure(delta)
-		_update_match_state(delta)
+		if not _is_network_match():
+			_update_opponent_samples(delta)
+			_update_bot_pressure(delta)
+			_update_match_state(delta)
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -133,6 +153,13 @@ func _assign_audio_streams() -> void:
 		sfx_spin.stream = SFX_SPIN_STREAM
 	if sfx_death:
 		sfx_death.stream = SFX_DEATH_STREAM
+
+
+func _trf(key: String, args: Array = []) -> String:
+	var translated := tr(key)
+	if args.is_empty():
+		return translated
+	return translated % args
 
 
 func _apply_network_match_state() -> void:
@@ -173,16 +200,15 @@ func _bind_opponent_panels() -> void:
 func _initialize_ui() -> void:
 	if result_overlay:
 		result_overlay.visible = false
+	if result_label:
+		result_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	if btn_restart:
-		btn_restart.pressed.connect(func():
-			_save_and_cleanup_data()
-			get_tree().reload_current_scene()
-		)
+		btn_restart.text = tr("TXT_REMATCH")
+		btn_restart.disabled = true
+		btn_restart.pressed.connect(_on_rematch_pressed)
 	if btn_lobby:
-		btn_lobby.pressed.connect(func():
-			_save_and_cleanup_data()
-			get_tree().change_scene_to_file("res://scenes/ui/main.tscn")
-		)
+		btn_lobby.text = tr("TXT_RETURN_LOBBY")
+		btn_lobby.pressed.connect(_on_lobby_pressed)
 	if player_garbage_bar and board:
 		player_garbage_bar.max_lines = board.visible_rows
 		player_garbage_bar.update_bar(0, 0, 0)
@@ -195,6 +221,9 @@ func _initialize_ui() -> void:
 		label_action_text.visible = false
 	if label_combo_text:
 		label_combo_text.visible = false
+	if local_ko_name_label:
+		local_ko_name_label.visible = false
+	_clear_vote_list()
 
 
 func _layout_player_garbage_bar() -> void:
@@ -230,7 +259,7 @@ func _initialize_match() -> void:
 		if not is_active:
 			continue
 
-		var sample := _build_opponent_sample(i)
+		var sample := _build_initial_opponent_sample(i) if _is_network_match() else _build_opponent_sample(i)
 		_opponents.append(sample)
 		panel.update_from_sample(sample)
 
@@ -337,7 +366,7 @@ func _eliminate_opponent(index: int) -> void:
 	if index < _opponent_panels.size():
 		_opponent_panels[index].set_eliminated(true)
 	_refresh_match_labels()
-	if _alive_count <= 1:
+	if _alive_count <= 1 and not _local_eliminated:
 		_on_victory()
 
 
@@ -366,6 +395,33 @@ func _build_opponent_sample(index: int, previous: Dictionary = {}) -> Dictionary
 	}
 
 
+func _build_initial_opponent_sample(index: int) -> Dictionary:
+	var visible_board := _create_empty_visible_board()
+	return {
+		"index": index,
+		"id": _network_opponent_ids[index] if index < _network_opponent_ids.size() else "",
+		"name": _network_opponent_names[index] if index < _network_opponent_names.size() else "P%02d" % (index + 2),
+		"rank": active_player_count,
+		"visible_board": visible_board,
+		"structure_score": 0.0,
+		"stability_score": 0.0,
+		"pending_garbage": 0,
+		"danger_score": 0.0,
+		"safety_score": 100.0,
+		"eliminated": false
+	}
+
+
+func _create_empty_visible_board() -> Array:
+	var board_state: Array = []
+	for _r in range(20):
+		var row: Array = []
+		row.resize(10)
+		row.fill(0)
+		board_state.append(row)
+	return board_state
+
+
 func _generate_visible_board(previous: Dictionary = {}) -> Array:
 	var board_state: Array = []
 	for _r in range(20):
@@ -391,6 +447,38 @@ func _calculate_danger_score(structure: float, stability: float, total_height: i
 	var height_risk := clampf(float(total_height) / 110.0 * 100.0, 0.0, 100.0)
 	var garbage_risk := clampf(float(pending) / 14.0 * 100.0, 0.0, 100.0)
 	return clampf(structure_risk * 0.48 + height_risk * 0.34 + garbage_risk * 0.18, 0.0, 100.0)
+
+
+func _is_network_match() -> bool:
+	return NetworkManager.current_room_mode == "tetris33"
+
+
+func _send_local_network_sample() -> void:
+	if not _is_network_match() or board == null:
+		return
+	var visible_grid := _get_visible_board_snapshot()
+	var scores := _evaluate_structure_scores(visible_grid)
+	scores["visible_board"] = visible_grid
+	scores["pending_garbage"] = _get_pending_garbage_total()
+	scores["rank"] = _local_rank if _local_rank > 0 else _alive_count
+	scores["eliminated"] = _local_eliminated
+	NetworkManager.send_tetris33_sample(scores)
+
+
+func _get_visible_board_snapshot() -> Array:
+	var full_grid: Array = board.get_grid_state().duplicate(true)
+	var visible_grid: Array = []
+	for r in range(board.buffer_rows, board.total_rows):
+		if r < full_grid.size():
+			visible_grid.append((full_grid[r] as Array).duplicate())
+	return visible_grid
+
+
+func _get_pending_garbage_total() -> int:
+	var total := ready_garbage
+	for attack in pending_attacks:
+		total += int(attack.get("amount", 0))
+	return total
 
 
 func _select_attack_target() -> int:
@@ -425,9 +513,10 @@ func _send_attack_to_target(amount: int) -> void:
 	for i in range(_opponent_panels.size()):
 		_opponent_panels[i].set_targeted(i == target_index)
 
-	_opponents[target_index]["pending_garbage"] = int(_opponents[target_index].get("pending_garbage", 0)) + amount
-	if target_index < _opponent_panels.size():
-		_opponent_panels[target_index].update_from_sample(_opponents[target_index])
+	if not _is_network_match():
+		_opponents[target_index]["pending_garbage"] = int(_opponents[target_index].get("pending_garbage", 0)) + amount
+		if target_index < _opponent_panels.size():
+			_opponent_panels[target_index].update_from_sample(_opponents[target_index])
 
 	var target_name := str(_opponents[target_index].get("name", "P%02d" % (target_index + 2)))
 	_log_attack("ATTACK %s +%d" % [target_name, amount])
@@ -437,7 +526,7 @@ func _send_attack_to_target(amount: int) -> void:
 	if label_target:
 		label_target.text = "TARGET  %s" % target_name
 
-	if int(_opponents[target_index].get("pending_garbage", 0)) >= 12 and _rng.randf() < 0.35:
+	if not _is_network_match() and int(_opponents[target_index].get("pending_garbage", 0)) >= 12 and _rng.randf() < 0.35:
 		_eliminate_opponent(target_index)
 
 
@@ -530,18 +619,18 @@ func _lock_piece() -> void:
 	score_changed.emit(scoring.score, scoring.level, scoring.lines)
 	piece_locked.emit(cur_type, board.get_grid_state())
 
-	hold_used = false
-	_spawn_next_piece()
-
-	if sfx_planting:
-		sfx_planting.play()
-
 	var did_clear_lines := scoring.lines > lines_before_lock
 	if will_receive_garbage and not did_clear_lines and board:
 		board.add_garbage_lines(ready_garbage)
 		ready_garbage = 0
 		if player_garbage_bar:
 			player_garbage_bar.update_bar(0, 0, 0)
+
+	hold_used = false
+	_spawn_next_piece()
+
+	if sfx_planting:
+		sfx_planting.play()
 
 	_record_piece_snapshot(
 		locked_piece_type,
@@ -559,33 +648,87 @@ func _try_hold() -> void:
 
 
 func _on_local_game_over() -> void:
+	if _local_eliminated or _match_finished:
+		return
+	_local_eliminated = true
+	_local_rank = maxi(2, _alive_count)
+	_freeze_local_play(true)
 	if bgm:
 		bgm.stop()
 	if sfx_death:
 		sfx_death.play()
-	_show_result("RANK #%d" % _alive_count)
 	if NetworkManager.current_room_mode == "tetris33":
-		NetworkManager.send_tetris33_game_over(_alive_count)
+		_send_local_network_sample()
+		NetworkManager.send_tetris33_game_over(_local_rank)
+	_enter_spectator_mode()
 	_save_and_cleanup_data()
 
 
 func _on_victory() -> void:
-	game_over = true
+	if _local_eliminated or _match_finished:
+		return
+	_local_rank = 1
+	_freeze_local_play(false)
 	if bgm:
 		bgm.stop()
-	_show_result("VICTORY  #1")
 	if NetworkManager.current_room_mode == "tetris33":
-		NetworkManager.send_tetris33_game_over(1)
+		_send_local_network_sample()
+	else:
+		_match_finished = true
+		_show_result(_compose_result_text(_local_rank, tr("TXT_TETRIS33_REMATCH_READY")), false)
 	_save_and_cleanup_data()
 
 
-func _show_result(text: String) -> void:
+func _enter_spectator_mode() -> void:
+	_show_local_rank_overlay()
+	if label_status:
+		label_status.text = "SPECTATING"
+	_refresh_match_labels()
+	if result_overlay:
+		result_overlay.visible = false
+
+
+func _show_result(text: String, allow_rematch: bool = false) -> void:
+	_last_result_title = text.get_slice("\n", 0)
 	if result_label:
 		result_label.text = text
+	if btn_restart:
+		btn_restart.disabled = not allow_rematch
 	if result_overlay:
 		result_overlay.visible = true
-		if btn_restart:
+		if btn_restart and not btn_restart.disabled:
 			btn_restart.grab_focus()
+		elif btn_lobby:
+			btn_lobby.grab_focus()
+
+
+func _set_result_subtitle(subtitle: String) -> void:
+	if result_label:
+		result_label.text = "%s\n%s" % [_last_result_title, subtitle]
+
+
+func _compose_result_text(rank: int, subtitle: String) -> String:
+	var title := "WINNER  #1" if rank == 1 else "RANK #%d" % rank
+	return "%s\n%s" % [title, subtitle]
+
+
+func _freeze_local_play(hide_active_piece: bool) -> void:
+	game_over = true
+	paused = true
+	if lock_timer:
+		lock_timer.stop()
+	if ghost_piece:
+		ghost_piece.visible = false
+	if current_piece and hide_active_piece:
+		current_piece.visible = false
+
+
+func _show_local_rank_overlay() -> void:
+	if local_ko_name_label == null:
+		return
+	var rank_value := _local_rank if _local_rank > 0 else maxi(2, _alive_count)
+	local_ko_name_label.text = "RANK #%d" % rank_value
+	local_ko_name_label.visible = true
 
 
 func _on_rows_cleared(rows_data: Array) -> void:
@@ -611,7 +754,7 @@ func _record_piece_snapshot(
 	locked_row: int,
 	next_pieces_at_lock: Array
 ) -> void:
-	if _data_collector == null or not _data_collector.is_active() or board == null:
+	if board == null:
 		return
 
 	var full_grid: Array = board.get_grid_state()
@@ -621,33 +764,36 @@ func _record_piece_snapshot(
 			visible_grid.append(full_grid[r])
 
 	var scores := _evaluate_structure_scores(visible_grid)
-	_data_collector.record_piece_drop(
-		locked_piece_type,
-		locked_rotation,
-		locked_col,
-		locked_row,
-		visible_grid,
-		next_pieces_at_lock,
-		scoring.score,
-		scoring.level,
-		scoring.lines,
-		scoring.combo,
-		scoring.b2b,
-		_last_is_spin,
-		_last_is_t_spin,
-		_last_lines_cleared_this_lock,
-		_last_damage_this_lock,
-		_hold_used_this_piece,
-		held_type,
-		float(scores.get("structure_score", 0.0)),
-		float(scores.get("stability_score", 0.0)),
-		_cached_board_after_drop,
-		visible_grid
-	)
+	if _data_collector != null and _data_collector.is_active():
+		_data_collector.record_piece_drop(
+			locked_piece_type,
+			locked_rotation,
+			locked_col,
+			locked_row,
+			visible_grid,
+			next_pieces_at_lock,
+			scoring.score,
+			scoring.level,
+			scoring.lines,
+			scoring.combo,
+			scoring.b2b,
+			_last_is_spin,
+			_last_is_t_spin,
+			_last_lines_cleared_this_lock,
+			_last_damage_this_lock,
+			_hold_used_this_piece,
+			held_type,
+			float(scores.get("structure_score", 0.0)),
+			float(scores.get("stability_score", 0.0)),
+			_cached_board_after_drop,
+			visible_grid
+		)
 	if NetworkManager.current_room_mode == "tetris33":
 		var scores_for_network := scores.duplicate()
 		scores_for_network["visible_board"] = visible_grid
-		scores_for_network["pending_garbage"] = pending_attacks.size() + ready_garbage
+		scores_for_network["pending_garbage"] = _get_pending_garbage_total()
+		scores_for_network["rank"] = _local_rank if _local_rank > 0 else _alive_count
+		scores_for_network["eliminated"] = _local_eliminated
 		NetworkManager.send_tetris33_sample(scores_for_network)
 	_hold_used_this_piece = false
 
@@ -690,9 +836,14 @@ func _refresh_match_labels() -> void:
 	if label_alive:
 		label_alive.text = "ALIVE\n%d/%d" % [_alive_count, active_player_count]
 	if label_rank:
-		label_rank.text = "RANK\n#%d" % _alive_count
+		label_rank.text = "LEFT %d/%d" % [_alive_count, active_player_count]
 	if label_status:
-		label_status.text = "TETRIS33"
+		if _match_finished:
+			label_status.text = "FINISHED"
+		elif _local_eliminated:
+			label_status.text = "SPECTATING"
+		else:
+			label_status.text = "TETRIS33"
 
 
 func _on_network_sample_received(payload: Dictionary) -> void:
@@ -732,6 +883,7 @@ func _on_network_attack_received(payload: Dictionary) -> void:
 func _on_network_game_over_received(payload: Dictionary) -> void:
 	var idx := _network_opponent_ids.find(str(payload.get("from_id", "")))
 	if idx >= 0:
+		_opponents[idx]["rank"] = int(payload.get("rank", _opponents[idx].get("rank", active_player_count)))
 		_eliminate_opponent(idx)
 
 
@@ -739,6 +891,157 @@ func _on_network_player_left(payload: Dictionary) -> void:
 	var idx := _network_opponent_ids.find(str(payload.get("id", "")))
 	if idx >= 0:
 		_eliminate_opponent(idx)
+
+
+func _on_tetris33_match_finished(payload: Dictionary) -> void:
+	_match_finished = true
+	_freeze_local_play(false)
+	for result in payload.get("results", []):
+		if result is Dictionary and str(result.get("id", "")) == NetworkManager.my_id:
+			_local_rank = int(result.get("rank", _local_rank))
+			break
+	if _local_rank <= 0:
+		_local_rank = 1 if not _local_eliminated else _alive_count
+	if _local_rank == 1 and local_ko_name_label:
+		local_ko_name_label.visible = false
+	elif _local_eliminated:
+		_show_local_rank_overlay()
+	_refresh_match_labels()
+	_show_result(_compose_result_text(_local_rank, tr("TXT_TETRIS33_REMATCH_READY")), not _rematch_declined)
+	_last_vote_statuses.clear()
+	_update_vote_list(_last_vote_statuses)
+	_save_and_cleanup_data()
+
+
+func _on_rematch_pressed() -> void:
+	if not _match_finished or _rematch_requested or _rematch_declined:
+		return
+	_rematch_requested = true
+	if btn_restart:
+		btn_restart.disabled = true
+		btn_restart.text = tr("TXT_WAITING_CONNECT")
+	NetworkManager.request_rematch()
+
+
+func _on_lobby_pressed() -> void:
+	_save_and_cleanup_data()
+	if _match_finished:
+		NetworkManager.decline_rematch()
+	else:
+		NetworkManager.leave_room()
+	get_tree().change_scene_to_file("res://scenes/ui/multiplayer_lobby.tscn")
+
+
+func _on_rematch_status_received(payload: Dictionary) -> void:
+	if str(payload.get("mode", "")) != "tetris33":
+		return
+	var declined := bool(payload.get("declined", false))
+	var ready_count := int(payload.get("ready_count", 0))
+	var total_count := int(payload.get("total_count", active_player_count))
+	if declined:
+		_rematch_declined = true
+		if btn_restart:
+			btn_restart.disabled = true
+		if result_label and _match_finished:
+			_set_result_subtitle(tr("TXT_TETRIS33_REMATCH_DECLINED"))
+		_update_vote_list(payload.get("statuses", []))
+		return
+	if result_label and _match_finished:
+		_set_result_subtitle(_trf("TXT_TETRIS33_REMATCH_WAITING", [ready_count, total_count]))
+	_update_vote_list(payload.get("statuses", []))
+
+
+func _on_tetris33_rematch_started(_seed: int, _local_slot: int, _player_count: int, _players: Array) -> void:
+	get_tree().reload_current_scene()
+
+
+func _clear_vote_list() -> void:
+	if vote_list == null:
+		return
+	for child in vote_list.get_children():
+		child.queue_free()
+
+
+func _update_vote_list(statuses: Array) -> void:
+	if vote_list == null:
+		return
+	_last_vote_statuses = statuses.duplicate(true)
+	_clear_vote_list()
+	if statuses.is_empty():
+		_add_vote_row(NetworkManager.player_name, "none")
+		return
+	for entry in statuses:
+		if entry is Dictionary:
+			_add_vote_row(str(entry.get("name", "Player")), str(entry.get("status", "none")))
+
+
+func _add_vote_row(player_name: String, status: String) -> void:
+	if vote_list == null:
+		return
+	var row := HBoxContainer.new()
+	row.custom_minimum_size = Vector2(0, 26)
+	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	row.add_theme_constant_override("separation", 10)
+
+	var icon := Label.new()
+	icon.custom_minimum_size = Vector2(28, 24)
+	icon.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	icon.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	icon.text = _vote_symbol(status)
+	icon.add_theme_font_size_override("font_size", 22)
+	icon.add_theme_color_override("font_color", _vote_color(status))
+	row.add_child(icon)
+
+	var name_label := Label.new()
+	name_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	name_label.text = player_name if not player_name.strip_edges().is_empty() else "Player"
+	name_label.clip_text = true
+	name_label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	name_label.add_theme_font_size_override("font_size", 15)
+	name_label.add_theme_color_override("font_color", Color(0.88, 0.94, 1.0, 1.0))
+	name_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	row.add_child(name_label)
+
+	var status_label := Label.new()
+	status_label.custom_minimum_size = Vector2(86, 24)
+	status_label.text = _vote_status_text(status)
+	status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	status_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	status_label.add_theme_font_size_override("font_size", 13)
+	status_label.add_theme_color_override("font_color", _vote_color(status))
+	row.add_child(status_label)
+
+	vote_list.add_child(row)
+
+
+func _vote_symbol(status: String) -> String:
+	match status:
+		"ready":
+			return SYMBOL_READY
+		"declined":
+			return SYMBOL_DECLINED
+		_:
+			return SYMBOL_WAITING
+
+
+func _vote_color(status: String) -> Color:
+	match status:
+		"ready":
+			return VOTE_COLOR_READY
+		"declined":
+			return VOTE_COLOR_DECLINED
+		_:
+			return VOTE_COLOR_WAITING
+
+
+func _vote_status_text(status: String) -> String:
+	match status:
+		"ready":
+			return tr("TXT_REMATCH_READY")
+		"declined":
+			return tr("TXT_REMATCH_DECLINED")
+		_:
+			return tr("TXT_REMATCH_WAITING")
 
 
 func _log_attack(text: String) -> void:

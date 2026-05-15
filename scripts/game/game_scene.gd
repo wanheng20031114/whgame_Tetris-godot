@@ -240,8 +240,6 @@ func _lock_piece() -> void:
 	score_changed.emit(scoring.score, scoring.level, scoring.lines)
 	piece_locked.emit(cur_type, board.get_grid_state())
 
-	hold_used = false
-	_spawn_next_piece()
 	# === 核心逻辑内联结束 ===
 
 	sfx_planting.play()
@@ -252,6 +250,9 @@ func _lock_piece() -> void:
 		ready_garbage = 0
 
 	# 每次锁定后记录一次快照。
+	hold_used = false
+	_spawn_next_piece()
+
 	_record_piece_snapshot(
 		locked_piece_type,
 		locked_rotation,

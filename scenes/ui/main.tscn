@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" uid="uid://clqynivx6dbv4" path="res://scripts/ui/ui_manager.gd" id="1_manager"]
 [ext_resource type="PackedScene" uid="uid://dvueqf22sfge1" path="res://scenes/ui/login_screen.tscn" id="2_login"]
-[ext_resource type="PackedScene" uid="uid://bbgjx6q6tpspu" path="res://scenes/ui/main_lobby.tscn" id="3_lobby"]
+[ext_resource type="PackedScene" path="res://scenes/ui/main_lobby.tscn" id="3_lobby"]
 
 [node name="MainUI" type="Control" unique_id=1894004525]
 layout_mode = 3

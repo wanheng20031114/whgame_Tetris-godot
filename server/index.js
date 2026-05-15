@@ -5,6 +5,7 @@ const PORT = 8998;
 const LIST_ROOMS_COOLDOWN_MS = 200;
 const CREATE_ROOM_COOLDOWN_MS = 1000;
 const LOGIN_COOLDOWN_MS = 1000;
+const MAX_PLAYER_NAME_LENGTH = 12;
 const server = http.createServer();
 const wss = new WebSocket.Server({ server });
 const actionCooldowns = new WeakMap(); // ws -> { action: last_ts_ms }
@@ -32,6 +33,12 @@ wss.on('connection', (ws) => {
     });
 });
 
+function sanitizePlayerName(name) {
+    const cleaned = String(name || '').trim();
+    const clipped = Array.from(cleaned).slice(0, MAX_PLAYER_NAME_LENGTH).join('');
+    return clipped || `GUEST_${Math.floor(Math.random() * 9000) + 1000}`;
+}
+
 function handleMessage(ws, data) {
     const { type, payload } = data;
     console.log(`收到消息: ${type}`, payload);
@@ -49,7 +56,7 @@ function handleMessage(ws, data) {
             // 登录并保存用户名
             clients.set(ws, {
                 id: Math.random().toString(36).substr(2, 9),
-                name: payload.name || 'fucking bot',
+                name: sanitizePlayerName(payload.name),
                 room_id: null
             });
             send(ws, 'login_success', { id: clients.get(ws).id });
@@ -70,14 +77,7 @@ function handleMessage(ws, data) {
             // 返回可加入的房间列表
             const roomList = Array.from(rooms.values())
                 .filter(r => r.status === 'waiting')
-                .map(r => ({
-                    id: r.id,
-                    name: r.name,
-                    mode: r.mode || 'versus',
-                    playerCount: r.players.length,
-                    maxPlayers: r.maxPlayers || 2,
-                    minPlayers: r.minPlayers || 2
-                }));
+                .map(serializeRoom);
             send(ws, 'room_list', { rooms: roomList });
             break;
 
@@ -160,16 +160,17 @@ function handleMessage(ws, data) {
                 return;
             }
 
+            if (joinClient.room_id && joinClient.room_id !== payload.room_id) {
+                send(ws, 'error', { message: 'already_in_room' });
+                return;
+            }
+
             if (targetRoom.players.length > 0 && targetRoom.players[0] === ws) {
                 send(ws, 'error', { message: 'cannot_join_own_room' });
                 return;
             }
 
             if (targetRoom && targetRoom.players.length < (targetRoom.maxPlayers || 2)) {
-                if (joinClient.room_id && joinClient.room_id !== payload.room_id) {
-                    leaveWaitingRoomIfOwned(joinClient, ws);
-                }
-
                 targetRoom.players.push(ws);
                 joinClient.room_id = payload.room_id;
 
@@ -188,6 +189,40 @@ function handleMessage(ws, data) {
                 broadcastRoomList();
             } else {
                 send(ws, 'error', { message: '无法加入房间（已满或不存在）' });
+            }
+            break;
+
+        case 'close_room':
+            const closeClient = clients.get(ws);
+            if (!closeClient || !closeClient.room_id) return;
+            const closeRoomTarget = rooms.get(closeClient.room_id);
+            if (!closeRoomTarget) {
+                closeClient.room_id = null;
+                send(ws, 'room_left', {});
+                return;
+            }
+            if (closeRoomTarget.owner !== ws) {
+                send(ws, 'error', { message: 'only_owner_can_close' });
+                return;
+            }
+            closeRoom(closeRoomTarget, 'owner_closed_room');
+            break;
+
+        case 'leave_room':
+            const leaveClient = clients.get(ws);
+            if (!leaveClient || !leaveClient.room_id) return;
+            const leaveRoomTarget = rooms.get(leaveClient.room_id);
+            if (!leaveRoomTarget) {
+                leaveClient.room_id = null;
+                send(ws, 'room_left', {});
+                return;
+            }
+            if (leaveRoomTarget.owner === ws) {
+                closeRoom(leaveRoomTarget, 'owner_closed_room');
+            } else {
+                removePlayerFromRoom(ws, leaveRoomTarget);
+                send(ws, 'room_left', { room_id: leaveRoomTarget.id });
+                broadcastRoomList();
             }
             break;
 
@@ -235,8 +270,16 @@ function handleMessage(ws, data) {
 
         case 'tetris33_sample':
         case 'tetris33_attack':
-        case 'tetris33_game_over':
             forwardToRoom(ws, type, payload);
+            break;
+
+        case 'tetris33_game_over':
+            {
+                const gameOverPayload = handleTetris33GameOver(ws, payload);
+                if (gameOverPayload) {
+                    forwardToRoom(ws, type, gameOverPayload);
+                }
+            }
             break;
 
         case 'rematch_request':
@@ -260,27 +303,6 @@ function getCooldownRetryMs(ws, action, cooldownMs) {
     record[action] = now;
     actionCooldowns.set(ws, record);
     return 0;
-}
-
-function leaveWaitingRoomIfOwned(client, ws) {
-    const oldRoomId = client.room_id;
-    if (!oldRoomId) return;
-
-    const oldRoom = rooms.get(oldRoomId);
-    if (!oldRoom) {
-        client.room_id = null;
-        return;
-    }
-
-    if (oldRoom.status !== 'waiting') {
-        return;
-    }
-
-    oldRoom.players = oldRoom.players.filter(p => p !== ws);
-    if (oldRoom.players.length === 0) {
-        rooms.delete(oldRoomId);
-    }
-    client.room_id = null;
 }
 
 // ============================================================
@@ -323,6 +345,9 @@ function startTetris33Game(room) {
     room.players = uniquePlayers.slice(0, room.maxPlayers || 33);
     room.status = 'playing';
     room.seed = Math.floor(Math.random() * 2147483647) + 1;
+    room.rematch.clear();
+    room.rematchLocked = false;
+    room.tetris33Results = new Map();
 
     const players = buildRoomPlayerList(room);
     for (let i = 0; i < room.players.length; i++) {
@@ -347,6 +372,133 @@ function buildRoomPlayerList(room) {
     });
 }
 
+function serializeRoom(room) {
+    const owner = clients.get(room.owner);
+    return {
+        id: room.id,
+        name: room.name,
+        mode: room.mode || 'versus',
+        playerCount: room.players.length,
+        maxPlayers: room.maxPlayers || 2,
+        minPlayers: room.minPlayers || 2,
+        ownerId: owner ? owner.id : '',
+        ownerName: owner ? owner.name : ''
+    };
+}
+
+function closeRoom(room, reason) {
+    const roomId = room.id;
+    for (const player of room.players) {
+        const playerClient = clients.get(player);
+        if (playerClient) {
+            playerClient.room_id = null;
+        }
+        send(player, 'room_closed', {
+            room_id: roomId,
+            reason: reason || 'room_closed'
+        });
+    }
+    rooms.delete(roomId);
+    broadcastRoomList();
+}
+
+function removePlayerFromRoom(ws, room) {
+    const client = clients.get(ws);
+    room.players = room.players.filter(p => p !== ws);
+    if (client) {
+        client.room_id = null;
+    }
+
+    if (room.players.length === 0) {
+        rooms.delete(room.id);
+        return;
+    }
+
+    if ((room.mode || 'versus') === 'tetris33') {
+        if (room.owner === ws) {
+            room.owner = room.players[0] || null;
+        }
+        for (const player of room.players) {
+            send(player, 'tetris33_player_left', {
+                id: client ? client.id : '',
+                name: client ? client.name : '',
+                player_count: room.players.length
+            });
+        }
+        if (room.status === 'waiting') {
+            broadcastTetris33Lobby(room);
+        }
+        return;
+    }
+
+    const opponent = room.players[0];
+    if (opponent && room.status !== 'waiting') {
+        const opponentClient = clients.get(opponent);
+        if (opponentClient) {
+            opponentClient.room_id = null;
+        }
+        send(opponent, 'opponent_left', {});
+        rooms.delete(room.id);
+    }
+}
+
+function handleTetris33GameOver(ws, payload) {
+    const client = clients.get(ws);
+    if (!client || !client.room_id) return null;
+
+    const room = rooms.get(client.room_id);
+    if (!room || room.mode !== 'tetris33') return null;
+    if (room.status === 'finished') return null;
+    if (Number(payload.rank || 0) === 1) return null;
+
+    if (!room.tetris33Results) {
+        room.tetris33Results = new Map();
+    }
+    if (room.tetris33Results.has(ws)) return null;
+
+    const totalPlayers = Math.max(1, room.players.length);
+    const serverRank = Math.max(2, totalPlayers - room.tetris33Results.size);
+    room.tetris33Results.set(ws, {
+        id: client.id,
+        name: client.name,
+        rank: serverRank
+    });
+
+    const authoritativePayload = { ...payload, rank: serverRank };
+
+    if (room.tetris33Results.size < Math.max(1, totalPlayers - 1)) {
+        return authoritativePayload;
+    }
+
+    for (const player of room.players) {
+        if (!room.tetris33Results.has(player)) {
+            const survivor = clients.get(player);
+            room.tetris33Results.set(player, {
+                id: survivor ? survivor.id : '',
+                name: survivor ? survivor.name : '',
+                rank: 1
+            });
+        }
+    }
+
+    room.status = 'finished';
+    room.rematch.clear();
+    room.rematchLocked = false;
+    for (const player of room.players) {
+        room.rematch.set(player, 'none');
+    }
+
+    const results = Array.from(room.tetris33Results.values()).sort((a, b) => a.rank - b.rank);
+    for (const player of room.players) {
+        send(player, 'tetris33_match_finished', {
+            results,
+            player_count: room.players.length
+        });
+    }
+    broadcastRematchStatus(room);
+    return authoritativePayload;
+}
+
 // ============================================================
 // Rematch 协议处理
 // ============================================================
@@ -359,6 +511,22 @@ function handleRematchRequest(ws) {
     if (!room) return;
 
     // 标记当前玩家为 ready
+    if ((room.mode || 'versus') === 'tetris33') {
+        if (room.status !== 'finished' || room.rematchLocked) {
+            broadcastRematchStatus(room);
+            return;
+        }
+
+        room.rematch.set(ws, 'ready');
+        const allReady = room.players.length > 0 && room.players.every(p => room.rematch.get(p) === 'ready');
+        if (allReady) {
+            startTetris33Game(room);
+        } else {
+            broadcastRematchStatus(room);
+        }
+        return;
+    }
+
     room.rematch.set(ws, 'ready');
 
     // 检查双方是否都准备好
@@ -383,6 +551,9 @@ function handleRematchDecline(ws) {
 
     // 标记当前玩家为 declined
     room.rematch.set(ws, 'declined');
+    if ((room.mode || 'versus') === 'tetris33') {
+        room.rematchLocked = true;
+    }
 
     // 通知对手
     broadcastRematchStatus(room);
@@ -390,6 +561,7 @@ function handleRematchDecline(ws) {
     // 将该玩家从房间移除
     room.players = room.players.filter(p => p !== ws);
     client.room_id = null;
+    send(ws, 'room_left', { room_id: room.id });
 
     // 如果房间空了，删除房间
     if (room.players.length === 0) {
@@ -398,6 +570,31 @@ function handleRematchDecline(ws) {
 }
 
 function broadcastRematchStatus(room) {
+    if ((room.mode || 'versus') === 'tetris33') {
+        const statuses = room.players.map(player => {
+            const client = clients.get(player);
+            return {
+                id: client ? client.id : '',
+                name: client ? client.name : '',
+                status: room.rematch.get(player) || 'none'
+            };
+        });
+        const readyCount = statuses.filter(s => s.status === 'ready').length;
+        const declined = statuses.some(s => s.status === 'declined') || !!room.rematchLocked;
+        for (const player of room.players) {
+            send(player, 'rematch_status', {
+                mode: 'tetris33',
+                my_status: room.rematch.get(player) || 'none',
+                opponent_status: declined ? 'declined' : 'none',
+                ready_count: readyCount,
+                total_count: statuses.length,
+                declined,
+                statuses
+            });
+        }
+        return;
+    }
+
     for (const player of room.players) {
         const opponent = room.players.find(p => p !== player);
         const myStatus = room.rematch.get(player) || 'none';
@@ -413,14 +610,7 @@ function broadcastRematchStatus(room) {
 function broadcastRoomList() {
     const roomList = Array.from(rooms.values())
         .filter(r => r.status === 'waiting')
-        .map(r => ({
-            id: r.id,
-            name: r.name,
-            mode: r.mode || 'versus',
-            playerCount: r.players.length,
-            maxPlayers: r.maxPlayers || 2,
-            minPlayers: r.minPlayers || 2
-        }));
+        .map(serializeRoom);
 
     for (const ws of clients.keys()) {
         send(ws, 'room_list', { rooms: roomList });
@@ -480,23 +670,15 @@ function handleDisconnect(ws) {
         if (client.room_id) {
             const room = rooms.get(client.room_id);
             if (room) {
+                if (room.owner === ws && room.status === 'waiting') {
+                    closeRoom(room, 'owner_disconnected');
+                    clients.delete(ws);
+                    return;
+                }
+
                 if (room.mode === 'tetris33') {
-                    room.players = room.players.filter(p => p !== ws);
-                    if (room.owner === ws) {
-                        room.owner = room.players[0] || null;
-                    }
-                    for (const player of room.players) {
-                        send(player, 'tetris33_player_left', {
-                            id: client.id,
-                            name: client.name,
-                            player_count: room.players.length
-                        });
-                    }
-                    if (room.players.length === 0) {
-                        rooms.delete(client.room_id);
-                    } else if (room.status === 'waiting') {
-                        broadcastTetris33Lobby(room);
-                    }
+                    removePlayerFromRoom(ws, room);
+                    broadcastRoomList();
                     clients.delete(ws);
                     return;
                 }
@@ -506,17 +688,8 @@ function handleDisconnect(ws) {
                     broadcastRematchStatus(room);
                 }
 
-                // 通知对手离开
-                const opponent = room.players.find(p => p !== ws);
-                if (opponent) {
-                    send(opponent, 'opponent_left', {});
-                }
-
-                // 将该玩家从房间移除
-                room.players = room.players.filter(p => p !== ws);
-                if (room.players.length === 0) {
-                    rooms.delete(client.room_id);
-                }
+                removePlayerFromRoom(ws, room);
+                broadcastRoomList();
             }
         }
         clients.delete(ws);

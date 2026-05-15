@@ -7,6 +7,7 @@ const BG_SWING_TOP_Y: float = -500.0
 const BG_SWING_BOTTOM_Y: float = 0.0
 const BG_SWING_TRAVEL_SECONDS: float = 28.5
 const BG_SWING_PAUSE_SECONDS: float = 1.5
+const MAX_PLAYER_NAME_LENGTH := 12
 
 signal login_successful(player_name: String)
 
@@ -28,6 +29,7 @@ func _ready() -> void:
 
 	btn_login.pressed.connect(_on_login_pressed)
 	line_edit_name.text_submitted.connect(_on_text_submitted)
+	line_edit_name.max_length = MAX_PLAYER_NAME_LENGTH
 	
 	line_edit_name.grab_focus() # 启动后自动获取焦点
 
@@ -55,7 +57,7 @@ func _on_text_submitted(_new_text: String) -> void:
 	_submit_login()
 
 func _submit_login() -> void:
-	var pname = line_edit_name.text.strip_edges()
+	var pname = line_edit_name.text.strip_edges().substr(0, MAX_PLAYER_NAME_LENGTH)
 	if pname.is_empty():
 		pname = "GUEST_" + str(randi_range(1000, 9999))
 	

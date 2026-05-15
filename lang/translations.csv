@@ -41,6 +41,25 @@ TXT_LOBBY_TITLE,游戏大厅,GAME LOBBY,ゲームロビー
 TXT_LOBBY_FETCHING_ROOMS,正在获取房间列表...,Fetching room list...,ルーム一覧を取得中...
 TXT_REFRESH_LIST,刷新列表,REFRESH LIST,一覧を更新
 TXT_CREATE_ROOM,创建房间,CREATE ROOM,ルーム作成
+TXT_CREATE_1V1_ROOM,创建1v1房间,CREATE 1v1 ROOM,1v1ルーム作成
+TXT_CREATE_TETRIS33_ROOM,创建tetris33房间,CREATE tetris33 ROOM,tetris33ルーム作成
+TXT_START_TETRIS33,开始tetris33,START tetris33,tetris33開始
+TXT_CLOSE_ROOM,解散房间,CLOSE ROOM,ルーム解散
+TXT_LEAVE_ROOM,离开房间,LEAVE ROOM,ルーム退出
+TXT_CLOSING_ROOM,正在解散房间...,Closing room...,ルーム解散中...
+TXT_LEAVING_ROOM,正在离开房间...,Leaving room...,ルーム退出中...
+TXT_ROOM_CLOSED,房间已解散，已回到大厅等待状态,Room closed. Back in lobby.,ルームが解散されました。ロビーに戻りました。
+TXT_ROOM_CLOSED_OWNER_LEFT,房主离开，房间已解散，已回到大厅等待状态,Host left. Room closed. Back in lobby.,ホストが退出したためルームが解散されました。ロビーに戻りました。
+TXT_ROOM_LEFT,已离开房间,Left room,ルームから退出しました
+TXT_ALREADY_IN_ROOM,你已经在房间中，不能创建或加入其他房间,You are already in a room.,すでにルーム内にいるため作成や参加はできません
+TXT_TETRIS33_ROOM_INFO,tetris33房间：%d/%d，至少%d人可开始,tetris33 room %d/%d minimum %d to start,tetris33ルーム %d/%d 最低%d人で開始
+TXT_TETRIS33_STARTING_REQUEST,正在开始tetris33...,Starting tetris33...,tetris33開始中...
+TXT_TETRIS33_STARTING,tetris33即将开始...,tetris33 starting...,tetris33開始します...
+TXT_TETRIS33_REMATCH_READY,比赛结束，等待重开确认,Match finished. Vote for rematch.,試合終了。再戦確認待ち
+TXT_TETRIS33_REMATCH_WAITING,重开确认：%d/%d,Rematch votes: %d/%d,再戦確認：%d/%d
+TXT_TETRIS33_REMATCH_DECLINED,有人返回大厅，不能重开,A player left. Rematch disabled.,退出者あり。再戦不可
+TXT_YOU_ARE_HOST,你是房主,You are host.,あなたがホストです
+TXT_WAITING_HOST,等待房主开始,Waiting for host.,ホストの開始を待っています
 TXT_DISCONNECT_BACK,断开并返回,DISCONNECT AND BACK,切断して戻る
 TXT_NO_ROOMS,当前没有房间，点击刷新或创建新房间,No rooms. Refresh or create a new room.,ルームがありません。更新または新規作成してください。
 TXT_FOUND_ROOMS,找到 %d 个房间,Found %d rooms,ルームが %d 件見つかりました
@@ -61,6 +80,9 @@ TXT_CLICK_BACK_LOBBY,点击返回大厅,Click to return lobby,クリックして
 TXT_VICTORY,胜利！,Victory!,勝利！
 TXT_OPPONENT_LEFT_TITLE,对手离开了,Opponent left,対戦相手が退出しました
 TXT_REMATCH,再来一局,REMATCH,再戦
+TXT_REMATCH_READY,已选择,READY,準備完了
+TXT_REMATCH_WAITING,等待中,WAITING,待機中
+TXT_REMATCH_DECLINED,已离开,LEFT,退出
 TXT_YOU,你,You,あなた
 TXT_PLAYER_STATS,玩家数据,PLAYER STATS,プレイヤーデータ
 TXT_STATS_BUTTON,数据,DATA,データ
@@ -180,4 +202,4 @@ TXT_AI_ANALYZING,AI 分析中...,AI ANALYZING...,AI分析中...
 TXT_AI_ANALYSIS_WAIT,分析耗时可能较长，请稍候,This can take a while. Please wait.,分析に時間がかかる場合があります。お待ちください
 TXT_AI_ANALYSIS_PROGRESS,正在生成分析文件 %d / %d,Generating analysis %d / %d,分析ファイル生成中 %d / %d
 TXT_AI_ANALYSIS_FAILED,AI 分析失败,AI analysis failed,AI分析に失敗
-TXT_STEP_FORMAT,步数 %d / %d,Step %d / %d,ステップ %d / %d
+TXT_STEP_FORMAT,Step %d / %d,Step %d / %d,Step %d / %d

@@ -1,12 +1,12 @@
-[gd_scene load_steps=12 format=3 uid="uid://b33tetrisbattle"]
+[gd_scene format=3 uid="uid://dd7f5de8i7pba"]
 
-[ext_resource type="Script" path="res://scripts/game/tetris33_game.gd" id="1_game"]
-[ext_resource type="Texture2D" path="res://assets/images/bg_tetris33_pixel.png" id="2_bg"]
+[ext_resource type="Script" uid="uid://bowvy2pwci2dk" path="res://scripts/game/tetris33_game.gd" id="1_game"]
+[ext_resource type="Texture2D" uid="uid://blklfy5f4gjum" path="res://assets/images/bg_tetris33_pixel.png" id="2_bg"]
 [ext_resource type="PackedScene" path="res://scenes/core/board.tscn" id="3_board"]
 [ext_resource type="PackedScene" path="res://scenes/core/piece.tscn" id="4_piece"]
 [ext_resource type="PackedScene" path="res://scenes/ui/garbage_bar.tscn" id="5_gbar"]
 [ext_resource type="PackedScene" path="res://scenes/ui/tetris33_opponent_panel.tscn" id="6_opp"]
-[ext_resource type="Script" path="res://scripts/core/structure_evaluator_node.gd" id="7_eval"]
+[ext_resource type="Script" uid="uid://coo3rsgbl1jgw" path="res://scripts/core/structure_evaluator_node.gd" id="7_eval"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_glass"]
 bg_color = Color(0.026, 0.034, 0.05, 0.84)
@@ -21,48 +21,62 @@ corner_radius_bottom_right = 6
 corner_radius_bottom_left = 6
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_gold"]
-bg_color = Color(0.96, 0.63, 0.20, 0.95)
-corner_radius_top_left = 4
-corner_radius_top_right = 4
-corner_radius_bottom_right = 4
-corner_radius_bottom_left = 4
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_overlay"]
-bg_color = Color(0.02, 0.024, 0.034, 0.92)
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
-border_color = Color(0.96, 0.68, 0.22, 0.9)
+bg_color = Color(0.91, 0.69, 0.32, 0.96)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(1, 0.86, 0.36, 0.65)
 corner_radius_top_left = 8
 corner_radius_top_right = 8
 corner_radius_bottom_right = 8
 corner_radius_bottom_left = 8
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_overlay"]
+bg_color = Color(0.032, 0.044, 0.055, 0.94)
+border_width_left = 2
+border_width_top = 2
+border_width_right = 2
+border_width_bottom = 2
+border_color = Color(0.44, 0.82, 0.9, 0.72)
+corner_radius_top_left = 8
+corner_radius_top_right = 8
+corner_radius_bottom_right = 8
+corner_radius_bottom_left = 8
+shadow_color = Color(0, 0, 0, 0.32)
+shadow_size = 14
+
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_button"]
-bg_color = Color(0.12, 0.42, 0.48, 1)
+bg_color = Color(0.14, 0.5, 0.56, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.35, 0.88, 0.92, 0.35)
 corner_radius_top_left = 6
 corner_radius_top_right = 6
 corner_radius_bottom_right = 6
 corner_radius_bottom_left = 6
 
-[node name="Tetris33Game" type="Node2D"]
+[node name="Tetris33Game" type="Node2D" unique_id=895119185]
 script = ExtResource("1_game")
 
-[node name="CustomBackground" type="TextureRect" parent="."]
+[node name="CustomBackground" type="TextureRect" parent="." unique_id=1666394725]
 offset_right = 1280.0
 offset_bottom = 720.0
 texture = ExtResource("2_bg")
 expand_mode = 1
 stretch_mode = 6
 
-[node name="ReadabilityWash" type="ColorRect" parent="."]
+[node name="ReadabilityWash" type="ColorRect" parent="." unique_id=454462027]
 offset_right = 1280.0
 offset_bottom = 720.0
 mouse_filter = 2
 color = Color(0.78, 0.92, 1, 0.08)
 
-[node name="OpponentLeft" type="Control" parent="."]
+[node name="OpponentLeft" type="Control" parent="." unique_id=312432104]
+layout_mode = 3
+anchors_preset = 0
 offset_left = 16.0
 offset_top = 28.0
 offset_right = 392.0
@@ -70,122 +84,124 @@ offset_bottom = 692.0
 
 [node name="OpponentLeftGrid" type="Control" parent="OpponentLeft" unique_id=1454481630]
 unique_name_in_owner = true
+anchors_preset = 0
 offset_right = 376.0
 offset_bottom = 664.0
 
-[node name="OpponentL00" parent="OpponentLeft/OpponentLeftGrid" instance=ExtResource("6_opp")]
-offset_left = 0.0
-offset_top = 0.0
-offset_right = 84.0
-offset_bottom = 156.0
-opponent_index = 0
+[node name="OpponentL00" parent="OpponentLeft/OpponentLeftGrid" unique_id=1202257777 instance=ExtResource("6_opp")]
+anchors_preset = 0
 
-[node name="OpponentL01" parent="OpponentLeft/OpponentLeftGrid" instance=ExtResource("6_opp")]
+[node name="OpponentL01" parent="OpponentLeft/OpponentLeftGrid" unique_id=152533999 instance=ExtResource("6_opp")]
+anchors_preset = 0
 offset_left = 94.0
-offset_top = 0.0
 offset_right = 178.0
-offset_bottom = 156.0
 opponent_index = 1
 
-[node name="OpponentL02" parent="OpponentLeft/OpponentLeftGrid" instance=ExtResource("6_opp")]
+[node name="OpponentL02" parent="OpponentLeft/OpponentLeftGrid" unique_id=1523935961 instance=ExtResource("6_opp")]
+anchors_preset = 0
 offset_left = 188.0
-offset_top = 0.0
 offset_right = 272.0
-offset_bottom = 156.0
 opponent_index = 2
 
-[node name="OpponentL03" parent="OpponentLeft/OpponentLeftGrid" instance=ExtResource("6_opp")]
+[node name="OpponentL03" parent="OpponentLeft/OpponentLeftGrid" unique_id=1769307797 instance=ExtResource("6_opp")]
+anchors_preset = 0
 offset_left = 282.0
-offset_top = 0.0
 offset_right = 366.0
-offset_bottom = 156.0
 opponent_index = 3
 
-[node name="OpponentL04" parent="OpponentLeft/OpponentLeftGrid" instance=ExtResource("6_opp")]
-offset_left = 0.0
+[node name="OpponentL04" parent="OpponentLeft/OpponentLeftGrid" unique_id=456191746 instance=ExtResource("6_opp")]
+anchors_preset = 0
 offset_top = 166.0
-offset_right = 84.0
 offset_bottom = 322.0
 opponent_index = 4
 
-[node name="OpponentL05" parent="OpponentLeft/OpponentLeftGrid" instance=ExtResource("6_opp")]
+[node name="OpponentL05" parent="OpponentLeft/OpponentLeftGrid" unique_id=500293297 instance=ExtResource("6_opp")]
+anchors_preset = 0
 offset_left = 94.0
 offset_top = 166.0
 offset_right = 178.0
 offset_bottom = 322.0
 opponent_index = 5
 
-[node name="OpponentL06" parent="OpponentLeft/OpponentLeftGrid" instance=ExtResource("6_opp")]
+[node name="OpponentL06" parent="OpponentLeft/OpponentLeftGrid" unique_id=1697680291 instance=ExtResource("6_opp")]
+anchors_preset = 0
 offset_left = 188.0
 offset_top = 166.0
 offset_right = 272.0
 offset_bottom = 322.0
 opponent_index = 6
 
-[node name="OpponentL07" parent="OpponentLeft/OpponentLeftGrid" instance=ExtResource("6_opp")]
+[node name="OpponentL07" parent="OpponentLeft/OpponentLeftGrid" unique_id=1596473049 instance=ExtResource("6_opp")]
+anchors_preset = 0
 offset_left = 282.0
 offset_top = 166.0
 offset_right = 366.0
 offset_bottom = 322.0
 opponent_index = 7
 
-[node name="OpponentL08" parent="OpponentLeft/OpponentLeftGrid" instance=ExtResource("6_opp")]
-offset_left = 0.0
+[node name="OpponentL08" parent="OpponentLeft/OpponentLeftGrid" unique_id=1445385535 instance=ExtResource("6_opp")]
+anchors_preset = 0
 offset_top = 332.0
-offset_right = 84.0
 offset_bottom = 488.0
 opponent_index = 8
 
-[node name="OpponentL09" parent="OpponentLeft/OpponentLeftGrid" instance=ExtResource("6_opp")]
+[node name="OpponentL09" parent="OpponentLeft/OpponentLeftGrid" unique_id=1560281445 instance=ExtResource("6_opp")]
+anchors_preset = 0
 offset_left = 94.0
 offset_top = 332.0
 offset_right = 178.0
 offset_bottom = 488.0
 opponent_index = 9
 
-[node name="OpponentL10" parent="OpponentLeft/OpponentLeftGrid" instance=ExtResource("6_opp")]
+[node name="OpponentL10" parent="OpponentLeft/OpponentLeftGrid" unique_id=1487445153 instance=ExtResource("6_opp")]
+anchors_preset = 0
 offset_left = 188.0
 offset_top = 332.0
 offset_right = 272.0
 offset_bottom = 488.0
 opponent_index = 10
 
-[node name="OpponentL11" parent="OpponentLeft/OpponentLeftGrid" instance=ExtResource("6_opp")]
+[node name="OpponentL11" parent="OpponentLeft/OpponentLeftGrid" unique_id=1425620732 instance=ExtResource("6_opp")]
+anchors_preset = 0
 offset_left = 282.0
 offset_top = 332.0
 offset_right = 366.0
 offset_bottom = 488.0
 opponent_index = 11
 
-[node name="OpponentL12" parent="OpponentLeft/OpponentLeftGrid" instance=ExtResource("6_opp")]
-offset_left = 0.0
+[node name="OpponentL12" parent="OpponentLeft/OpponentLeftGrid" unique_id=1103813887 instance=ExtResource("6_opp")]
+anchors_preset = 0
 offset_top = 498.0
-offset_right = 84.0
 offset_bottom = 654.0
 opponent_index = 12
 
-[node name="OpponentL13" parent="OpponentLeft/OpponentLeftGrid" instance=ExtResource("6_opp")]
+[node name="OpponentL13" parent="OpponentLeft/OpponentLeftGrid" unique_id=728156291 instance=ExtResource("6_opp")]
+anchors_preset = 0
 offset_left = 94.0
 offset_top = 498.0
 offset_right = 178.0
 offset_bottom = 654.0
 opponent_index = 13
 
-[node name="OpponentL14" parent="OpponentLeft/OpponentLeftGrid" instance=ExtResource("6_opp")]
+[node name="OpponentL14" parent="OpponentLeft/OpponentLeftGrid" unique_id=1945990240 instance=ExtResource("6_opp")]
+anchors_preset = 0
 offset_left = 188.0
 offset_top = 498.0
 offset_right = 272.0
 offset_bottom = 654.0
 opponent_index = 14
 
-[node name="OpponentL15" parent="OpponentLeft/OpponentLeftGrid" instance=ExtResource("6_opp")]
+[node name="OpponentL15" parent="OpponentLeft/OpponentLeftGrid" unique_id=436498958 instance=ExtResource("6_opp")]
+anchors_preset = 0
 offset_left = 282.0
 offset_top = 498.0
 offset_right = 366.0
 offset_bottom = 654.0
 opponent_index = 15
 
-[node name="OpponentRight" type="Control" parent="."]
+[node name="OpponentRight" type="Control" parent="." unique_id=757453304]
+layout_mode = 3
+anchors_preset = 0
 offset_left = 888.0
 offset_top = 28.0
 offset_right = 1264.0
@@ -193,182 +209,202 @@ offset_bottom = 692.0
 
 [node name="OpponentRightGrid" type="Control" parent="OpponentRight" unique_id=2036889132]
 unique_name_in_owner = true
+anchors_preset = 0
 offset_right = 376.0
 offset_bottom = 664.0
 
-[node name="OpponentR00" parent="OpponentRight/OpponentRightGrid" instance=ExtResource("6_opp")]
-offset_left = 0.0
-offset_top = 0.0
-offset_right = 84.0
-offset_bottom = 156.0
+[node name="OpponentR00" parent="OpponentRight/OpponentRightGrid" unique_id=802941539 instance=ExtResource("6_opp")]
+anchors_preset = 0
 opponent_index = 16
 
-[node name="OpponentR01" parent="OpponentRight/OpponentRightGrid" instance=ExtResource("6_opp")]
+[node name="OpponentR01" parent="OpponentRight/OpponentRightGrid" unique_id=1916427919 instance=ExtResource("6_opp")]
+anchors_preset = 0
 offset_left = 94.0
-offset_top = 0.0
 offset_right = 178.0
-offset_bottom = 156.0
 opponent_index = 17
 
-[node name="OpponentR02" parent="OpponentRight/OpponentRightGrid" instance=ExtResource("6_opp")]
+[node name="OpponentR02" parent="OpponentRight/OpponentRightGrid" unique_id=2047560147 instance=ExtResource("6_opp")]
+anchors_preset = 0
 offset_left = 188.0
-offset_top = 0.0
 offset_right = 272.0
-offset_bottom = 156.0
 opponent_index = 18
 
-[node name="OpponentR03" parent="OpponentRight/OpponentRightGrid" instance=ExtResource("6_opp")]
+[node name="OpponentR03" parent="OpponentRight/OpponentRightGrid" unique_id=820554106 instance=ExtResource("6_opp")]
+anchors_preset = 0
 offset_left = 282.0
-offset_top = 0.0
 offset_right = 366.0
-offset_bottom = 156.0
 opponent_index = 19
 
-[node name="OpponentR04" parent="OpponentRight/OpponentRightGrid" instance=ExtResource("6_opp")]
-offset_left = 0.0
+[node name="OpponentR04" parent="OpponentRight/OpponentRightGrid" unique_id=1332005140 instance=ExtResource("6_opp")]
+anchors_preset = 0
 offset_top = 166.0
-offset_right = 84.0
 offset_bottom = 322.0
 opponent_index = 20
 
-[node name="OpponentR05" parent="OpponentRight/OpponentRightGrid" instance=ExtResource("6_opp")]
+[node name="OpponentR05" parent="OpponentRight/OpponentRightGrid" unique_id=385958143 instance=ExtResource("6_opp")]
+anchors_preset = 0
 offset_left = 94.0
 offset_top = 166.0
 offset_right = 178.0
 offset_bottom = 322.0
 opponent_index = 21
 
-[node name="OpponentR06" parent="OpponentRight/OpponentRightGrid" instance=ExtResource("6_opp")]
+[node name="OpponentR06" parent="OpponentRight/OpponentRightGrid" unique_id=1409591332 instance=ExtResource("6_opp")]
+anchors_preset = 0
 offset_left = 188.0
 offset_top = 166.0
 offset_right = 272.0
 offset_bottom = 322.0
 opponent_index = 22
 
-[node name="OpponentR07" parent="OpponentRight/OpponentRightGrid" instance=ExtResource("6_opp")]
+[node name="OpponentR07" parent="OpponentRight/OpponentRightGrid" unique_id=738573511 instance=ExtResource("6_opp")]
+anchors_preset = 0
 offset_left = 282.0
 offset_top = 166.0
 offset_right = 366.0
 offset_bottom = 322.0
 opponent_index = 23
 
-[node name="OpponentR08" parent="OpponentRight/OpponentRightGrid" instance=ExtResource("6_opp")]
-offset_left = 0.0
+[node name="OpponentR08" parent="OpponentRight/OpponentRightGrid" unique_id=1747881751 instance=ExtResource("6_opp")]
+anchors_preset = 0
 offset_top = 332.0
-offset_right = 84.0
 offset_bottom = 488.0
 opponent_index = 24
 
-[node name="OpponentR09" parent="OpponentRight/OpponentRightGrid" instance=ExtResource("6_opp")]
+[node name="OpponentR09" parent="OpponentRight/OpponentRightGrid" unique_id=909279604 instance=ExtResource("6_opp")]
+anchors_preset = 0
 offset_left = 94.0
 offset_top = 332.0
 offset_right = 178.0
 offset_bottom = 488.0
 opponent_index = 25
 
-[node name="OpponentR10" parent="OpponentRight/OpponentRightGrid" instance=ExtResource("6_opp")]
+[node name="OpponentR10" parent="OpponentRight/OpponentRightGrid" unique_id=911438455 instance=ExtResource("6_opp")]
+anchors_preset = 0
 offset_left = 188.0
 offset_top = 332.0
 offset_right = 272.0
 offset_bottom = 488.0
 opponent_index = 26
 
-[node name="OpponentR11" parent="OpponentRight/OpponentRightGrid" instance=ExtResource("6_opp")]
+[node name="OpponentR11" parent="OpponentRight/OpponentRightGrid" unique_id=678614739 instance=ExtResource("6_opp")]
+anchors_preset = 0
 offset_left = 282.0
 offset_top = 332.0
 offset_right = 366.0
 offset_bottom = 488.0
 opponent_index = 27
 
-[node name="OpponentR12" parent="OpponentRight/OpponentRightGrid" instance=ExtResource("6_opp")]
-offset_left = 0.0
+[node name="OpponentR12" parent="OpponentRight/OpponentRightGrid" unique_id=179357762 instance=ExtResource("6_opp")]
+anchors_preset = 0
 offset_top = 498.0
-offset_right = 84.0
 offset_bottom = 654.0
 opponent_index = 28
 
-[node name="OpponentR13" parent="OpponentRight/OpponentRightGrid" instance=ExtResource("6_opp")]
+[node name="OpponentR13" parent="OpponentRight/OpponentRightGrid" unique_id=55198755 instance=ExtResource("6_opp")]
+anchors_preset = 0
 offset_left = 94.0
 offset_top = 498.0
 offset_right = 178.0
 offset_bottom = 654.0
 opponent_index = 29
 
-[node name="OpponentR14" parent="OpponentRight/OpponentRightGrid" instance=ExtResource("6_opp")]
+[node name="OpponentR14" parent="OpponentRight/OpponentRightGrid" unique_id=656550835 instance=ExtResource("6_opp")]
+anchors_preset = 0
 offset_left = 188.0
 offset_top = 498.0
 offset_right = 272.0
 offset_bottom = 654.0
 opponent_index = 30
 
-[node name="OpponentR15" parent="OpponentRight/OpponentRightGrid" instance=ExtResource("6_opp")]
+[node name="OpponentR15" parent="OpponentRight/OpponentRightGrid" unique_id=1424805747 instance=ExtResource("6_opp")]
+anchors_preset = 0
 offset_left = 282.0
 offset_top = 498.0
 offset_right = 366.0
 offset_bottom = 654.0
 opponent_index = 31
 
-[node name="PlayerFocus" type="Node2D" parent="."]
-position = Vector2(505, 28)
+[node name="PlayerFocus" type="Node2D" parent="." unique_id=1387311361]
+position = Vector2(493, 20)
 
-[node name="PlayerHeader" type="Panel" parent="PlayerFocus"]
-offset_right = 300.0
-offset_bottom = 42.0
+[node name="PlayerHeader" type="Panel" parent="PlayerFocus" unique_id=1733440486]
+offset_right = 336.0
+offset_bottom = 46.0
 theme_override_styles/panel = SubResource("StyleBoxFlat_glass")
 
 [node name="StatusLabel" type="Label" parent="PlayerFocus/PlayerHeader" unique_id=111394456]
 unique_name_in_owner = true
+layout_mode = 0
 offset_left = 12.0
-offset_top = 4.0
-offset_right = 176.0
-offset_bottom = 38.0
+offset_top = 5.0
+offset_right = 186.0
+offset_bottom = 41.0
 theme_override_colors/font_color = Color(1, 0.78, 0.22, 1)
-theme_override_font_sizes/font_size = 22
+theme_override_font_sizes/font_size = 24
 text = "TETRIS33"
 vertical_alignment = 1
 
-[node name="RankChip" type="Panel" parent="PlayerFocus/PlayerHeader"]
-offset_left = 204.0
+[node name="RankChip" type="Panel" parent="PlayerFocus/PlayerHeader" unique_id=745028215]
+layout_mode = 0
+offset_left = 196.0
 offset_top = 7.0
-offset_right = 288.0
-offset_bottom = 35.0
+offset_right = 324.0
+offset_bottom = 39.0
 theme_override_styles/panel = SubResource("StyleBoxFlat_gold")
 
 [node name="RankLabel" type="Label" parent="PlayerFocus/PlayerHeader/RankChip" unique_id=1735768091]
 unique_name_in_owner = true
-anchors_preset = 15
+layout_mode = 0
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 theme_override_colors/font_color = Color(0.04, 0.03, 0.02, 1)
-theme_override_font_sizes/font_size = 12
-text = "RANK\n#33"
+theme_override_font_sizes/font_size = 14
+text = "LEFT 33/33"
 horizontal_alignment = 1
 vertical_alignment = 1
 
 [node name="Board" parent="PlayerFocus" unique_id=1942312580 instance=ExtResource("3_board")]
 unique_name_in_owner = true
 position = Vector2(0, 52)
-cell_size = 27.0
+cell_size = 29.0
 
 [node name="CurrentPiece" parent="PlayerFocus/Board" unique_id=237738877 instance=ExtResource("4_piece")]
 unique_name_in_owner = true
-cell_size = 27.0
+cell_size = 29.0
 
 [node name="GhostPiece" parent="PlayerFocus/Board" unique_id=765790715 instance=ExtResource("4_piece")]
 unique_name_in_owner = true
-cell_size = 27.0
+cell_size = 29.0
 
-[node name="HoldPanel" type="Panel" parent="."]
-offset_left = 398.0
+[node name="LocalKONameLabel" type="Label" parent="PlayerFocus" unique_id=673284916]
+unique_name_in_owner = true
+visible = false
+offset_left = -7.0
+offset_top = 258.0
+offset_right = 297.0
+offset_bottom = 384.0
+theme_override_colors/font_color = Color(0.9, 0.97, 1, 0.95)
+theme_override_colors/font_outline_color = Color(0.02, 0.03, 0.04, 0.9)
+theme_override_constants/outline_size = 8
+theme_override_font_sizes/font_size = 42
+text = "RANK #33"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="HoldPanel" type="Panel" parent="." unique_id=1446384885]
+offset_left = 382.5
 offset_top = 110.0
-offset_right = 466.0
+offset_right = 456.2
 offset_bottom = 216.0
 theme_override_styles/panel = SubResource("StyleBoxFlat_glass")
+metadata/_edit_group_ = true
 
 [node name="HoldLabel" type="Label" parent="HoldPanel" unique_id=648979021]
 unique_name_in_owner = true
+layout_mode = 0
 offset_left = 8.0
 offset_top = 5.0
 offset_right = 70.0
@@ -380,18 +416,20 @@ text = "HOLD"
 [node name="HoldPiece" parent="HoldPanel" unique_id=1349367057 instance=ExtResource("4_piece")]
 unique_name_in_owner = true
 visible = false
-position = Vector2(35, 62)
-cell_size = 18.0
+position = Vector2(23, 62)
+cell_size = 16.0
 
-[node name="NextPanel" type="Panel" parent="."]
-offset_left = 782.0
+[node name="NextPanel" type="Panel" parent="." unique_id=736782794]
+offset_left = 796.0
 offset_top = 86.0
-offset_right = 872.0
+offset_right = 884.0
 offset_bottom = 508.0
 theme_override_styles/panel = SubResource("StyleBoxFlat_glass")
+metadata/_edit_group_ = true
 
 [node name="NextLabel" type="Label" parent="NextPanel" unique_id=1711742952]
 unique_name_in_owner = true
+layout_mode = 0
 offset_left = 8.0
 offset_top = 5.0
 offset_right = 70.0
@@ -402,32 +440,33 @@ text = "NEXT"
 
 [node name="NextPieces" type="Node2D" parent="NextPanel" unique_id=1970256760]
 unique_name_in_owner = true
-position = Vector2(38, 58)
+position = Vector2(28, 56)
+metadata/_edit_group_ = true
 
-[node name="Next0" parent="NextPanel/NextPieces" instance=ExtResource("4_piece")]
-cell_size = 18.0
+[node name="Next0" parent="NextPanel/NextPieces" unique_id=1915219592 instance=ExtResource("4_piece")]
+cell_size = 16.0
 
-[node name="Next1" parent="NextPanel/NextPieces" instance=ExtResource("4_piece")]
+[node name="Next1" parent="NextPanel/NextPieces" unique_id=72509048 instance=ExtResource("4_piece")]
 position = Vector2(0, 72)
-cell_size = 18.0
+cell_size = 16.0
 
-[node name="Next2" parent="NextPanel/NextPieces" instance=ExtResource("4_piece")]
+[node name="Next2" parent="NextPanel/NextPieces" unique_id=657381075 instance=ExtResource("4_piece")]
 position = Vector2(0, 144)
-cell_size = 18.0
+cell_size = 16.0
 
-[node name="Next3" parent="NextPanel/NextPieces" instance=ExtResource("4_piece")]
+[node name="Next3" parent="NextPanel/NextPieces" unique_id=425220114 instance=ExtResource("4_piece")]
 position = Vector2(0, 216)
-cell_size = 18.0
+cell_size = 16.0
 
-[node name="Next4" parent="NextPanel/NextPieces" instance=ExtResource("4_piece")]
+[node name="Next4" parent="NextPanel/NextPieces" unique_id=1533972155 instance=ExtResource("4_piece")]
 position = Vector2(0, 288)
-cell_size = 18.0
+cell_size = 16.0
 
 [node name="PlayerGarbageBar" parent="." unique_id=1315742237 instance=ExtResource("5_gbar")]
 unique_name_in_owner = true
 offset_right = 30.0
 
-[node name="StructureEvaluator" type="Node" parent="."]
+[node name="StructureEvaluator" type="Node" parent="." unique_id=1896828509]
 script = ExtResource("7_eval")
 
 [node name="LockDelayTimer" type="Timer" parent="." unique_id=375409371]
@@ -435,23 +474,24 @@ unique_name_in_owner = true
 wait_time = 0.5
 one_shot = true
 
-[node name="BGM" type="AudioStreamPlayer" parent="."]
+[node name="BGM" type="AudioStreamPlayer" parent="." unique_id=928961188]
 volume_db = -10.0
 
-[node name="SfxPlanting" type="AudioStreamPlayer" parent="."]
+[node name="SfxPlanting" type="AudioStreamPlayer" parent="." unique_id=1364785818]
 
-[node name="SfxLineClear" type="AudioStreamPlayer" parent="."]
+[node name="SfxLineClear" type="AudioStreamPlayer" parent="." unique_id=2077473119]
 
-[node name="SfxSuccess" type="AudioStreamPlayer" parent="."]
+[node name="SfxSuccess" type="AudioStreamPlayer" parent="." unique_id=1894439260]
 
-[node name="SfxSpin" type="AudioStreamPlayer" parent="."]
+[node name="SfxSpin" type="AudioStreamPlayer" parent="." unique_id=1333185412]
 
-[node name="SfxDeath" type="AudioStreamPlayer" parent="."]
+[node name="SfxDeath" type="AudioStreamPlayer" parent="." unique_id=145927204]
 
-[node name="HUD" type="CanvasLayer" parent="."]
+[node name="HUD" type="CanvasLayer" parent="." unique_id=606676061]
 layer = 20
 
-[node name="StatsPanel" type="Panel" parent="HUD"]
+[node name="StatsPanel" type="Panel" parent="HUD" unique_id=1244431591]
+visible = false
 offset_left = 398.0
 offset_top = 634.0
 offset_right = 872.0
@@ -460,42 +500,49 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_glass")
 
 [node name="ScoreLabel" type="Label" parent="HUD/StatsPanel" unique_id=900447102]
 unique_name_in_owner = true
+layout_mode = 0
 offset_left = 16.0
 offset_top = 8.0
 offset_right = 122.0
 offset_bottom = 50.0
 theme_override_colors/font_color = Color(0.84, 0.94, 1, 1)
 theme_override_font_sizes/font_size = 20
-text = "SCORE\n0"
+text = "SCORE
+0"
 horizontal_alignment = 1
 vertical_alignment = 1
 
 [node name="LinesLabel" type="Label" parent="HUD/StatsPanel" unique_id=1038373193]
 unique_name_in_owner = true
+layout_mode = 0
 offset_left = 132.0
 offset_top = 8.0
 offset_right = 238.0
 offset_bottom = 50.0
 theme_override_colors/font_color = Color(0.84, 0.94, 1, 1)
 theme_override_font_sizes/font_size = 20
-text = "LINES\n0"
+text = "LINES
+0"
 horizontal_alignment = 1
 vertical_alignment = 1
 
 [node name="AliveLabel" type="Label" parent="HUD/StatsPanel" unique_id=1041816763]
 unique_name_in_owner = true
+layout_mode = 0
 offset_left = 248.0
 offset_top = 8.0
 offset_right = 354.0
 offset_bottom = 50.0
 theme_override_colors/font_color = Color(1, 0.78, 0.22, 1)
 theme_override_font_sizes/font_size = 20
-text = "ALIVE\n33/33"
+text = "ALIVE
+33/33"
 horizontal_alignment = 1
 vertical_alignment = 1
 
 [node name="TargetLabel" type="Label" parent="HUD/StatsPanel" unique_id=971537515]
 unique_name_in_owner = true
+layout_mode = 0
 offset_left = 362.0
 offset_top = 8.0
 offset_right = 466.0
@@ -508,6 +555,7 @@ vertical_alignment = 1
 
 [node name="AttackLogLabel" type="Label" parent="HUD/StatsPanel" unique_id=1710318193]
 unique_name_in_owner = true
+layout_mode = 0
 offset_left = 6.0
 offset_top = 54.0
 offset_right = 468.0
@@ -553,44 +601,67 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-mouse_filter = 0
-color = Color(0, 0, 0, 0.62)
+color = Color(0, 0, 0, 0.46)
 
-[node name="ResultCard" type="Panel" parent="HUD/ResultOverlay"]
-offset_left = 440.0
-offset_top = 236.0
-offset_right = 840.0
-offset_bottom = 464.0
+[node name="ResultCard" type="Panel" parent="HUD/ResultOverlay" unique_id=1493041532]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 328.0
+offset_top = 154.0
+offset_right = 952.0
+offset_bottom = 574.0
 theme_override_styles/panel = SubResource("StyleBoxFlat_overlay")
 
 [node name="ResultLabel" type="Label" parent="HUD/ResultOverlay/ResultCard" unique_id=1860945853]
 unique_name_in_owner = true
-offset_left = 28.0
-offset_top = 28.0
-offset_right = 372.0
-offset_bottom = 96.0
-theme_override_colors/font_color = Color(1, 0.78, 0.22, 1)
-theme_override_font_sizes/font_size = 34
+layout_mode = 0
+offset_left = 36.0
+offset_top = 24.0
+offset_right = 588.0
+offset_bottom = 118.0
+theme_override_colors/font_color = Color(0.9, 0.98, 1, 1)
+theme_override_colors/font_outline_color = Color(0.02, 0.024, 0.034, 1)
+theme_override_constants/line_spacing = 6
+theme_override_constants/outline_size = 2
+theme_override_font_sizes/font_size = 24
 text = "VICTORY  #1"
 horizontal_alignment = 1
 vertical_alignment = 1
+autowrap_mode = 3
+
+[node name="VoteScroll" type="ScrollContainer" parent="HUD/ResultOverlay/ResultCard" unique_id=341906619]
+layout_mode = 0
+offset_left = 52.0
+offset_top = 136.0
+offset_right = 572.0
+offset_bottom = 304.0
+
+[node name="VoteList" type="VBoxContainer" parent="HUD/ResultOverlay/ResultCard/VoteScroll" unique_id=1337437988]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 6
 
 [node name="RestartButton" type="Button" parent="HUD/ResultOverlay/ResultCard" unique_id=610544482]
 unique_name_in_owner = true
-offset_left = 72.0
-offset_top = 122.0
-offset_right = 328.0
-offset_bottom = 170.0
-theme_override_font_sizes/font_size = 18
+layout_mode = 0
+offset_left = 76.0
+offset_top = 332.0
+offset_right = 298.0
+offset_bottom = 382.0
+theme_override_colors/font_color = Color(0.9, 0.98, 1, 1)
+theme_override_font_sizes/font_size = 16
 theme_override_styles/normal = SubResource("StyleBoxFlat_button")
 text = "RESTART"
 
 [node name="LobbyButton" type="Button" parent="HUD/ResultOverlay/ResultCard" unique_id=1769167221]
 unique_name_in_owner = true
-offset_left = 72.0
-offset_top = 176.0
-offset_right = 328.0
-offset_bottom = 224.0
-theme_override_font_sizes/font_size = 18
+layout_mode = 0
+offset_left = 326.0
+offset_top = 332.0
+offset_right = 548.0
+offset_bottom = 382.0
+theme_override_colors/font_color = Color(0.9, 0.98, 1, 1)
+theme_override_font_sizes/font_size = 16
 theme_override_styles/normal = SubResource("StyleBoxFlat_button")
 text = "LOBBY"

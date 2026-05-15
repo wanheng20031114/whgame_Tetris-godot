@@ -21,6 +21,7 @@ var _main_lobby: MainLobby = null
 
 # 缓存玩家名，避免在切换过程中多次访问 AutoLoad
 var _cached_player_name: String = ""
+const MAX_PLAYER_NAME_LENGTH := 12
 
 
 func _ready() -> void:
@@ -39,13 +40,13 @@ func _read_cached_player_name() -> String:
 	var state := get_node_or_null("/root/GameState")
 	if state == null:
 		return ""
-	return String(state.player_name).strip_edges()
+	return String(state.player_name).strip_edges().substr(0, MAX_PLAYER_NAME_LENGTH)
 
 
 func _save_cached_player_name(player_name: String) -> void:
 	var state := get_node_or_null("/root/GameState")
 	if state != null:
-		state.player_name = player_name
+		state.player_name = player_name.strip_edges().substr(0, MAX_PLAYER_NAME_LENGTH)
 
 
 func _clear_active_screen() -> void:
@@ -121,7 +122,7 @@ func _show_lobby(player_name: String) -> void:
 
 
 func _on_login_successful(player_name: String) -> void:
-	_cached_player_name = player_name.strip_edges()
+	_cached_player_name = player_name.strip_edges().substr(0, MAX_PLAYER_NAME_LENGTH)
 	_save_cached_player_name(_cached_player_name)
 	_show_lobby(_cached_player_name)
 

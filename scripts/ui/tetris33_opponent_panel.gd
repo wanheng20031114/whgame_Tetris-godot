@@ -6,8 +6,8 @@ extends Control
 
 @onready var frame: Panel = %Frame
 @onready var name_label: Label = %NameLabel
-@onready var badge_label: Label = %BadgeLabel
-@onready var metric_label: Label = %MetricLabel
+@onready var badge_label: Label = get_node_or_null("%BadgeLabel")
+@onready var metric_label: Label = get_node_or_null("%MetricLabel")
 @onready var preview_board: Board = %PreviewBoard
 @onready var target_marker: ColorRect = %TargetMarker
 @onready var ko_label: Label = %KOLabel
@@ -23,6 +23,10 @@ func _ready() -> void:
 		target_marker.visible = false
 	if ko_label:
 		ko_label.visible = false
+	if badge_label:
+		badge_label.get_parent().visible = false
+	if metric_label:
+		metric_label.visible = false
 	_refresh_static_labels()
 
 
@@ -48,17 +52,8 @@ func update_from_sample(sample: Dictionary) -> void:
 	if sample.has("eliminated"):
 		set_eliminated(bool(sample["eliminated"]))
 
-	var structure := float(sample.get("structure_score", 0.0))
-	var stability := float(sample.get("stability_score", 0.0))
-	var pending := int(sample.get("pending_garbage", 0))
-	var rank := int(sample.get("rank", opponent_index + 2))
-
 	if name_label:
 		name_label.text = player_name if not player_name.strip_edges().is_empty() else "P%02d" % (opponent_index + 2)
-	if badge_label:
-		badge_label.text = "#%02d" % rank
-	if metric_label:
-		metric_label.text = "S %.0f  G %d" % [structure * 0.5 + stability * 0.5, pending]
 
 	var board_data: Array = sample.get("visible_board", [])
 	if preview_board and not board_data.is_empty():

@@ -38,6 +38,11 @@ var _cards: Array[PanelContainer] = []
 
 
 func _ready() -> void:
+	if lbl_player_name:
+		lbl_player_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+		lbl_player_name.clip_text = true
+		lbl_player_name.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+
 	# 绑定点击输入
 	card_marathon.gui_input.connect(_on_card_input.bind(card_marathon, "marathon"))
 	card_multiplayer.gui_input.connect(_on_card_input.bind(card_multiplayer, "multiplayer"))

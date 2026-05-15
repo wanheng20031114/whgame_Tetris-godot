@@ -1,6 +1,6 @@
-[gd_scene format=3 uid="uid://bbnd7txcqw40r"]
+[gd_scene format=3 uid="uid://bw4kfau0u6pvv"]
 
-[ext_resource type="Script" path="res://scripts/ui/tetris33_opponent_panel.gd" id="1_panel"]
+[ext_resource type="Script" uid="uid://b8e77ckmqlti2" path="res://scripts/ui/tetris33_opponent_panel.gd" id="1_panel"]
 [ext_resource type="PackedScene" path="res://scenes/core/board.tscn" id="2_board"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_frame"]
@@ -29,15 +29,17 @@ corner_radius_top_right = 3
 corner_radius_bottom_right = 3
 corner_radius_bottom_left = 3
 
-[node name="Tetris33OpponentPanel" type="Control"]
+[node name="Tetris33OpponentPanel" type="Control" unique_id=2105227370]
 custom_minimum_size = Vector2(84, 156)
+layout_mode = 3
+anchors_preset = 0
 offset_right = 84.0
 offset_bottom = 156.0
 script = ExtResource("1_panel")
 
 [node name="Frame" type="Panel" parent="." unique_id=73201285]
 unique_name_in_owner = true
-anchors_preset = 15
+layout_mode = 0
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
@@ -46,15 +48,19 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_frame")
 
 [node name="TargetMarker" type="ColorRect" parent="Frame" unique_id=221358784]
 unique_name_in_owner = true
+layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+offset_left = 1.0
+offset_right = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-color = Color(1, 0.78, 0.18, 0.22)
+color = Color(0.5176471, 1, 0.93333334, 0.2627451)
 
-[node name="NameBack" type="Panel" parent="Frame"]
+[node name="NameBack" type="Panel" parent="Frame" unique_id=1291829225]
+layout_mode = 0
 offset_left = 4.0
 offset_top = 4.0
 offset_right = 80.0
@@ -63,7 +69,7 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_name")
 
 [node name="NameLabel" type="Label" parent="Frame/NameBack" unique_id=189234376]
 unique_name_in_owner = true
-anchors_preset = 15
+layout_mode = 0
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
@@ -74,7 +80,9 @@ text = "P02"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="BadgeBack" type="Panel" parent="Frame"]
+[node name="BadgeBack" type="Panel" parent="Frame" unique_id=717130467]
+visible = false
+layout_mode = 0
 offset_left = 5.0
 offset_top = 128.0
 offset_right = 34.0
@@ -83,7 +91,7 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_badge")
 
 [node name="BadgeLabel" type="Label" parent="Frame/BadgeBack" unique_id=622467700]
 unique_name_in_owner = true
-anchors_preset = 15
+layout_mode = 0
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
@@ -96,6 +104,8 @@ vertical_alignment = 1
 
 [node name="MetricLabel" type="Label" parent="Frame" unique_id=512051012]
 unique_name_in_owner = true
+visible = false
+layout_mode = 0
 offset_left = 36.0
 offset_top = 127.0
 offset_right = 81.0
@@ -113,7 +123,7 @@ cell_size = 6.0
 
 [node name="KOLabel" type="Label" parent="Frame" unique_id=132882315]
 unique_name_in_owner = true
-anchors_preset = 15
+layout_mode = 0
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
