@@ -9,6 +9,12 @@ signal room_created(id: String)
 signal room_joined(id: String)
 signal game_started(opponent_name: String, seed: int)
 signal opponent_left()
+signal tetris33_lobby_updated(payload: Dictionary)
+signal tetris33_game_started(seed: int, local_slot: int, player_count: int, players: Array)
+signal tetris33_sample_received(payload: Dictionary)
+signal tetris33_attack_received(payload: Dictionary)
+signal tetris33_game_over_received(payload: Dictionary)
+signal tetris33_player_left(payload: Dictionary)
 
 signal board_update_received(data: Array)
 signal attack_received(amount: int)
@@ -25,6 +31,11 @@ var player_name := ""
 var my_id := ""
 var opponent_name := ""
 var match_seed: int = 0
+var current_room_mode: String = "versus"
+var tetris33_players: Array = []
+var tetris33_player_count: int = 0
+var tetris33_local_slot: int = 1
+var tetris33_is_owner: bool = false
 
 func _process(_delta: float) -> void:
 	if socket == null:
@@ -62,6 +73,11 @@ func connect_to_server(ip: String, port: int) -> int:
 	_last_connect_error = ""
 	opponent_name = ""
 	match_seed = 0
+	current_room_mode = "versus"
+	tetris33_players.clear()
+	tetris33_player_count = 0
+	tetris33_local_slot = 1
+	tetris33_is_owner = false
 
 	var url: String = "ws://%s:%d" % [ip, port]
 	print("[Network] Connecting to ", url)
@@ -112,13 +128,42 @@ func _handle_message(json_str: String) -> void:
 		"room_list":
 			room_list_received.emit(payload.rooms)
 		"room_created":
+			current_room_mode = str(payload.get("mode", "versus"))
 			room_created.emit(payload.room_id)
 		"room_joined":
+			current_room_mode = str(payload.get("mode", "versus"))
 			room_joined.emit(payload.room_id)
 		"game_start":
+			current_room_mode = "versus"
 			opponent_name = payload.opponent_name
 			match_seed = int(payload.get("seed", 0))
 			game_started.emit(opponent_name, match_seed)
+		"tetris33_lobby_update":
+			current_room_mode = "tetris33"
+			tetris33_players = payload.get("players", [])
+			tetris33_player_count = int(payload.get("player_count", tetris33_players.size()))
+			for p in tetris33_players:
+				if p is Dictionary and str(p.get("id", "")) == my_id:
+					tetris33_local_slot = int(p.get("slot", tetris33_local_slot))
+					break
+			var owner_slot: int = int(payload.get("owner_slot", 1))
+			tetris33_is_owner = owner_slot == tetris33_local_slot
+			tetris33_lobby_updated.emit(payload)
+		"game_start_tetris33":
+			current_room_mode = "tetris33"
+			match_seed = int(payload.get("seed", 0))
+			tetris33_local_slot = int(payload.get("local_slot", 1))
+			tetris33_player_count = int(payload.get("player_count", 0))
+			tetris33_players = payload.get("players", [])
+			tetris33_game_started.emit(match_seed, tetris33_local_slot, tetris33_player_count, tetris33_players)
+		"tetris33_sample":
+			tetris33_sample_received.emit(payload)
+		"tetris33_attack":
+			tetris33_attack_received.emit(payload)
+		"tetris33_game_over":
+			tetris33_game_over_received.emit(payload)
+		"tetris33_player_left":
+			tetris33_player_left.emit(payload)
 		"opponent_left":
 			opponent_left.emit()
 		"board_update":
@@ -141,10 +186,29 @@ func request_room_list() -> void:
 	send_message("list_rooms", {})
 
 func create_room(room_name: String) -> void:
+	current_room_mode = "versus"
 	send_message("create_room", {"name": room_name})
+
+func create_tetris33_room(room_name: String) -> void:
+	current_room_mode = "tetris33"
+	tetris33_is_owner = true
+	tetris33_local_slot = 1
+	send_message("create_tetris33_room", {"name": room_name})
 
 func join_room(room_id: String) -> void:
 	send_message("join_room", {"room_id": room_id})
+
+func start_tetris33() -> void:
+	send_message("start_tetris33", {})
+
+func send_tetris33_sample(sample: Dictionary) -> void:
+	send_message("tetris33_sample", sample)
+
+func send_tetris33_attack(target_id: String, amount: int) -> void:
+	send_message("tetris33_attack", {"target_id": target_id, "amount": amount})
+
+func send_tetris33_game_over(rank: int) -> void:
+	send_message("tetris33_game_over", {"rank": rank})
 
 func sync_board(grid: Array) -> void:
 	send_message("board_update", {"grid": grid})

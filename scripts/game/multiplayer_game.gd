@@ -49,6 +49,15 @@ var _combo_text_tween: Tween
 var pending_attacks: Array = []
 var ready_garbage: int = 0
 
+var _data_collector: PlayerDataCollector
+var _structure_evaluator: Node
+var _last_lines_cleared_this_lock: int = 0
+var _last_damage_this_lock: int = 0
+var _last_is_spin: bool = false
+var _last_is_t_spin: bool = false
+var _hold_used_this_piece: bool = false
+var _cached_board_after_drop: Array = []
+
 # 受攻击条贴边间距，与单人保持一致。
 const GARBAGE_BAR_GAP: float = 6.0
 const ATTACK_DELAY_SECONDS: float = 12.0
@@ -87,6 +96,7 @@ func _ready() -> void:
 
 	_spawn_next_piece()
 	bgm.play()
+	_start_data_collection()
 
 func _setup_bgm_loop() -> void:
 	if bgm == null:
@@ -349,6 +359,8 @@ func _update_texts() -> void:
 
 func _physics_process(delta: float) -> void:
 	process_logic(delta)
+	if _data_collector and _data_collector.is_active() and not game_over and not paused:
+		_count_key_presses()
 	if not game_over and not paused:
 		_update_multiplayer_garbage(delta)
 
@@ -381,6 +393,7 @@ func _unhandled_input(event: InputEvent) -> void:
 	# 游戏结束后 ESC 等同于返回大厅。
 	if game_over and game_over_panel and game_over_panel.visible:
 		if event.is_action_pressed("ui_cancel"):
+			_save_and_cleanup_data()
 			NetworkManager.decline_rematch()
 			get_tree().change_scene_to_file("res://scenes/ui/multiplayer_lobby.tscn")
 			var vp := get_viewport()
@@ -396,6 +409,11 @@ func _on_local_piece_locked(_type: int, grid_state: Array) -> void:
 	sfx_planting.play()
 
 func _on_local_lines_cleared(amount: int, is_spin: bool, is_t_spin: bool, damage: int) -> void:
+	_last_lines_cleared_this_lock = amount
+	_last_damage_this_lock = damage
+	_last_is_spin = is_spin
+	_last_is_t_spin = is_t_spin
+
 	# 与单人保持一致的音效规则。
 	if is_spin or is_t_spin:
 		if sfx_spin:
@@ -438,7 +456,48 @@ func _lock_piece() -> void:
 	var will_receive_garbage: bool = (ready_garbage > 0)
 	var lines_before_lock: int = scoring.lines
 
-	super._lock_piece()
+	_last_lines_cleared_this_lock = 0
+	_last_damage_this_lock = 0
+	_last_is_spin = false
+	_last_is_t_spin = false
+
+	var locked_piece_type: int = cur_type
+	var locked_rotation: int = cur_rot
+	var locked_col: int = cur_col
+	var locked_row: int = cur_row
+	var next_pieces_at_lock: Array = bag.peek(5)
+
+	lock_timer.stop()
+	board.lock_piece(cur_type, cur_rot, cur_col, cur_row, PieceData.COLORS[cur_type])
+
+	var full_grid_before_clear: Array = board.get_grid_state()
+	_cached_board_after_drop = []
+	for r in range(board.buffer_rows, board.total_rows):
+		if r < full_grid_before_clear.size():
+			_cached_board_after_drop.append(full_grid_before_clear[r])
+
+	var is_spin: bool = false
+	if last_was_rotation and _is_spin_piece_type(cur_type):
+		is_spin = _check_immobile()
+
+	var clear_result: Dictionary = board.clear_lines_with_data()
+	var cleared: int = int(clear_result["cleared"])
+	var cleared_rows_data: Array = clear_result["rows_data"]
+	var dmg: int = 0
+	if cleared > 0:
+		var is_t_spin: bool = (cur_type == PieceData.Type.T and is_spin)
+		scoring.process_line_clear(cleared, is_spin, is_t_spin)
+		dmg = _calculate_damage(cleared, is_spin)
+		lines_cleared.emit(cleared, is_spin, is_t_spin, dmg)
+		rows_cleared.emit(cleared_rows_data)
+	else:
+		scoring.reset_combo()
+
+	score_changed.emit(scoring.score, scoring.level, scoring.lines)
+	piece_locked.emit(cur_type, board.get_grid_state())
+
+	hold_used = false
+	_spawn_next_piece()
 
 	var did_clear_lines: bool = scoring.lines > lines_before_lock
 	if will_receive_garbage and not did_clear_lines and board:
@@ -447,6 +506,19 @@ func _lock_piece() -> void:
 		_refresh_player_garbage_bar()
 		NetworkManager.sync_board(board.get_grid_state())
 
+	_record_piece_snapshot(
+		locked_piece_type,
+		locked_rotation,
+		locked_col,
+		locked_row,
+		next_pieces_at_lock
+	)
+
+func _try_hold() -> void:
+	if not hold_used:
+		_hold_used_this_piece = true
+	super._try_hold()
+
 func _on_local_game_over() -> void:
 	NetworkManager.send_game_over()
 	_set_status_key("TXT_YOU_LOST")
@@ -454,6 +526,7 @@ func _on_local_game_over() -> void:
 		bgm.stop()
 	sfx_death.play()
 	_show_game_over_panel("TXT_GAME_OVER")
+	_save_and_cleanup_data()
 
 
 # ------------------------------------------------------------------------------
@@ -478,6 +551,7 @@ func _on_opponent_game_over() -> void:
 	if bgm:
 		bgm.stop()
 	_show_game_over_panel("TXT_VICTORY")
+	_save_and_cleanup_data()
 
 func _on_opponent_left() -> void:
 	_set_status_key("TXT_OPPONENT_LEFT")
@@ -485,6 +559,7 @@ func _on_opponent_left() -> void:
 	if bgm:
 		bgm.stop()
 	_show_game_over_panel("TXT_OPPONENT_LEFT_TITLE")
+	_save_and_cleanup_data()
 
 ## 双方都确认重开后，服务器会再次发送 game_start，重载当前场景。
 func _on_rematch_game_started(_opp_name: String, _seed: int) -> void:
@@ -511,3 +586,97 @@ func _on_rows_cleared(rows_data: Array) -> void:
 	var effect := LineClearEffect.new()
 	board.add_child(effect)
 	effect.setup(rows_data, board.cell_size, board.buffer_rows)
+
+
+func _start_data_collection() -> void:
+	_data_collector = PlayerDataCollector.new()
+	_structure_evaluator = get_node_or_null("StructureEvaluator")
+
+	var pname: String = NetworkManager.player_name.strip_edges()
+	if pname.is_empty():
+		var state := get_node_or_null("/root/GameState")
+		if state:
+			pname = str(state.player_name).strip_edges()
+
+	_data_collector.start_session(
+		pname if not pname.is_empty() else "Player",
+		"multiplayer_1v1",
+		2,
+		"versus",
+		1
+	)
+
+
+func _count_key_presses() -> void:
+	if _data_collector == null:
+		return
+	for action in ["move_left", "move_right", "soft_drop", "hard_drop", "rotate_cw", "rotate_ccw", "rotate_180", "hold"]:
+		if Input.is_action_just_pressed(action):
+			_data_collector.key_presses_this_piece += 1
+
+
+func _record_piece_snapshot(
+	locked_piece_type: int,
+	locked_rotation: int,
+	locked_col: int,
+	locked_row: int,
+	next_pieces_at_lock: Array
+) -> void:
+	if _data_collector == null or not _data_collector.is_active():
+		return
+	if board == null:
+		return
+
+	var full_grid: Array = board.get_grid_state()
+	var visible_grid: Array = []
+	for r in range(board.buffer_rows, board.total_rows):
+		if r < full_grid.size():
+			visible_grid.append(full_grid[r])
+
+	var scores := _evaluate_structure_scores(visible_grid)
+	_data_collector.record_piece_drop(
+		locked_piece_type,
+		locked_rotation,
+		locked_col,
+		locked_row,
+		visible_grid,
+		next_pieces_at_lock,
+		scoring.score,
+		scoring.level,
+		scoring.lines,
+		scoring.combo,
+		scoring.b2b,
+		_last_is_spin,
+		_last_is_t_spin,
+		_last_lines_cleared_this_lock,
+		_last_damage_this_lock,
+		_hold_used_this_piece,
+		held_type,
+		float(scores.get("structure_score", 0.0)),
+		float(scores.get("stability_score", 0.0)),
+		_cached_board_after_drop,
+		visible_grid
+	)
+	_hold_used_this_piece = false
+
+
+func _save_and_cleanup_data() -> void:
+	if _data_collector == null or not _data_collector.is_active():
+		return
+	_data_collector.end_session(scoring.score, scoring.level, scoring.lines)
+
+
+func _evaluate_structure_scores(board_state_visible: Array) -> Dictionary:
+	if _structure_evaluator == null:
+		return {"structure_score": 0.0, "stability_score": 0.0}
+
+	if _structure_evaluator.has_method("EvaluateBoardScores"):
+		var result = _structure_evaluator.call("EvaluateBoardScores", board_state_visible)
+		if result is Dictionary:
+			return result
+	elif _structure_evaluator.has_method("evaluate_board_scores"):
+		var result2 = _structure_evaluator.call("evaluate_board_scores", board_state_visible)
+		if result2 is Dictionary:
+			return result2
+
+	return {"structure_score": 0.0, "stability_score": 0.0}

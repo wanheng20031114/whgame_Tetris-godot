@@ -30,6 +30,10 @@ const EFFICIENCY_KPP_WEIGHT: float = 0.4
 
 var _active: bool = false
 var _player_name: String = ""
+var _game_mode: String = "marathon"
+var _match_type: String = "solo"
+var _player_count: int = 1
+var _local_player_slot: int = 1
 
 var _session_start_ticks_ms: int = 0
 var _session_start_iso: String = ""
@@ -74,9 +78,19 @@ var _max_b2b: int = 0
 # 2. 初始化核心起始数据，例如游戏局内的运行时间戳、ISO格式标准时间。
 # 3. 将之前局所有遗留的变量、统计值、收集过的快照信息等全部清零与重置。
 # ==========================================
-func start_session(player_name: String) -> void:
+func start_session(
+	player_name: String,
+	game_mode: String = "marathon",
+	player_count: int = 1,
+	match_type: String = "",
+	local_player_slot: int = 1
+) -> void:
 	_active = true
 	_player_name = player_name
+	_game_mode = game_mode
+	_player_count = maxi(player_count, 1)
+	_match_type = match_type if not match_type.strip_edges().is_empty() else game_mode
+	_local_player_slot = maxi(local_player_slot, 1)
 	_session_start_ticks_ms = Time.get_ticks_msec()
 	_session_start_iso = _get_iso_datetime()
 	_last_piece_ticks_ms = _session_start_ticks_ms
@@ -285,6 +299,10 @@ func end_session(final_score: int, final_level: int, final_lines: int) -> Dictio
 
 	var session_data: Dictionary = {
 		"player_name": _player_name,
+		"game_mode": _game_mode,
+		"match_type": _match_type,
+		"player_count": _player_count,
+		"local_player_slot": _local_player_slot,
 		"session_id": _session_start_iso,
 		"start_time": _session_start_iso,
 		"end_time": end_iso,
@@ -321,6 +339,9 @@ func end_session(final_score: int, final_level: int, final_lines: int) -> Dictio
 	var history_entry: Dictionary = {
 		"session_id": _session_start_iso,
 		"date": _session_start_iso.left(10),
+		"game_mode": _game_mode,
+		"match_type": _match_type,
+		"player_count": _player_count,
 		"score": final_score,
 		"lines": final_lines,
 		"level": final_level,

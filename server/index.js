@@ -70,7 +70,14 @@ function handleMessage(ws, data) {
             // 返回可加入的房间列表
             const roomList = Array.from(rooms.values())
                 .filter(r => r.status === 'waiting')
-                .map(r => ({ id: r.id, name: r.name, playerCount: r.players.length }));
+                .map(r => ({
+                    id: r.id,
+                    name: r.name,
+                    mode: r.mode || 'versus',
+                    playerCount: r.players.length,
+                    maxPlayers: r.maxPlayers || 2,
+                    minPlayers: r.minPlayers || 2
+                }));
             send(ws, 'room_list', { rooms: roomList });
             break;
 
@@ -95,8 +102,12 @@ function handleMessage(ws, data) {
             const newRoom = {
                 id: roomId,
                 name: payload.name || `${client.name}'s room`,
+                mode: 'versus',
                 players: [ws],
                 status: 'waiting',
+                maxPlayers: 2,
+                minPlayers: 2,
+                owner: ws,
                 seed: null,
                 rematch: new Map()
             };
@@ -104,6 +115,34 @@ function handleMessage(ws, data) {
             client.room_id = roomId;
             send(ws, 'room_created', { room_id: roomId });
             broadcastRoomList();
+            break;
+
+        case 'create_tetris33_room':
+            const t33Client = clients.get(ws);
+            if (!t33Client) return;
+            if (t33Client.room_id) {
+                send(ws, 'error', { message: 'already_in_room' });
+                return;
+            }
+
+            const t33RoomId = Math.random().toString(36).substr(2, 6).toUpperCase();
+            const t33Room = {
+                id: t33RoomId,
+                name: payload.name || `${t33Client.name}'s Tetris33`,
+                mode: 'tetris33',
+                players: [ws],
+                status: 'waiting',
+                maxPlayers: 33,
+                minPlayers: 3,
+                owner: ws,
+                seed: null,
+                rematch: new Map()
+            };
+            rooms.set(t33RoomId, t33Room);
+            t33Client.room_id = t33RoomId;
+            send(ws, 'room_created', { room_id: t33RoomId, mode: 'tetris33' });
+            broadcastRoomList();
+            broadcastTetris33Lobby(t33Room);
             break;
 
         case 'join_room':
@@ -126,7 +165,7 @@ function handleMessage(ws, data) {
                 return;
             }
 
-            if (targetRoom && targetRoom.players.length < 2) {
+            if (targetRoom && targetRoom.players.length < (targetRoom.maxPlayers || 2)) {
                 if (joinClient.room_id && joinClient.room_id !== payload.room_id) {
                     leaveWaitingRoomIfOwned(joinClient, ws);
                 }
@@ -134,10 +173,15 @@ function handleMessage(ws, data) {
                 targetRoom.players.push(ws);
                 joinClient.room_id = payload.room_id;
 
-                send(ws, 'room_joined', { room_id: payload.room_id });
+                send(ws, 'room_joined', { room_id: payload.room_id, mode: targetRoom.mode || 'versus' });
 
                 // 如果人满了，通知双方游戏开始
-                if (targetRoom.players.length === 2) {
+                if ((targetRoom.mode || 'versus') === 'tetris33') {
+                    broadcastTetris33Lobby(targetRoom);
+                    if (targetRoom.players.length >= targetRoom.maxPlayers) {
+                        startTetris33Game(targetRoom);
+                    }
+                } else if (targetRoom.players.length === 2) {
                     startGame(targetRoom);
                 }
 
@@ -145,6 +189,26 @@ function handleMessage(ws, data) {
             } else {
                 send(ws, 'error', { message: '无法加入房间（已满或不存在）' });
             }
+            break;
+
+        case 'start_tetris33':
+            const startClient = clients.get(ws);
+            if (!startClient || !startClient.room_id) return;
+            const startRoom = rooms.get(startClient.room_id);
+            if (!startRoom || startRoom.mode !== 'tetris33') return;
+            if (startRoom.owner !== ws) {
+                send(ws, 'error', { message: 'only_owner_can_start' });
+                return;
+            }
+            if (startRoom.players.length < startRoom.minPlayers) {
+                send(ws, 'error', {
+                    message: 'not_enough_players',
+                    min_players: startRoom.minPlayers,
+                    player_count: startRoom.players.length
+                });
+                return;
+            }
+            startTetris33Game(startRoom);
             break;
 
         case 'board_update':
@@ -167,6 +231,12 @@ function handleMessage(ws, data) {
                     }
                 }
             }
+            break;
+
+        case 'tetris33_sample':
+        case 'tetris33_attack':
+        case 'tetris33_game_over':
+            forwardToRoom(ws, type, payload);
             break;
 
         case 'rematch_request':
@@ -241,6 +311,42 @@ function startGame(room) {
     broadcastRoomList();
 }
 
+function startTetris33Game(room) {
+    const uniquePlayers = Array.from(new Set(room.players));
+    if (uniquePlayers.length < (room.minPlayers || 3)) {
+        room.players = uniquePlayers;
+        room.status = 'waiting';
+        broadcastTetris33Lobby(room);
+        return;
+    }
+
+    room.players = uniquePlayers.slice(0, room.maxPlayers || 33);
+    room.status = 'playing';
+    room.seed = Math.floor(Math.random() * 2147483647) + 1;
+
+    const players = buildRoomPlayerList(room);
+    for (let i = 0; i < room.players.length; i++) {
+        send(room.players[i], 'game_start_tetris33', {
+            seed: room.seed,
+            local_slot: i + 1,
+            player_count: room.players.length,
+            players
+        });
+    }
+    broadcastRoomList();
+}
+
+function buildRoomPlayerList(room) {
+    return room.players.map((player, index) => {
+        const client = clients.get(player);
+        return {
+            id: client ? client.id : '',
+            name: client ? client.name : `Player ${index + 1}`,
+            slot: index + 1
+        };
+    });
+}
+
 // ============================================================
 // Rematch 协议处理
 // ============================================================
@@ -307,10 +413,32 @@ function broadcastRematchStatus(room) {
 function broadcastRoomList() {
     const roomList = Array.from(rooms.values())
         .filter(r => r.status === 'waiting')
-        .map(r => ({ id: r.id, name: r.name, playerCount: r.players.length }));
+        .map(r => ({
+            id: r.id,
+            name: r.name,
+            mode: r.mode || 'versus',
+            playerCount: r.players.length,
+            maxPlayers: r.maxPlayers || 2,
+            minPlayers: r.minPlayers || 2
+        }));
 
     for (const ws of clients.keys()) {
         send(ws, 'room_list', { rooms: roomList });
+    }
+}
+
+function broadcastTetris33Lobby(room) {
+    if (!room || room.mode !== 'tetris33') return;
+    const payload = {
+        room_id: room.id,
+        player_count: room.players.length,
+        min_players: room.minPlayers || 3,
+        max_players: room.maxPlayers || 33,
+        owner_slot: room.players.indexOf(room.owner) + 1,
+        players: buildRoomPlayerList(room)
+    };
+    for (const player of room.players) {
+        send(player, 'tetris33_lobby_update', payload);
     }
 }
 
@@ -327,6 +455,24 @@ function forwardToOpponent(ws, type, payload) {
     }
 }
 
+function forwardToRoom(ws, type, payload) {
+    const client = clients.get(ws);
+    if (!client || !client.room_id) return;
+
+    const room = rooms.get(client.room_id);
+    if (!room || room.mode !== 'tetris33') return;
+
+    for (const player of room.players) {
+        if (player !== ws && player.readyState === WebSocket.OPEN) {
+            send(player, type, {
+                ...payload,
+                from_id: client.id,
+                from_name: client.name
+            });
+        }
+    }
+}
+
 function handleDisconnect(ws) {
     const client = clients.get(ws);
     if (client) {
@@ -334,6 +480,26 @@ function handleDisconnect(ws) {
         if (client.room_id) {
             const room = rooms.get(client.room_id);
             if (room) {
+                if (room.mode === 'tetris33') {
+                    room.players = room.players.filter(p => p !== ws);
+                    if (room.owner === ws) {
+                        room.owner = room.players[0] || null;
+                    }
+                    for (const player of room.players) {
+                        send(player, 'tetris33_player_left', {
+                            id: client.id,
+                            name: client.name,
+                            player_count: room.players.length
+                        });
+                    }
+                    if (room.players.length === 0) {
+                        rooms.delete(client.room_id);
+                    } else if (room.status === 'waiting') {
+                        broadcastTetris33Lobby(room);
+                    }
+                    clients.delete(ws);
+                    return;
+                }
                 // 如果房间处于结算阶段，标记断线玩家为 declined 并通知对手
                 if (room.status === 'finished') {
                     room.rematch.set(ws, 'declined');

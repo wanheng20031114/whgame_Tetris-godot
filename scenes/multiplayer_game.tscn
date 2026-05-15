@@ -6,6 +6,7 @@
 [ext_resource type="PackedScene" path="res://scenes/core/piece.tscn" id="3_piece"]
 [ext_resource type="PackedScene" path="res://scenes/ui/garbage_bar.tscn" id="4_gbar"]
 [ext_resource type="PackedScene" uid="uid://drnwu2mscsah3" path="res://scenes/ui/game_over_panel.tscn" id="5_gopanel"]
+[ext_resource type="Script" path="res://scripts/core/structure_evaluator_node.gd" id="6_eval"]
 
 [sub_resource type="StyleBoxFlat" id="SubResource_panel"]
 bg_color = Color(0.051, 0.051, 0.078, 1)
@@ -111,6 +112,9 @@ cell_size = 21.0
 unique_name_in_owner = true
 wait_time = 0.5
 one_shot = true
+
+[node name="StructureEvaluator" type="Node" parent="."]
+script = ExtResource("6_eval")
 
 [node name="BGM" type="AudioStreamPlayer" parent="." unique_id=533508076]
 volume_db = -10.0

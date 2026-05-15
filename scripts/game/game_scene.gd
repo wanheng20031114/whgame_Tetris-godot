@@ -497,6 +497,12 @@ func _setup_input_actions() -> void:
 	pass
 
 
+func _try_hold() -> void:
+	if not hold_used:
+		_hold_used_this_piece = true
+	super._try_hold()
+
+
 func _on_rows_cleared(rows_data: Array) -> void:
 	# 行清除粒子效果。
 	if board == null or rows_data.is_empty():

@@ -1,0 +1,127 @@
+[gd_scene format=3 uid="uid://bbnd7txcqw40r"]
+
+[ext_resource type="Script" path="res://scripts/ui/tetris33_opponent_panel.gd" id="1_panel"]
+[ext_resource type="PackedScene" path="res://scenes/core/board.tscn" id="2_board"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_frame"]
+bg_color = Color(0.035, 0.045, 0.062, 0.84)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.18, 0.42, 0.56, 0.84)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_name"]
+bg_color = Color(0.02, 0.026, 0.036, 0.92)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_badge"]
+bg_color = Color(0.94, 0.61, 0.18, 1)
+corner_radius_top_left = 3
+corner_radius_top_right = 3
+corner_radius_bottom_right = 3
+corner_radius_bottom_left = 3
+
+[node name="Tetris33OpponentPanel" type="Control"]
+custom_minimum_size = Vector2(84, 156)
+offset_right = 84.0
+offset_bottom = 156.0
+script = ExtResource("1_panel")
+
+[node name="Frame" type="Panel" parent="." unique_id=73201285]
+unique_name_in_owner = true
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_styles/panel = SubResource("StyleBoxFlat_frame")
+
+[node name="TargetMarker" type="ColorRect" parent="Frame" unique_id=221358784]
+unique_name_in_owner = true
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(1, 0.78, 0.18, 0.22)
+
+[node name="NameBack" type="Panel" parent="Frame"]
+offset_left = 4.0
+offset_top = 4.0
+offset_right = 80.0
+offset_bottom = 23.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_name")
+
+[node name="NameLabel" type="Label" parent="Frame/NameBack" unique_id=189234376]
+unique_name_in_owner = true
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(0.86, 0.93, 1, 1)
+theme_override_font_sizes/font_size = 10
+text = "P02"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="BadgeBack" type="Panel" parent="Frame"]
+offset_left = 5.0
+offset_top = 128.0
+offset_right = 34.0
+offset_bottom = 150.0
+theme_override_styles/panel = SubResource("StyleBoxFlat_badge")
+
+[node name="BadgeLabel" type="Label" parent="Frame/BadgeBack" unique_id=622467700]
+unique_name_in_owner = true
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(0.035, 0.026, 0.018, 1)
+theme_override_font_sizes/font_size = 10
+text = "#02"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="MetricLabel" type="Label" parent="Frame" unique_id=512051012]
+unique_name_in_owner = true
+offset_left = 36.0
+offset_top = 127.0
+offset_right = 81.0
+offset_bottom = 151.0
+theme_override_colors/font_color = Color(0.64, 0.76, 0.86, 1)
+theme_override_font_sizes/font_size = 9
+text = "S 0  G 0"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="PreviewBoard" parent="Frame" unique_id=980872132 instance=ExtResource("2_board")]
+unique_name_in_owner = true
+position = Vector2(12, 27)
+cell_size = 6.0
+
+[node name="KOLabel" type="Label" parent="Frame" unique_id=132882315]
+unique_name_in_owner = true
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(1, 0.24, 0.22, 1)
+theme_override_colors/font_outline_color = Color(0.02, 0.02, 0.03, 1)
+theme_override_constants/outline_size = 5
+theme_override_font_sizes/font_size = 32
+text = "KO"
+horizontal_alignment = 1
+vertical_alignment = 1

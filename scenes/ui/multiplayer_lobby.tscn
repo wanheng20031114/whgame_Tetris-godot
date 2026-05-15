@@ -46,7 +46,7 @@ grow_horizontal = 2
 grow_vertical = 2
 
 [node name="LobbyPanel" type="PanelContainer" parent="CenterContainer" unique_id=339951941]
-custom_minimum_size = Vector2(600, 550)
+custom_minimum_size = Vector2(720, 590)
 layout_mode = 2
 theme_override_styles/panel = SubResource("StyleBoxFlat_glass")
 
@@ -71,6 +71,13 @@ theme_override_colors/font_color = Color(0.7, 1, 0.7, 1)
 text = "房间列表"
 horizontal_alignment = 1
 
+[node name="StartTetris33Button" type="Button" parent="CenterContainer/LobbyPanel/VBox" unique_id=1545510922]
+unique_name_in_owner = true
+visible = false
+custom_minimum_size = Vector2(0, 44)
+layout_mode = 2
+text = "START TETRIS33"
+
 [node name="ScrollContainer" type="ScrollContainer" parent="CenterContainer/LobbyPanel/VBox" unique_id=1873152687]
 layout_mode = 2
 size_flags_vertical = 3
@@ -86,20 +93,26 @@ layout_mode = 2
 
 [node name="HBox" type="HBoxContainer" parent="CenterContainer/LobbyPanel/VBox" unique_id=2080842179]
 layout_mode = 2
-theme_override_constants/separation = 20
+theme_override_constants/separation = 14
 alignment = 1
 
 [node name="RefreshButton" type="Button" parent="CenterContainer/LobbyPanel/VBox/HBox" unique_id=1062188707]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(180, 50)
+custom_minimum_size = Vector2(160, 50)
 layout_mode = 2
 text = "刷新列表"
 
 [node name="CreateButton" type="Button" parent="CenterContainer/LobbyPanel/VBox/HBox" unique_id=407982475]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(180, 50)
+custom_minimum_size = Vector2(160, 50)
 layout_mode = 2
 text = "创建房间"
+
+[node name="CreateTetris33Button" type="Button" parent="CenterContainer/LobbyPanel/VBox/HBox" unique_id=588762420]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(190, 50)
+layout_mode = 2
+text = "CREATE TETRIS33"
 
 [node name="BackButton" type="Button" parent="CenterContainer/LobbyPanel/VBox" unique_id=760364601]
 unique_name_in_owner = true
@@ -109,6 +122,7 @@ text = "断开并返回"
 flat = true
 
 [node name="BtnSettings" parent="." unique_id=64885342 instance=ExtResource("2_stngs")]
+unique_name_in_owner = true
 layout_mode = 0
 offset_left = 1218.0
 offset_top = 16.0
