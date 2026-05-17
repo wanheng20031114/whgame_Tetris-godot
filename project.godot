@@ -22,6 +22,7 @@ SettingsMenu="*res://scripts/ui/settings_menu.gd"
 ButtonSfx="*res://scripts/ui/button_sfx.gd"
 GameState="*res://scripts/core/game_state.gd"
 NetworkManager="*res://scripts/core/network_manager.gd"
+BlockStyleManager="*res://scripts/core/block_style_manager.gd"
 
 [display]
 

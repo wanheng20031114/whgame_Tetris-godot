@@ -18,6 +18,7 @@ enum LobbyState {
 @onready var btn_refresh: Button = %RefreshButton
 @onready var btn_back: Button = %BackButton
 @onready var btn_settings: TextureButton = %BtnSettings
+@onready var btn_block_style: TextureButton = %BtnBlockStyle
 @onready var lbl_info: Label = %InfoLabel
 
 var _rooms_cache: Array = []
@@ -71,7 +72,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		_on_back_pressed()
 
 func _is_settings_menu_open() -> bool:
-	return btn_settings != null and btn_settings.has_method("is_menu_open") and bool(btn_settings.call("is_menu_open"))
+	var settings_open := btn_settings != null and btn_settings.has_method("is_menu_open") and bool(btn_settings.call("is_menu_open"))
+	var style_open := btn_block_style != null and btn_block_style.has_method("is_menu_open") and bool(btn_block_style.call("is_menu_open"))
+	return settings_open or style_open
 
 func _mark_input_handled() -> void:
 	var vp := get_viewport()

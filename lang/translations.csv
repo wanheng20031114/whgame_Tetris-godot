@@ -22,6 +22,21 @@ TXT_RETURN_LOBBY,返回大厅,RETURN LOBBY,ロビーへ戻る
 TXT_MARATHON_DESC,无限生存，消行越多速度越快,ENDLESS SURVIVAL. CLEAR LINES TO GO FASTER.,エンドレス生存。ラインを消すほどスピードアップ。
 TXT_MULTIPLAYER_DESC,与其他玩家在线对战,ONLINE BATTLE AGAINST OTHER PLAYERS,他プレイヤーとオンライン対戦
 TXT_OK,确定,OK,OK
+TXT_CLOSE,关闭,CLOSE,閉じる
+TXT_BLOCK_STYLE,方块风格,BLOCK STYLE,ブロックスタイル
+TXT_BLOCK_STYLE_TITLE,更换方块风格,CHANGE BLOCK STYLE,ブロックスタイル変更
+TXT_BLOCK_STYLE_TOOLTIP,更换方块风格,Change block style,ブロックスタイル変更
+TXT_BLOCK_STYLE_HINT,只影响正常游玩和多人对战，不影响复盘浏览,Applies to normal play and multiplayer only. Replays stay unchanged.,通常プレイと対戦だけに反映。リプレイ表示は変わりません
+TXT_BLOCK_STYLE_INNER,内线方块,INNER LINE,内側ライン
+TXT_BLOCK_STYLE_INNER_DESC,当前默认对战风格,Current default battle style,現在の標準対戦スタイル
+TXT_BLOCK_STYLE_SOLID,纯色方块,SOLID COLOR,単色ブロック
+TXT_BLOCK_STYLE_SOLID_DESC,接近复盘模式的清晰纯色,Clear solid blocks inspired by replay mode,リプレイ風の見やすい単色
+TXT_BLOCK_STYLE_GLASS,玻璃高光,GLASS LIGHT,グラスライト
+TXT_BLOCK_STYLE_GLASS_DESC,明亮高光和轻微透明层次,Bright highlights with light layered depth,明るいハイライトと軽い奥行き
+TXT_BLOCK_STYLE_PASTEL,粉彩柔光,PASTEL SOFT,パステルソフト
+TXT_BLOCK_STYLE_PASTEL_DESC,低刺激的柔和配色,Soft low-glare colors,目にやさしい柔らかな色
+TXT_BLOCK_STYLE_ARCADE,街机描边,ARCADE EDGE,アーケードエッジ
+TXT_BLOCK_STYLE_ARCADE_DESC,清晰高对比像素边缘,Crisp high-contrast pixel edges,くっきり高コントラストの縁取り
 TXT_MP_SETUP_TITLE,多人对战,MULTIPLAYER,マルチプレイヤー
 TXT_SERVER_ADDRESS,服务器地址,SERVER ADDRESS,サーバーアドレス
 TXT_SERVER_PORT,端口,PORT,ポート

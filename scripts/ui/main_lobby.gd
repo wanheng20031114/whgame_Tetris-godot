@@ -18,6 +18,7 @@ signal open_replay()
 @onready var btn_stats: Button = %BtnStats
 @onready var card_replay: PanelContainer = %CardReplay
 @onready var btn_settings: TextureButton = %BtnSettings
+@onready var btn_block_style: TextureButton = %BtnBlockStyle
 
 var _current_pname: String = ""
 
@@ -76,11 +77,16 @@ func _ready() -> void:
 		card_multiplayer.focus_neighbor_bottom = btn_stats.get_path()
 		card_replay.focus_neighbor_bottom = btn_stats.get_path()
 		btn_stats.focus_neighbor_top = card_multiplayer.get_path()
-		if btn_settings:
-			btn_stats.focus_neighbor_right = btn_settings.get_path()
+		if btn_block_style:
+			btn_stats.focus_neighbor_right = btn_block_style.get_path()
+	if btn_block_style:
+		btn_block_style.focus_mode = Control.FOCUS_ALL
+		btn_block_style.focus_neighbor_left = btn_stats.get_path() if btn_stats else card_replay.get_path()
+		btn_block_style.focus_neighbor_right = btn_settings.get_path() if btn_settings else NodePath("")
+		btn_block_style.focus_neighbor_top = card_replay.get_path()
 	if btn_settings:
 		btn_settings.focus_mode = Control.FOCUS_ALL
-		btn_settings.focus_neighbor_left = btn_stats.get_path() if btn_stats else card_replay.get_path()
+		btn_settings.focus_neighbor_left = btn_block_style.get_path() if btn_block_style else (btn_stats.get_path() if btn_stats else card_replay.get_path())
 		btn_settings.focus_neighbor_top = card_replay.get_path()
 
 	# 缩放动画基准点设为卡片中心
@@ -263,7 +269,9 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _is_settings_menu_open() -> bool:
-	return btn_settings != null and btn_settings.has_method("is_menu_open") and bool(btn_settings.call("is_menu_open"))
+	var settings_open := btn_settings != null and btn_settings.has_method("is_menu_open") and bool(btn_settings.call("is_menu_open"))
+	var style_open := btn_block_style != null and btn_block_style.has_method("is_menu_open") and bool(btn_block_style.call("is_menu_open"))
+	return settings_open or style_open
 
 
 func _focus_card_by_delta(delta: int) -> void:

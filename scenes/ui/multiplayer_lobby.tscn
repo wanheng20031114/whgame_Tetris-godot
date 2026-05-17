@@ -3,6 +3,7 @@
 [ext_resource type="Script" uid="uid://8jiv3i6ssy8t" path="res://scripts/ui/multiplayer_lobby.gd" id="1_x5678"]
 [ext_resource type="Texture2D" uid="uid://cry1vfotodsqf" path="res://assets/images/bg_server_lobby.png" id="2_6qqbu"]
 [ext_resource type="PackedScene" path="res://scenes/ui/settings_menu.tscn" id="2_stngs"]
+[ext_resource type="PackedScene" path="res://scenes/ui/block_style_menu.tscn" id="3_blockstyle"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_glass"]
 bg_color = Color(0, 0, 0, 0.4)
@@ -127,4 +128,12 @@ layout_mode = 0
 offset_left = 1218.0
 offset_top = 16.0
 offset_right = 1258.0
+offset_bottom = 56.0
+
+[node name="BtnBlockStyle" parent="." unique_id=64885343 instance=ExtResource("3_blockstyle")]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 1166.0
+offset_top = 16.0
+offset_right = 1206.0
 offset_bottom = 56.0

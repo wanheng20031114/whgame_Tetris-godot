@@ -1,0 +1,11 @@
+[gd_scene format=3]
+
+[ext_resource type="Texture2D" path="res://assets/ui/icon_block_style.png" id="1_icon"]
+[ext_resource type="Script" path="res://scripts/ui/block_style_menu.gd" id="2_script"]
+
+[node name="BlockStyleMenu" type="TextureButton"]
+custom_minimum_size = Vector2(40, 40)
+texture_normal = ExtResource("1_icon")
+ignore_texture_size = true
+stretch_mode = 5
+script = ExtResource("2_script")

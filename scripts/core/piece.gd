@@ -21,6 +21,14 @@ var piece_color: Color
 ## 单个格子的实际像素大小（通过检查器或场景树设置）
 @export var cell_size: float = 30.0
 
+
+func _ready() -> void:
+	var manager := _get_block_style_manager()
+	if manager != null and manager.has_signal("style_changed"):
+		var callback := Callable(self, "_on_block_style_changed")
+		if not manager.is_connected("style_changed", callback):
+			manager.connect("style_changed", callback)
+
 # ==============================================================================
 # 核心初始化逻辑
 # ==============================================================================
@@ -52,16 +60,7 @@ func _draw() -> void:
 		# 使用 Rect2 限定出这个小方格的位置和尺寸
 		var rect = Rect2(Vector2(x, y), Vector2(cell_size, cell_size))
 		
-		# == 主填涂色 (使用我们的霓虹色系) ==
-		draw_rect(rect, piece_color)
-		
-		# == 高级 UI 设计：内部分层光效，替代简单生硬的描边 ==
-		# 外框深色，制造边缘阴影材质立体感
-		draw_rect(rect, piece_color.darkened(0.3), false, 2.0)
-		
-		# 内框提亮，制造屏幕泛光灯柱特效（玻璃拟物风或者科技高透）
-		var inner_rect = rect.grow(-4.0) # 内缩 4 像素
-		draw_rect(inner_rect, piece_color.lightened(0.4), false, 1.0)
+		_draw_block_cell(rect, piece_color)
 		
 		# 如果之后需要加发光外发散，我们可以加入基于 Shader 材质的 Bloom
 		# 不过目前依靠不同色彩深度的互相印衬，就足以生成“非常酷”的视觉表现了
@@ -82,3 +81,22 @@ func set_as_ghost() -> void:
 	# 面漆设为超低透明 (只留下一丝魂气)
 	piece_color = Color(base.r, base.g, base.b, 0.2)
 	queue_redraw()
+
+
+func _on_block_style_changed(_style_id: String) -> void:
+	queue_redraw()
+
+
+func _get_block_style_manager() -> Node:
+	return get_node_or_null("/root/BlockStyleManager")
+
+
+func _draw_block_cell(rect: Rect2, color: Color) -> void:
+	var manager := _get_block_style_manager()
+	if manager != null and manager.has_method("draw_cell"):
+		manager.call("draw_cell", self, rect, color)
+		return
+
+	draw_rect(rect, color)
+	draw_rect(rect, color.darkened(0.3), false, 2.0)
+	draw_rect(rect.grow(-4.0), color.lightened(0.4), false, 1.0)

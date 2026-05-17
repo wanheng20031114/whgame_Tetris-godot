@@ -457,9 +457,7 @@ func _ready() -> void:
 func _draw() -> void:
 	if not has_focus() and not _icon_hovered and not is_menu_open():
 		return
-	var ring_rect := Rect2(Vector2(-4.0, -4.0), size + Vector2(8.0, 8.0))
-	draw_rect(ring_rect, Color(0.0, 0.83, 1.0, 0.24), false, 6.0, true)
-	draw_rect(ring_rect.grow(-2.0), Color(0.0, 0.83, 1.0, 0.95), false, 2.0, true)
+	draw_rect(Rect2(Vector2.ZERO, size), Color(0.40, 0.86, 1.0, 0.85), false, 2.0)
 
 # --- 信号处理与逻辑 ---
 

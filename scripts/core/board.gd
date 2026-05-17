@@ -24,6 +24,11 @@ var _danger_pulse_time: float = 0.0
 func _ready() -> void:
 	_init_grid()
 	set_process(false)
+	var manager := _get_block_style_manager()
+	if manager != null and manager.has_signal("style_changed"):
+		var callback := Callable(self, "_on_block_style_changed")
+		if not manager.is_connected("style_changed", callback):
+			manager.connect("style_changed", callback)
 
 func _process(delta: float) -> void:
 	if not danger_warning_active:
@@ -120,10 +125,7 @@ func _draw() -> void:
 			if color != null:
 				var vis_row: int = row - buffer_rows
 				var rect := Rect2(Vector2(col * cell_size, vis_row * cell_size), Vector2(cell_size, cell_size))
-				draw_rect(rect, color)
-				draw_rect(rect, color.darkened(0.3), false, 2.0)
-				var inner := rect.grow(-4.0)
-				draw_rect(inner, color.lightened(0.4), false, 1.0)
+				_draw_block_cell(rect, color)
 
 	draw_rect(Rect2(Vector2(-1, -1), Vector2(board_w + 2, board_h + 2)), BORDER_COLOR, false, 2.0)
 	if danger_warning_active:
@@ -228,3 +230,22 @@ func set_danger_warning(active: bool) -> void:
 		_danger_pulse_time = 0.0
 	set_process(danger_warning_active)
 	queue_redraw()
+
+
+func _on_block_style_changed(_style_id: String) -> void:
+	queue_redraw()
+
+
+func _get_block_style_manager() -> Node:
+	return get_node_or_null("/root/BlockStyleManager")
+
+
+func _draw_block_cell(rect: Rect2, color: Color) -> void:
+	var manager := _get_block_style_manager()
+	if manager != null and manager.has_method("draw_cell"):
+		manager.call("draw_cell", self, rect, color)
+		return
+
+	draw_rect(rect, color)
+	draw_rect(rect, color.darkened(0.3), false, 2.0)
+	draw_rect(rect.grow(-4.0), color.lightened(0.4), false, 1.0)
