@@ -1,0 +1,1349 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>リプレイ機能とAI分析 | 5分発表</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #172033;
+      --muted: #607086;
+      --paper: #f7fbff;
+      --line: rgba(23, 32, 51, 0.13);
+      --cyan: #16c9ea;
+      --blue: #2868ff;
+      --green: #39d277;
+      --amber: #ffb43d;
+      --coral: #ff6b64;
+      --violet: #7a5cff;
+      --dark: #0b1020;
+      --radius: 8px;
+      --shadow: 0 22px 70px rgba(18, 29, 55, 0.16);
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: var(--paper);
+      color: var(--ink);
+      font-family: "Yu Gothic", "Hiragino Kaku Gothic ProN", "Noto Sans JP", Meiryo, system-ui, sans-serif;
+      letter-spacing: 0;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      background:
+        linear-gradient(135deg, rgba(22, 201, 234, 0.13), transparent 24%),
+        linear-gradient(315deg, rgba(255, 180, 61, 0.12), transparent 30%),
+        radial-gradient(circle at 88% 16%, rgba(57, 210, 119, 0.14), transparent 21%);
+      z-index: 0;
+    }
+
+    button {
+      font: inherit;
+      color: inherit;
+    }
+
+    .deck {
+      position: relative;
+      z-index: 1;
+      width: 100vw;
+      height: 100vh;
+      transform: translateY(var(--nudge, 0px));
+      transition: transform 220ms cubic-bezier(0.2, 0.8, 0.18, 1);
+    }
+
+    .slide {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      grid-template-rows: auto 1fr;
+      gap: clamp(18px, 2.2vw, 34px);
+      padding: clamp(30px, 4vw, 64px);
+      opacity: 0;
+      transform: translateY(42px) scale(0.985);
+      pointer-events: none;
+      transition: opacity 520ms cubic-bezier(0.2, 0.8, 0.18, 1), transform 520ms cubic-bezier(0.2, 0.8, 0.18, 1);
+    }
+
+    .slide.active {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      pointer-events: auto;
+    }
+
+    .slide-header {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 28px;
+    }
+
+    .kicker {
+      margin: 0 0 10px;
+      color: var(--blue);
+      font-size: clamp(13px, 1.3vw, 18px);
+      font-weight: 800;
+      line-height: 1.3;
+    }
+
+    h1, h2, h3, p {
+      margin: 0;
+    }
+
+    h1 {
+      max-width: 1020px;
+      font-size: clamp(44px, 6.2vw, 96px);
+      line-height: 1.03;
+      font-weight: 900;
+    }
+
+    h2 {
+      max-width: 980px;
+      font-size: clamp(34px, 4.6vw, 72px);
+      line-height: 1.08;
+      font-weight: 900;
+    }
+
+    h3 {
+      font-size: clamp(19px, 2vw, 29px);
+      line-height: 1.25;
+      font-weight: 850;
+    }
+
+    .slide-count {
+      min-width: 78px;
+      text-align: right;
+      color: var(--muted);
+      font-size: clamp(14px, 1.2vw, 18px);
+      font-weight: 800;
+      padding-right: 74px;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(420px, 0.96fr) minmax(520px, 1.28fr);
+      align-items: center;
+      gap: clamp(30px, 4vw, 64px);
+    }
+
+    .hero-copy {
+      display: grid;
+      gap: clamp(22px, 2vw, 34px);
+    }
+
+    .lead {
+      max-width: 780px;
+      color: #2f3a4f;
+      font-size: clamp(23px, 2.1vw, 34px);
+      line-height: 1.55;
+      font-weight: 750;
+    }
+
+    .meta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      height: 38px;
+      padding: 0 14px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.72);
+      color: #33415a;
+      font-size: 15px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .hero-visual,
+    .image-stage {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid rgba(23, 32, 51, 0.12);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      background: #fff;
+    }
+
+    .hero-visual {
+      aspect-ratio: 16 / 9;
+      transform: rotate(0.6deg);
+    }
+
+    .title-slide .hero-visual {
+      align-self: start;
+      margin-top: -76px;
+      transform: translateY(-8px) rotate(0.6deg);
+    }
+
+    .hero-visual img,
+    .image-stage img,
+    .demo-screen img,
+    .stats-shot img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+
+    .caption-strip {
+      position: absolute;
+      left: 18px;
+      right: 18px;
+      bottom: 18px;
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      padding: 13px 16px;
+      background: rgba(11, 16, 32, 0.82);
+      color: white;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: var(--radius);
+      backdrop-filter: blur(10px);
+      font-size: clamp(15px, 1.25vw, 20px);
+      font-weight: 800;
+    }
+
+    .accent {
+      color: var(--cyan);
+    }
+
+    .grid-two {
+      display: grid;
+      grid-template-columns: minmax(420px, 0.94fr) minmax(540px, 1.16fr);
+      align-items: stretch;
+      gap: clamp(28px, 3vw, 46px);
+      min-height: 0;
+    }
+
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, 0.72);
+      box-shadow: 0 14px 44px rgba(18, 29, 55, 0.1);
+    }
+
+    .point-list {
+      display: grid;
+      gap: 16px;
+      align-content: center;
+    }
+
+    .point {
+      display: grid;
+      grid-template-columns: 52px 1fr;
+      gap: 18px;
+      align-items: start;
+      padding: clamp(18px, 2vw, 28px);
+      min-height: 112px;
+    }
+
+    .num {
+      display: grid;
+      place-items: center;
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      background: var(--dark);
+      color: #fff;
+      font-size: 19px;
+      font-weight: 900;
+    }
+
+    .point:nth-child(2) .num { background: var(--blue); }
+    .point:nth-child(3) .num { background: var(--green); color: var(--dark); }
+
+    .point p {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: clamp(16px, 1.45vw, 22px);
+      line-height: 1.55;
+      font-weight: 700;
+    }
+
+    .research-map {
+      display: grid;
+      grid-template-rows: 1fr auto 1fr;
+      gap: 18px;
+      padding: clamp(22px, 2.4vw, 34px);
+      background:
+        linear-gradient(160deg, rgba(255, 255, 255, 0.95), rgba(234, 247, 255, 0.72)),
+        repeating-linear-gradient(90deg, transparent 0 34px, rgba(23, 32, 51, 0.04) 35px);
+    }
+
+    .map-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+
+    .map-node {
+      display: grid;
+      align-content: center;
+      gap: 10px;
+      padding: clamp(20px, 2vw, 30px);
+      border-radius: var(--radius);
+      border: 1px solid var(--line);
+      background: #fff;
+      min-height: 150px;
+    }
+
+    .map-node strong {
+      font-size: clamp(21px, 2vw, 31px);
+      line-height: 1.2;
+    }
+
+    .map-node span {
+      color: var(--muted);
+      font-size: clamp(15px, 1.35vw, 21px);
+      line-height: 1.45;
+      font-weight: 700;
+    }
+
+    .map-bridge {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 82px;
+      color: var(--dark);
+      font-size: clamp(24px, 2.6vw, 42px);
+      font-weight: 950;
+    }
+
+    .map-bridge::before,
+    .map-bridge::after {
+      content: "";
+      height: 3px;
+      flex: 1;
+      background: linear-gradient(90deg, transparent, var(--cyan), var(--amber), transparent);
+    }
+
+    .map-bridge span {
+      padding: 0 20px;
+    }
+
+    .goal-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: clamp(16px, 2vw, 26px);
+      align-items: stretch;
+    }
+
+    .goal {
+      display: grid;
+      align-content: space-between;
+      gap: 26px;
+      min-height: 360px;
+      padding: clamp(24px, 2.6vw, 38px);
+      border-radius: var(--radius);
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.78);
+      box-shadow: 0 16px 42px rgba(18, 29, 55, 0.1);
+    }
+
+    .goal .mark {
+      width: 74px;
+      height: 74px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: var(--dark);
+      color: white;
+      font-size: 34px;
+      font-weight: 950;
+    }
+
+    .goal:nth-child(2) .mark { background: var(--coral); }
+    .goal:nth-child(3) .mark { background: var(--green); color: var(--dark); }
+
+    .goal p {
+      color: var(--muted);
+      font-size: clamp(18px, 1.55vw, 24px);
+      line-height: 1.55;
+      font-weight: 750;
+    }
+
+    .diff-layout {
+      display: grid;
+      grid-template-columns: minmax(720px, 1.25fr) minmax(420px, 0.75fr);
+      gap: clamp(26px, 3vw, 46px);
+      min-height: 0;
+    }
+
+    .stats-pair {
+      display: grid;
+      grid-template-columns: minmax(260px, 0.5fr) minmax(520px, 1.5fr);
+      gap: 26px;
+      align-items: center;
+    }
+
+    .stats-shot {
+      overflow: hidden;
+      border-radius: var(--radius);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: var(--dark);
+      box-shadow: var(--shadow);
+      min-height: 0;
+    }
+
+    .stats-shot img {
+      object-fit: contain;
+      padding: 10px;
+      background: #11131f;
+    }
+
+    .stats-shot.data {
+      width: 100%;
+      aspect-ratio: 1212 / 650;
+    }
+
+    .stats-shot.radar {
+      width: min(100%, 330px);
+      aspect-ratio: 1 / 1;
+      justify-self: center;
+    }
+
+    .stats-shot.radar img {
+      object-fit: contain;
+      padding: 0;
+      background: #080a12;
+    }
+
+    .diff-list {
+      display: grid;
+      gap: 14px;
+      align-content: center;
+    }
+
+    .diff-item {
+      display: grid;
+      grid-template-columns: 12px 1fr;
+      gap: 16px;
+      align-items: start;
+      padding: clamp(16px, 1.7vw, 24px);
+      border-radius: var(--radius);
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.76);
+      font-size: clamp(17px, 1.5vw, 23px);
+      line-height: 1.48;
+      font-weight: 800;
+    }
+
+    .diff-item::before {
+      content: "";
+      width: 10px;
+      height: 100%;
+      min-height: 42px;
+      border-radius: 999px;
+      background: var(--cyan);
+    }
+
+    .diff-item:nth-child(2)::before { background: var(--amber); }
+    .diff-item:nth-child(3)::before { background: var(--green); }
+    .diff-item:nth-child(4)::before { background: var(--violet); }
+
+    .slide-diff .diff-list {
+      gap: 10px;
+    }
+
+    .slide-diff .diff-item {
+      padding: clamp(14px, 1.45vw, 20px);
+      font-size: clamp(15px, 1.3vw, 20px);
+      line-height: 1.42;
+    }
+
+    .screen-layout {
+      display: grid;
+      grid-template-columns: minmax(640px, 1.32fr) minmax(360px, 0.68fr);
+      gap: clamp(24px, 2.8vw, 42px);
+      min-height: 0;
+    }
+
+    .image-stage {
+      min-height: 0;
+      background: #eef8ff;
+    }
+
+    .image-stage img {
+      object-fit: contain;
+    }
+
+    .feature-stack {
+      display: grid;
+      align-content: center;
+      gap: 14px;
+    }
+
+    .feature {
+      padding: clamp(16px, 1.7vw, 24px);
+      border-left: 6px solid var(--cyan);
+      background: rgba(255, 255, 255, 0.76);
+      border-radius: 0 var(--radius) var(--radius) 0;
+      box-shadow: 0 10px 32px rgba(18, 29, 55, 0.08);
+    }
+
+    .feature:nth-child(2) { border-color: var(--green); }
+    .feature:nth-child(3) { border-color: var(--amber); }
+    .feature:nth-child(4) { border-color: var(--coral); }
+
+    .feature strong {
+      display: block;
+      font-size: clamp(18px, 1.55vw, 25px);
+      line-height: 1.25;
+    }
+
+    .feature span {
+      display: block;
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: clamp(14px, 1.25vw, 19px);
+      line-height: 1.45;
+      font-weight: 700;
+    }
+
+    .demo-layout {
+      display: grid;
+      grid-template-columns: minmax(720px, 1.35fr) minmax(360px, 0.65fr);
+      gap: clamp(24px, 2.7vw, 42px);
+      min-height: 0;
+    }
+
+    .demo-screen {
+      position: relative;
+      overflow: hidden;
+      border-radius: var(--radius);
+      border: 1px solid rgba(23, 32, 51, 0.18);
+      background: var(--dark);
+      box-shadow: var(--shadow);
+      min-height: 0;
+    }
+
+    .demo-screen img {
+      object-fit: contain;
+      transition: opacity 220ms ease;
+    }
+
+    .ask-pin {
+      position: absolute;
+      left: 46.9%;
+      top: 74.5%;
+      width: 52px;
+      height: 52px;
+      display: grid;
+      place-items: center;
+      border: 2px solid rgba(255, 255, 255, 0.9);
+      border-radius: 50%;
+      background: rgba(22, 201, 234, 0.88);
+      color: var(--dark);
+      font-size: 30px;
+      font-weight: 950;
+      cursor: pointer;
+      box-shadow: 0 0 0 0 rgba(22, 201, 234, 0.5);
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(22, 201, 234, 0.45); }
+      70% { box-shadow: 0 0 0 22px rgba(22, 201, 234, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(22, 201, 234, 0); }
+    }
+
+    .demo-panel {
+      display: grid;
+      grid-template-rows: auto 1fr auto;
+      gap: 18px;
+      min-height: 0;
+    }
+
+    .step-title {
+      padding: clamp(20px, 2vw, 28px);
+      border-radius: var(--radius);
+      background: var(--dark);
+      color: white;
+      box-shadow: var(--shadow);
+    }
+
+    .step-title small {
+      display: block;
+      color: var(--cyan);
+      font-size: 15px;
+      font-weight: 900;
+      margin-bottom: 10px;
+    }
+
+    .step-title strong {
+      display: block;
+      font-size: clamp(25px, 2.4vw, 40px);
+      line-height: 1.2;
+    }
+
+    .step-title p {
+      margin-top: 14px;
+      color: rgba(255, 255, 255, 0.78);
+      font-size: clamp(15px, 1.3vw, 20px);
+      line-height: 1.55;
+      font-weight: 700;
+    }
+
+    .step-buttons {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      align-content: start;
+    }
+
+    .step-btn {
+      min-height: 64px;
+      padding: 10px;
+      border-radius: var(--radius);
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.76);
+      cursor: pointer;
+      color: var(--muted);
+      font-size: 14px;
+      font-weight: 900;
+      transition: transform 150ms ease, background 150ms ease, color 150ms ease;
+    }
+
+    .step-btn:hover,
+    .step-btn.active {
+      transform: translateY(-2px);
+      background: var(--dark);
+      color: #fff;
+    }
+
+    .demo-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    .action-btn,
+    .nav-btn {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: rgba(255, 255, 255, 0.84);
+      cursor: pointer;
+      font-weight: 900;
+      transition: transform 150ms ease, background 150ms ease;
+    }
+
+    .action-btn {
+      flex: 1;
+      min-height: 54px;
+      padding: 0 16px;
+    }
+
+    .action-btn.primary {
+      background: var(--cyan);
+      color: var(--dark);
+      border-color: transparent;
+    }
+
+    .action-btn:hover,
+    .nav-btn:hover {
+      transform: translateY(-2px);
+    }
+
+    .closing {
+      display: grid;
+      grid-template-columns: minmax(560px, 1.08fr) minmax(420px, 0.92fr);
+      gap: clamp(28px, 3vw, 48px);
+      align-items: center;
+    }
+
+    .takeaway {
+      display: grid;
+      gap: 18px;
+    }
+
+    .takeaway-line {
+      padding: clamp(20px, 2vw, 30px);
+      border-radius: var(--radius);
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.78);
+      font-size: clamp(22px, 2.2vw, 34px);
+      line-height: 1.35;
+      font-weight: 900;
+    }
+
+    .next-box {
+      padding: clamp(26px, 3vw, 44px);
+      border-radius: var(--radius);
+      background: var(--dark);
+      color: white;
+      box-shadow: var(--shadow);
+    }
+
+    .next-box h3 {
+      color: var(--cyan);
+      margin-bottom: 22px;
+    }
+
+    .next-box p {
+      color: rgba(255, 255, 255, 0.82);
+      font-size: clamp(20px, 1.8vw, 28px);
+      line-height: 1.55;
+      font-weight: 750;
+    }
+
+    .slide-final .slide-header {
+      align-items: start;
+    }
+
+    .slide-final h2 {
+      font-size: clamp(34px, 4.1vw, 64px);
+    }
+
+    .slide-final .closing {
+      grid-template-columns: minmax(560px, 1fr) minmax(560px, 1fr);
+      align-items: stretch;
+    }
+
+    .summary-card {
+      display: grid;
+      align-content: start;
+      gap: 18px;
+      padding: clamp(24px, 2.5vw, 36px);
+      border-radius: var(--radius);
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.8);
+      box-shadow: 0 16px 42px rgba(18, 29, 55, 0.1);
+    }
+
+    .summary-card.dark {
+      border-color: transparent;
+      background: var(--dark);
+      color: white;
+      box-shadow: var(--shadow);
+    }
+
+    .summary-card h3 {
+      color: var(--blue);
+      font-size: clamp(24px, 2vw, 34px);
+    }
+
+    .summary-card.dark h3 {
+      color: var(--cyan);
+    }
+
+    .summary-list {
+      display: grid;
+      gap: 14px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .summary-list li {
+      display: grid;
+      grid-template-columns: 10px 1fr;
+      gap: 14px;
+      align-items: start;
+      color: #233047;
+      font-size: clamp(18px, 1.45vw, 23px);
+      line-height: 1.5;
+      font-weight: 850;
+    }
+
+    .summary-list li::before {
+      content: "";
+      width: 10px;
+      height: 100%;
+      min-height: 36px;
+      border-radius: 999px;
+      background: var(--cyan);
+    }
+
+    .summary-list li:nth-child(2)::before { background: var(--green); }
+    .summary-list li:nth-child(3)::before { background: var(--amber); }
+
+    .summary-card.dark .summary-list li {
+      color: rgba(255, 255, 255, 0.86);
+    }
+
+    .summary-card.dark .summary-list li::before { background: var(--violet); }
+    .summary-card.dark .summary-list li:nth-child(2)::before { background: var(--cyan); }
+    .summary-card.dark .summary-list li:nth-child(3)::before { background: var(--green); }
+
+    .controls {
+      position: fixed;
+      right: 8px;
+      top: 50%;
+      z-index: 20;
+      transform: translate(42%, -50%);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      padding: 8px;
+      border: 1px solid rgba(23, 32, 51, 0.12);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.78);
+      box-shadow: 0 12px 32px rgba(18, 29, 55, 0.12);
+      backdrop-filter: blur(12px);
+      opacity: 0.18;
+      transition: opacity 160ms ease;
+    }
+
+    .controls:hover,
+    .controls:focus-within {
+      opacity: 1;
+    }
+
+    .nav-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      font-size: 20px;
+    }
+
+    .dots {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      padding: 6px 0;
+    }
+
+    .dot {
+      width: 10px;
+      height: 10px;
+      padding: 0;
+      border: 0;
+      border-radius: 50%;
+      background: rgba(23, 32, 51, 0.22);
+      cursor: pointer;
+    }
+
+    .dot.active {
+      width: 10px;
+      height: 28px;
+      border-radius: 999px;
+      background: var(--blue);
+    }
+
+    .progress {
+      position: fixed;
+      left: 0;
+      top: 0;
+      z-index: 30;
+      height: 5px;
+      width: 100%;
+      background: rgba(23, 32, 51, 0.08);
+    }
+
+    .progress span {
+      display: block;
+      width: 0;
+      height: 100%;
+      background: linear-gradient(90deg, var(--cyan), var(--green), var(--amber));
+      transition: width 260ms ease;
+    }
+
+    .sr-only {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
+    }
+
+    @media (max-width: 980px) {
+      html, body {
+        overflow: auto;
+      }
+
+      .deck {
+        height: auto;
+      }
+
+      .slide {
+        position: relative;
+        min-height: 100vh;
+        opacity: 1;
+        transform: none;
+        pointer-events: auto;
+      }
+
+      .hero,
+      .grid-two,
+      .diff-layout,
+      .screen-layout,
+      .demo-layout,
+      .closing,
+      .stats-pair {
+        grid-template-columns: 1fr;
+      }
+
+      .goal-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .controls,
+      .progress {
+        display: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="progress" aria-hidden="true"><span id="progressBar"></span></div>
+
+  <main class="deck" id="deck">
+    <section class="slide title-slide active" aria-label="タイトル">
+      <div class="slide-header">
+        <div>
+          <p class="kicker">5/22 ゼミ発表</p>
+          <h1>リプレイ機能と<br>AI分析による<br>振り返り支援</h1>
+        </div>
+        <p class="slide-count">01 / 07</p>
+      </div>
+      <div class="hero">
+        <div class="hero-copy">
+          <p class="lead">
+            プレイ中に答えを教えるのではなく、対局後に自分の判断を見直せる仕組みを作っています。
+          </p>
+          <div class="meta-row">
+            <span class="pill">研究背景</span>
+            <span class="pill">関連研究</span>
+            <span class="pill">研究目的</span>
+            <span class="pill">4月からの差分</span>
+          </div>
+        </div>
+        <figure class="hero-visual">
+          <img src="原始replay界面.png" alt="リプレイ分析画面">
+          <figcaption class="caption-strip">
+            <span>Replay Analysis</span>
+            <span class="accent">AI score + timeline</span>
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section class="slide" aria-label="背景と関連研究">
+      <div class="slide-header">
+        <div>
+          <p class="kicker">背景・簡易関連研究</p>
+          <h2>上達したい時、必要なのは<br>「なぜ悪かったか」を戻って見られること</h2>
+        </div>
+        <p class="slide-count">02 / 07</p>
+      </div>
+      <div class="grid-two">
+        <div class="point-list">
+          <article class="point panel">
+            <div class="num">1</div>
+            <div>
+              <h3>テトリスは判断が速い</h3>
+              <p>一手ごとの配置、ホールド、ネクスト確認が連続するため、プレイ中に反省する余裕が少ないです。</p>
+            </div>
+          </article>
+          <article class="point panel">
+            <div class="num">2</div>
+            <div>
+              <h3>リプレイは客観視に向いている</h3>
+              <p>動画のように流れを戻せるので、失敗した場面や判断の変化を後から確認できます。</p>
+            </div>
+          </article>
+          <article class="point panel">
+            <div class="num">3</div>
+            <div>
+              <h3>AI評価は比較材料になる</h3>
+              <p>各手をスコア化し、AIの候補手と比べることで、改善点を見つけやすくなります。</p>
+            </div>
+          </article>
+        </div>
+        <div class="research-map panel">
+          <div class="map-row">
+            <div class="map-node">
+              <strong>リプレイ分析</strong>
+              <span>操作の流れを再生し、ミスの位置を特定する</span>
+            </div>
+            <div class="map-node">
+              <strong>プレイ統計</strong>
+              <span>PPS・APMなどで自分の傾向を把握する</span>
+            </div>
+          </div>
+          <div class="map-bridge"><span>本研究</span></div>
+          <div class="map-row">
+            <div class="map-node">
+              <strong>AI評価</strong>
+              <span>一手ごとの良し悪しを数値で示す</span>
+            </div>
+            <div class="map-node">
+              <strong>候補手提示</strong>
+              <span>より良い置き方を画面上で確認する</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" aria-label="研究目的">
+      <div class="slide-header">
+        <div>
+          <p class="kicker">研究目的</p>
+          <h2>初心者から中級者が、<br>短時間で自分のミスに気づける支援</h2>
+        </div>
+        <p class="slide-count">03 / 07</p>
+      </div>
+      <div class="goal-grid">
+        <article class="goal">
+          <div class="mark">A</div>
+          <div>
+            <h3>各操作の良し悪しを判断する</h3>
+            <p>リプレイ上でAI評価を見せ、どの一手が良かったか、どの一手が悪かったかを素早く確認できるようにします。</p>
+          </div>
+        </article>
+        <article class="goal">
+          <div class="mark">B</div>
+          <div>
+            <h3>ミスになった配置を探す</h3>
+            <p>タイムラインと評価推移を合わせて、積み方が崩れた場面や判断が遅れた場面を発見しやすくします。</p>
+          </div>
+        </article>
+        <article class="goal">
+          <div class="mark">C</div>
+          <div>
+            <h3>AIの置き方を参考にする</h3>
+            <p>どこにブロックを置くとよいかを候補として示し、次の練習につながる形でフィードバックします。</p>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="slide slide-diff" aria-label="四月からの差分">
+      <div class="slide-header">
+        <div>
+          <p class="kicker">4月からの差分</p>
+          <h2>「遊べる」から、<br>「振り返れる」へ</h2>
+        </div>
+        <p class="slide-count">04 / 07</p>
+      </div>
+      <div class="diff-layout">
+        <div class="stats-pair">
+          <figure class="stats-shot radar">
+            <img src="用户总游戏雷达图.png" alt="プレイヤー傾向のレーダーチャート">
+          </figure>
+          <figure class="stats-shot data">
+            <img src="用户总游戏数据.png" alt="プレイヤーデータ一覧">
+          </figure>
+        </div>
+        <div class="diff-list">
+          <div class="diff-item">プレイヤーの総合データを保存し、スコア・ライン数・PPS・APMなどを確認できるようにしました。</div>
+          <div class="diff-item">レーダーチャートで、速度・安定・火力などの特徴を直感的に見られるようにしました。</div>
+          <div class="diff-item">対局の履歴をリプレイとして読み込み、任意の手順まで戻れる画面を作りました。</div>
+          <div class="diff-item">Cold Clear系の評価ロジックを用いたAI分析を、リプレイ画面に接続しました。</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" aria-label="分析画面">
+      <div class="slide-header">
+        <div>
+          <p class="kicker">実装画面</p>
+          <h2>盤面・評価・時間の流れを<br>同じ場所で確認できます</h2>
+        </div>
+        <p class="slide-count">05 / 07</p>
+      </div>
+      <div class="screen-layout">
+        <figure class="image-stage">
+          <img src="包含面板具体解释的replay界面.png" alt="リプレイ分析画面の構成説明">
+        </figure>
+        <div class="feature-stack">
+          <div class="feature">
+            <strong>対局概要</strong>
+            <span>PPS・APM・スコアなどをまとめて確認します。</span>
+          </div>
+          <div class="feature">
+            <strong>AI評価</strong>
+            <span>現在の手がどの程度良いかを、画面左下に大きく表示します。</span>
+          </div>
+          <div class="feature">
+            <strong>タイムライン</strong>
+            <span>手順、評価差、操作時間を並べて、怪しい場面を探します。</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" aria-label="AIアドバイスのデモ">
+      <div class="slide-header">
+        <div>
+          <p class="kicker">完成イメージ</p>
+          <h2>「？」からAIに聞き、<br>候補手を段階的に確認します</h2>
+        </div>
+        <p class="slide-count">06 / 07</p>
+      </div>
+      <div class="demo-layout">
+        <figure class="demo-screen">
+          <img id="stepImage" src="step0可以点击问好进入AI逐步建议.png" alt="AI逐次アドバイス画面">
+          <button class="ask-pin" id="askPin" type="button" aria-label="AIに聞く">?</button>
+        </figure>
+        <div class="demo-panel">
+          <div class="step-title">
+            <small id="stepIndex">STEP 0</small>
+            <strong id="stepTitle">気になる一手を選ぶ</strong>
+            <p id="stepText">リプレイ中に判断が難しい場面を見つけたら、盤面上の「？」からAI分析を確認します。</p>
+          </div>
+          <div class="step-buttons" id="stepButtons" aria-label="ステップ選択"></div>
+          <div class="demo-actions">
+            <button class="action-btn" id="prevStep" type="button">戻る</button>
+            <button class="action-btn primary" id="nextStep" type="button">次へ</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide slide-final" aria-label="まとめ">
+      <div class="slide-header">
+        <div>
+          <p class="kicker">4月からの差分・今後</p>
+          <h2>リプレイ分析から、<br>対話できる練習環境へ</h2>
+        </div>
+        <p class="slide-count">07 / 07</p>
+      </div>
+      <div class="closing">
+        <article class="summary-card">
+          <h3>4月から5月の差分</h3>
+          <ul class="summary-list">
+            <li>対局履歴を読み込み、任意の手順を確認できるリプレイシステムを制作しました。</li>
+            <li>現在使用しているAI評価を導入し、一手ごとの良し悪しを見られるようにしました。</li>
+            <li>AIが次の数手の候補を提示する仕組みを入れ、配置の比較ができるようにしました。</li>
+          </ul>
+        </article>
+        <article class="summary-card dark">
+          <h3>今後の方向性：LAB機能</h3>
+          <ul class="summary-list">
+            <li>ユーザーが盤面を自由に動かし、置き方を試せる練習用のLAB画面を追加します。</li>
+            <li>別モデルを組み合わせ、AIが評価理由を説明し、ユーザーの質問にも答えられるようにします。</li>
+            <li>「この位置は良いか」をAIに確認し、理由まで返せる対話型の復習環境を目指します。</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <nav class="controls" aria-label="スライド操作">
+    <button class="nav-btn" id="prevSlide" type="button" aria-label="前のスライド">↑</button>
+    <div class="dots" id="dots"></div>
+    <button class="nav-btn" id="nextSlide" type="button" aria-label="次のスライド">↓</button>
+  </nav>
+
+  <script>
+    const slides = Array.from(document.querySelectorAll(".slide"));
+    const dots = document.getElementById("dots");
+    const progressBar = document.getElementById("progressBar");
+    const prevSlide = document.getElementById("prevSlide");
+    const nextSlide = document.getElementById("nextSlide");
+    let currentSlide = 0;
+
+    slides.forEach((_, index) => {
+      const dot = document.createElement("button");
+      dot.className = "dot";
+      dot.type = "button";
+      dot.setAttribute("aria-label", `${index + 1}枚目へ`);
+      dot.addEventListener("click", () => showSlide(index));
+      dots.appendChild(dot);
+    });
+
+    function showSlide(index) {
+      currentSlide = Math.max(0, Math.min(slides.length - 1, index));
+      slides.forEach((slide, slideIndex) => {
+        slide.classList.toggle("active", slideIndex === currentSlide);
+      });
+      Array.from(dots.children).forEach((dot, dotIndex) => {
+        dot.classList.toggle("active", dotIndex === currentSlide);
+      });
+      progressBar.style.width = `${((currentSlide + 1) / slides.length) * 100}%`;
+    }
+
+    prevSlide.addEventListener("click", () => showSlide(currentSlide - 1));
+    nextSlide.addEventListener("click", () => showSlide(currentSlide + 1));
+
+    const steps = [
+      {
+        image: "step0可以点击问好进入AI逐步建议.png",
+        label: "STEP 0",
+        title: "気になる一手を選ぶ",
+        text: "リプレイ中に判断が難しい場面を見つけたら、盤面上の「？」からAI分析を確認します。"
+      },
+      {
+        image: "step1.png",
+        label: "STEP 1",
+        title: "AIの候補手を見る",
+        text: "まずAIが良いと判断した置き方を表示し、自分の配置と比較できるようにします。"
+      },
+      {
+        image: "step2.png",
+        label: "STEP 2",
+        title: "評価差を確認する",
+        text: "現在の手と候補手の差を示し、どのくらい損をしたかを直感的に分かる形にします。"
+      },
+      {
+        image: "step3.png",
+        label: "STEP 3",
+        title: "理由を短く読む",
+        text: "穴、凹凸、次の置きやすさなど、評価に影響した要素を短い説明で確認します。"
+      },
+      {
+        image: "step4.png",
+        label: "STEP 4",
+        title: "危険な判断を見つける",
+        text: "スコアが大きく下がった手を強調し、ミスになりやすい配置を見つけやすくします。"
+      },
+      {
+        image: "step5.png",
+        label: "STEP 5",
+        title: "次の練習につなげる",
+        text: "同じ状況でどこを見るべきかを整理し、次回のプレイで意識できる形にします。"
+      }
+    ];
+
+    const stepImage = document.getElementById("stepImage");
+    const stepIndex = document.getElementById("stepIndex");
+    const stepTitle = document.getElementById("stepTitle");
+    const stepText = document.getElementById("stepText");
+    const stepButtons = document.getElementById("stepButtons");
+    const prevStep = document.getElementById("prevStep");
+    const nextStep = document.getElementById("nextStep");
+    const askPin = document.getElementById("askPin");
+    let currentStep = 0;
+
+    steps.forEach((step, index) => {
+      const btn = document.createElement("button");
+      btn.className = "step-btn";
+      btn.type = "button";
+      btn.textContent = step.label.replace("STEP ", "");
+      btn.setAttribute("aria-label", step.title);
+      btn.addEventListener("click", () => showStep(index));
+      stepButtons.appendChild(btn);
+    });
+
+    function showStep(index) {
+      currentStep = (index + steps.length) % steps.length;
+      const step = steps[currentStep];
+      stepImage.style.opacity = "0";
+      window.setTimeout(() => {
+        stepImage.src = step.image;
+        stepImage.style.opacity = "1";
+      }, 120);
+      stepIndex.textContent = step.label;
+      stepTitle.textContent = step.title;
+      stepText.textContent = step.text;
+      askPin.style.display = currentStep === 0 ? "grid" : "none";
+      Array.from(stepButtons.children).forEach((btn, btnIndex) => {
+        btn.classList.toggle("active", btnIndex === currentStep);
+      });
+    }
+
+    prevStep.addEventListener("click", () => showStep(currentStep - 1));
+    nextStep.addEventListener("click", () => showStep(currentStep + 1));
+    askPin.addEventListener("click", () => showStep(1));
+
+    let wheelPower = 0;
+    let lastWheelFlip = 0;
+    let nudgeTimer = 0;
+    let touchStartY = 0;
+    let touchLastY = 0;
+    const wheelThreshold = 110;
+    const flipCooldown = 620;
+
+    function clamp(value, min, max) {
+      return Math.max(min, Math.min(max, value));
+    }
+
+    function setNudge(deltaY) {
+      const nudge = clamp(-deltaY / 9, -16, 16);
+      document.documentElement.style.setProperty("--nudge", `${nudge}px`);
+      window.clearTimeout(nudgeTimer);
+      nudgeTimer = window.setTimeout(() => {
+        document.documentElement.style.setProperty("--nudge", "0px");
+      }, 120);
+    }
+
+    function verticalFlip(direction) {
+      const now = Date.now();
+      if (now - lastWheelFlip < flipCooldown) return;
+      lastWheelFlip = now;
+      wheelPower = 0;
+      document.documentElement.style.setProperty("--nudge", "0px");
+      showSlide(currentSlide + direction);
+    }
+
+    window.addEventListener("wheel", (event) => {
+      event.preventDefault();
+      wheelPower += event.deltaY;
+      setNudge(event.deltaY);
+      if (Math.abs(wheelPower) >= wheelThreshold) {
+        verticalFlip(wheelPower > 0 ? 1 : -1);
+      }
+    }, { passive: false });
+
+    window.addEventListener("touchstart", (event) => {
+      if (!event.touches.length) return;
+      touchStartY = event.touches[0].clientY;
+      touchLastY = touchStartY;
+    }, { passive: true });
+
+    window.addEventListener("touchmove", (event) => {
+      if (!event.touches.length) return;
+      touchLastY = event.touches[0].clientY;
+      setNudge(touchStartY - touchLastY);
+    }, { passive: true });
+
+    window.addEventListener("touchend", () => {
+      const distance = touchStartY - touchLastY;
+      if (Math.abs(distance) > 70) {
+        verticalFlip(distance > 0 ? 1 : -1);
+      } else {
+        document.documentElement.style.setProperty("--nudge", "0px");
+      }
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "ArrowRight" || event.key === "ArrowDown" || event.key === " ") {
+        event.preventDefault();
+        if (currentSlide === 5 && currentStep < steps.length - 1) {
+          showStep(currentStep + 1);
+        } else {
+          showSlide(currentSlide + 1);
+        }
+      }
+      if (event.key === "ArrowLeft" || event.key === "ArrowUp") {
+        event.preventDefault();
+        if (currentSlide === 5 && currentStep > 0) {
+          showStep(currentStep - 1);
+        } else {
+          showSlide(currentSlide - 1);
+        }
+      }
+      if (event.key >= "1" && event.key <= "7") {
+        showSlide(Number(event.key) - 1);
+      }
+    });
+
+    showStep(0);
+    const startParams = new URLSearchParams(window.location.search);
+    const startSlide = Number(startParams.get("slide") || "1") - 1;
+    showSlide(Number.isFinite(startSlide) ? startSlide : 0);
+  </script>
+</body>
+</html>
