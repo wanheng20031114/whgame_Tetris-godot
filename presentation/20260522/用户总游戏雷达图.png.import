@@ -3,15 +3,15 @@
 importer="texture"
 type="CompressedTexture2D"
 uid="uid://b6gk3thtn5185"
-path="res://.godot/imported/用户总游戏雷达图.png-eda635ab06309c4a19fe6151d8c01cab.ctex"
+path="res://.godot/imported/用户总游戏雷达图.png-63973fbc2602e04f17f5fb2b17d67ce9.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://presentation/用户总游戏雷达图.png"
-dest_files=["res://.godot/imported/用户总游戏雷达图.png-eda635ab06309c4a19fe6151d8c01cab.ctex"]
+source_file="res://presentation/20260522/用户总游戏雷达图.png"
+dest_files=["res://.godot/imported/用户总游戏雷达图.png-63973fbc2602e04f17f5fb2b17d67ce9.ctex"]
 
 [params]
 
