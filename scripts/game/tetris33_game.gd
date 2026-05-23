@@ -610,7 +610,7 @@ func _lock_piece() -> void:
 	if cleared > 0:
 		var is_t_spin := cur_type == PieceData.Type.T and is_spin
 		scoring.process_line_clear(cleared, is_spin, is_t_spin)
-		dmg = _calculate_damage(cleared, is_spin)
+		dmg = _calculate_damage(cleared, is_spin, is_t_spin)
 		lines_cleared.emit(cleared, is_spin, is_t_spin, dmg)
 		rows_cleared.emit(cleared_rows_data)
 	else:

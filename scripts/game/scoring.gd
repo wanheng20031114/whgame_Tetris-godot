@@ -4,7 +4,7 @@ extends RefCounted
 ## 计分与等级系统
 ##
 ## 管理分数、等级、消行数、连击（Combo）、背靠背（B2B）等所有得分逻辑。
-## 支持 All Spin Bonus：不仅 T-Spin，任何方块的 Spin 都给予额外奖励。
+## T-Spin 使用 Spin 奖励；其它方块的 Spin 只作为操作展示，不提供额外攻击/困难消除奖励。
 
 # ==============================================================================
 # 分数常量表
@@ -18,7 +18,7 @@ const LINE_SCORES: Dictionary = {
 	4: 800 # Tetris
 }
 
-## Spin 消行基础分（All Spin Bonus，乘以当前等级）
+## T-Spin 消行基础分（乘以当前等级）
 const SPIN_SCORES: Dictionary = {
 	0: 400, # Spin 但没消行（只旋转入位）
 	1: 800, # Spin Single
@@ -59,21 +59,21 @@ signal lines_changed(new_lines: int)
 
 ## 处理一次消行事件
 ## lines_cleared: 本次消除的行数（0-4）
-## is_spin: 是否为 Spin 消除（All Spin Bonus 判定）
-## is_t_piece: 是否为 T 方块（用于区分 T-Spin 和普通 Spin）
-func process_line_clear(lines_cleared: int, is_spin: bool, _is_t_piece: bool) -> void:
-	if lines_cleared <= 0 and not is_spin:
+## is_spin: 是否为 Spin 消除
+## is_t_spin: 是否为 T-Spin。只有 T-Spin 使用 Spin 奖励。
+func process_line_clear(lines_cleared: int, _is_spin: bool, is_t_spin: bool) -> void:
+	if lines_cleared <= 0 and not is_t_spin:
 		return
 
 	# 1. 计算基础分
 	var base: int = 0
-	if is_spin:
+	if is_t_spin:
 		base = SPIN_SCORES.get(lines_cleared, 0)
 	else:
 		base = LINE_SCORES.get(lines_cleared, 0)
 
-	# 2. 判断是否为"困难消除"（Tetris 或任何 Spin 消行）
-	var is_difficult: bool = is_spin or lines_cleared >= 4
+	# 2. 判断是否为"困难消除"（Tetris 或 T-Spin）
+	var is_difficult: bool = is_t_spin or lines_cleared >= 4
 
 	# 3. B2B 加成
 	if is_difficult:

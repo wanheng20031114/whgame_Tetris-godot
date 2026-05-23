@@ -308,7 +308,7 @@ func _lock_piece() -> void:
 	if cleared > 0:
 		var is_t_spin = (cur_type == PieceData.Type.T and is_spin)
 		scoring.process_line_clear(cleared, is_spin, is_t_spin)
-		dmg = _calculate_damage(cleared, is_spin)
+		dmg = _calculate_damage(cleared, is_spin, is_t_spin)
 		lines_cleared.emit(cleared, is_spin, is_t_spin, dmg)
 		rows_cleared.emit(cleared_rows_data)
 	else:
@@ -339,9 +339,9 @@ func _check_immobile() -> bool:
 		blocked += 1
 	return blocked >= 3
 
-func _calculate_damage(cleared_count: int, is_spin: bool) -> int:
+func _calculate_damage(cleared_count: int, _is_spin: bool, is_t_spin: bool) -> int:
 	var dmg: int = 0
-	if is_spin:
+	if is_t_spin:
 		if cleared_count == 1: dmg = 2
 		elif cleared_count == 2: dmg = 4
 		elif cleared_count == 3: dmg = 6
@@ -351,7 +351,7 @@ func _calculate_damage(cleared_count: int, is_spin: bool) -> int:
 		elif cleared_count >= 4: dmg = 4
 	
 	# B2B 加成
-	if scoring.b2b > 0 and (is_spin or cleared_count >= 4):
+	if scoring.b2b > 0 and (is_t_spin or cleared_count >= 4):
 		dmg += 1
 		
 	# Combo 加成

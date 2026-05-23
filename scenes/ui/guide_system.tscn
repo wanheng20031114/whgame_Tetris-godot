@@ -1,0 +1,132 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/guide_system.gd" id="1_guide"]
+
+[node name="GuideSystem" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_guide")
+
+[node name="Background" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0.964706, 0.976471, 1, 1)
+
+[node name="Page" type="VBoxContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Header" type="PanelContainer" parent="Page"]
+layout_mode = 2
+custom_minimum_size = Vector2(0, 76)
+
+[node name="Margin" type="MarginContainer" parent="Page/Header"]
+layout_mode = 2
+theme_override_constants/margin_left = 28
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 28
+theme_override_constants/margin_bottom = 10
+
+[node name="Row" type="HBoxContainer" parent="Page/Header/Margin"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="BackButton" type="Button" parent="Page/Header/Margin/Row"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(116, 42)
+text = "返回大厅"
+
+[node name="TitleBox" type="VBoxContainer" parent="Page/Header/Margin/Row"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="Title" type="Label" parent="Page/Header/Margin/Row/TitleBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.058824, 0.121569, 0.270588, 1)
+theme_override_font_sizes/font_size = 28
+text = "TETRIS GUIDE"
+
+[node name="Tabs" type="HBoxContainer" parent="Page/Header/Margin/Row"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="ReadTab" type="Label" parent="Page/Header/Margin/Row/Tabs"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.0360784, 0.464706, 0.545098, 1)
+theme_override_font_sizes/font_size = 13
+text = "阅读"
+
+[node name="DemoTab" type="Label" parent="Page/Header/Margin/Row/Tabs"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.0360784, 0.464706, 0.545098, 1)
+theme_override_font_sizes/font_size = 13
+text = "演示"
+
+[node name="TryTab" type="Label" parent="Page/Header/Margin/Row/Tabs"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.0360784, 0.464706, 0.545098, 1)
+theme_override_font_sizes/font_size = 13
+text = "模拟"
+
+[node name="BodyMargin" type="MarginContainer" parent="Page"]
+layout_mode = 2
+size_flags_vertical = 3
+theme_override_constants/margin_left = 28
+theme_override_constants/margin_top = 20
+theme_override_constants/margin_right = 28
+theme_override_constants/margin_bottom = 22
+
+[node name="Body" type="HBoxContainer" parent="Page/BodyMargin"]
+layout_mode = 2
+theme_override_constants/separation = 18
+
+[node name="SidebarPanel" type="PanelContainer" parent="Page/BodyMargin/Body"]
+layout_mode = 2
+custom_minimum_size = Vector2(250, 0)
+
+[node name="SidebarMargin" type="MarginContainer" parent="Page/BodyMargin/Body/SidebarPanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 0
+theme_override_constants/margin_top = 0
+theme_override_constants/margin_right = 0
+theme_override_constants/margin_bottom = 0
+
+[node name="Sidebar" type="VBoxContainer" parent="Page/BodyMargin/Body/SidebarPanel/SidebarMargin"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="OverviewButton" type="Button" parent="Page/BodyMargin/Body/SidebarPanel/SidebarMargin/Sidebar"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(0, 42)
+text = "  总览"
+alignment = 0
+
+[node name="SectionLabel" type="Label" parent="Page/BodyMargin/Body/SidebarPanel/SidebarMargin/Sidebar"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.392157, 0.454902, 0.545098, 1)
+theme_override_font_sizes/font_size = 13
+text = "学习章节"
+
+[node name="ChaptersList" type="VBoxContainer" parent="Page/BodyMargin/Body/SidebarPanel/SidebarMargin/Sidebar"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="ContentRoot" type="MarginContainer" parent="Page/BodyMargin/Body"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3

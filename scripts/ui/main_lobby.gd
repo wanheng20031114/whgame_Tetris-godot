@@ -8,12 +8,14 @@ extends Control
 ## 3) 同时兼容鼠标悬停与手柄/键盘焦点
 
 signal start_marathon()
+signal open_guide()
 signal start_multiplayer()
 signal open_player_stats()
 signal open_replay()
 
 @onready var lbl_player_name: Label = %PlayerNameLabel
 @onready var card_marathon: PanelContainer = %CardMarathon
+@onready var card_guide: PanelContainer = %CardGuide
 @onready var card_multiplayer: PanelContainer = %CardMultiplayer
 @onready var btn_stats: Button = %BtnStats
 @onready var card_replay: PanelContainer = %CardReplay
@@ -46,34 +48,43 @@ func _ready() -> void:
 
 	# 绑定点击输入
 	card_marathon.gui_input.connect(_on_card_input.bind(card_marathon, "marathon"))
+	card_guide.gui_input.connect(_on_card_input.bind(card_guide, "guide"))
 	card_multiplayer.gui_input.connect(_on_card_input.bind(card_multiplayer, "multiplayer"))
 	card_replay.gui_input.connect(_on_card_input.bind(card_replay, "replay"))
 
 	# 绑定 hover + focus，统一走同一套高亮刷新逻辑
 	card_marathon.mouse_entered.connect(_on_card_hover.bind(card_marathon, true))
 	card_marathon.mouse_exited.connect(_on_card_hover.bind(card_marathon, false))
+	card_guide.mouse_entered.connect(_on_card_hover.bind(card_guide, true))
+	card_guide.mouse_exited.connect(_on_card_hover.bind(card_guide, false))
 	card_multiplayer.mouse_entered.connect(_on_card_hover.bind(card_multiplayer, true))
 	card_multiplayer.mouse_exited.connect(_on_card_hover.bind(card_multiplayer, false))
 	card_replay.mouse_entered.connect(_on_card_hover.bind(card_replay, true))
 	card_replay.mouse_exited.connect(_on_card_hover.bind(card_replay, false))
 	card_marathon.focus_entered.connect(_on_card_hover.bind(card_marathon, true))
 	card_marathon.focus_exited.connect(_on_card_hover.bind(card_marathon, false))
+	card_guide.focus_entered.connect(_on_card_hover.bind(card_guide, true))
+	card_guide.focus_exited.connect(_on_card_hover.bind(card_guide, false))
 	card_multiplayer.focus_entered.connect(_on_card_hover.bind(card_multiplayer, true))
 	card_multiplayer.focus_exited.connect(_on_card_hover.bind(card_multiplayer, false))
 	card_replay.focus_entered.connect(_on_card_hover.bind(card_replay, true))
 	card_replay.focus_exited.connect(_on_card_hover.bind(card_replay, false))
 
 	# 焦点导航配置（手柄/键盘）
-	_cards = [card_marathon, card_multiplayer, card_replay]
+	_cards = [card_marathon, card_guide, card_multiplayer, card_replay]
 	card_marathon.focus_mode = Control.FOCUS_ALL
+	card_guide.focus_mode = Control.FOCUS_ALL
 	card_multiplayer.focus_mode = Control.FOCUS_ALL
 	card_replay.focus_mode = Control.FOCUS_ALL
-	card_marathon.focus_neighbor_right = card_multiplayer.get_path()
-	card_multiplayer.focus_neighbor_left = card_marathon.get_path()
+	card_marathon.focus_neighbor_right = card_guide.get_path()
+	card_guide.focus_neighbor_left = card_marathon.get_path()
+	card_guide.focus_neighbor_right = card_multiplayer.get_path()
+	card_multiplayer.focus_neighbor_left = card_guide.get_path()
 	card_multiplayer.focus_neighbor_right = card_replay.get_path()
 	card_replay.focus_neighbor_left = card_multiplayer.get_path()
 	if btn_stats:
 		card_marathon.focus_neighbor_bottom = btn_stats.get_path()
+		card_guide.focus_neighbor_bottom = btn_stats.get_path()
 		card_multiplayer.focus_neighbor_bottom = btn_stats.get_path()
 		card_replay.focus_neighbor_bottom = btn_stats.get_path()
 		btn_stats.focus_neighbor_top = card_multiplayer.get_path()
@@ -91,6 +102,7 @@ func _ready() -> void:
 
 	# 缩放动画基准点设为卡片中心
 	card_marathon.pivot_offset = card_marathon.size / 2.0
+	card_guide.pivot_offset = card_guide.size / 2.0
 	card_multiplayer.pivot_offset = card_multiplayer.size / 2.0
 	card_replay.pivot_offset = card_replay.size / 2.0
 
@@ -123,6 +135,9 @@ func _clear_initial_card_selection() -> void:
 	if card_marathon:
 		card_marathon.release_focus()
 		card_marathon.scale = CARD_NORMAL_SCALE
+	if card_guide:
+		card_guide.release_focus()
+		card_guide.scale = CARD_NORMAL_SCALE
 	if card_multiplayer:
 		card_multiplayer.release_focus()
 		card_multiplayer.scale = CARD_NORMAL_SCALE
@@ -146,9 +161,17 @@ func _update_texts() -> void:
 	if lbl_multiplayer:
 		lbl_multiplayer.text = tr("TXT_MULTIPLAYER")
 
+	var lbl_guide = get_node_or_null("%CardGuide/VBoxContainer/Title")
+	if lbl_guide:
+		lbl_guide.text = "教程百科"
+
 	var lbl_m_desc = get_node_or_null("%CardMarathon/VBoxContainer/Desc")
 	if lbl_m_desc:
 		lbl_m_desc.text = tr("TXT_MARATHON_DESC")
+
+	var lbl_g_desc = get_node_or_null("%CardGuide/VBoxContainer/Desc")
+	if lbl_g_desc:
+		lbl_g_desc.text = "学习消除攻击\n旋转技巧\n和 AI 评价"
 
 	var lbl_mp_desc = get_node_or_null("%CardMultiplayer/VBoxContainer/Desc")
 	if lbl_mp_desc:
@@ -185,7 +208,7 @@ func _init_card_glow_styles() -> void:
 	# 每张卡都从当前 panel 样式复制出两份：
 	# - base: 默认样式
 	# - glow: 选中时的高亮外发光样式
-	for card in [card_marathon, card_multiplayer, card_replay]:
+	for card in [card_marathon, card_guide, card_multiplayer, card_replay]:
 		var panel_style: StyleBox = card.get_theme_stylebox("panel")
 		if not (panel_style is StyleBoxFlat):
 			continue
@@ -242,6 +265,7 @@ func _set_card_glow(card: PanelContainer, active: bool) -> void:
 
 func _refresh_card_visuals() -> void:
 	_set_card_glow(card_marathon, _is_card_active(card_marathon))
+	_set_card_glow(card_guide, _is_card_active(card_guide))
 	_set_card_glow(card_multiplayer, _is_card_active(card_multiplayer))
 	_set_card_glow(card_replay, _is_card_active(card_replay))
 
@@ -304,6 +328,8 @@ func _get_focused_card() -> PanelContainer:
 func _get_focused_card_mode(card: Control) -> String:
 	if card == card_marathon:
 		return "marathon"
+	if card == card_guide:
+		return "guide"
 	if card == card_multiplayer:
 		return "multiplayer"
 	if card == card_replay:
@@ -323,6 +349,8 @@ func _activate_mode(card: Control, mode: String) -> void:
 	tween.finished.connect(func():
 		if mode == "marathon":
 			start_marathon.emit()
+		elif mode == "guide":
+			open_guide.emit()
 		elif mode == "multiplayer":
 			start_multiplayer.emit()
 		elif mode == "replay":
