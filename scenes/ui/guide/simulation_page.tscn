@@ -42,7 +42,8 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.027451, 0.521569, 0.921569, 1)
 theme_override_font_sizes/font_size = 14
 text = "点击右侧棋盘聚焦，使用游戏按键操作方块。
-方块不会自动下落。"
+方向键会锁定为方块操作，Esc 取消棋盘聚焦。
+鼠标点击其它控件也会切换聚焦。"
 autowrap_mode = 3
 
 [node name="Spacer" type="Control" parent="SidePanel/SideMargin/SideBox"]
@@ -77,13 +78,10 @@ theme_override_constants/margin_top = 16
 theme_override_constants/margin_right = 16
 theme_override_constants/margin_bottom = 16
 
-[node name="BoardCenter" type="CenterContainer" parent="BoardPanel/BoardMargin"]
+[node name="BoardView" type="Control" parent="BoardPanel/BoardMargin"]
+unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
-
-[node name="BoardView" type="Control" parent="BoardPanel/BoardMargin/BoardCenter"]
-unique_name_in_owner = true
-layout_mode = 2
-custom_minimum_size = Vector2(340, 680)
+custom_minimum_size = Vector2(200, 400)
 script = ExtResource("1_board")

@@ -86,7 +86,9 @@ func _gui_input(event: InputEvent) -> void:
 
 
 func _notification(what: int) -> void:
-	if what == NOTIFICATION_FOCUS_EXIT:
+	if what == NOTIFICATION_FOCUS_ENTER:
+		focused = true
+	elif what == NOTIFICATION_FOCUS_EXIT:
 		focused = false
 
 
@@ -188,13 +190,6 @@ func _draw() -> void:
 			var y := board_rect.position.y + float(row) * cell
 			draw_rect(Rect2(board_rect.position.x, y, board_rect.size.x, cell), Color(1.0, 0.84, 0.28, 0.22), true)
 
-	for c in range(columns + 1):
-		var x := board_rect.position.x + float(c) * cell
-		draw_line(Vector2(x, board_rect.position.y), Vector2(x, board_rect.position.y + board_rect.size.y), Color(0.15, 0.15, 0.22, 0.5), 1.0)
-	for r in range(rows + 1):
-		var y := board_rect.position.y + float(r) * cell
-		draw_line(Vector2(board_rect.position.x, y), Vector2(board_rect.position.x + board_rect.size.x, y), Color(0.15, 0.15, 0.22, 0.5), 1.0)
-
 	for row in range(mini(rows, grid.size())):
 		var row_data: Array = grid[row]
 		for col in range(mini(columns, row_data.size())):
@@ -213,7 +208,7 @@ func _draw() -> void:
 	if show_ghost and ghost_row >= 0 and not active_piece.is_empty():
 		var ghost_piece := active_piece.duplicate()
 		ghost_piece["row"] = ghost_row
-		_draw_piece(board_rect, ghost_piece, 0.20)
+		_draw_piece(board_rect, ghost_piece, 0.12)
 
 	if not active_piece.is_empty():
 		_draw_piece(board_rect, active_piece, 1.0)
@@ -221,6 +216,13 @@ func _draw() -> void:
 		# 显示旋转中心点（红色圆圈）
 		if show_center_point:
 			_draw_center_point(board_rect, active_piece)
+
+	for c in range(columns + 1):
+		var x := board_rect.position.x + float(c) * cell
+		draw_line(Vector2(x, board_rect.position.y), Vector2(x, board_rect.position.y + board_rect.size.y), Color(0.15, 0.15, 0.22, 0.5), 1.0)
+	for r in range(rows + 1):
+		var y := board_rect.position.y + float(r) * cell
+		draw_line(Vector2(board_rect.position.x, y), Vector2(board_rect.position.x + board_rect.size.x, y), Color(0.15, 0.15, 0.22, 0.5), 1.0)
 
 	# 聚焦状态边框
 	var main_border_color := Color(0.0, 0.92, 1.0, 0.8) if focused else Color(0.0, 0.83, 1.0, 0.45)
@@ -329,19 +331,18 @@ func _draw_cell_at(board_rect: Rect2, col: float, row: float, value: int, alpha:
 	var cell := board_rect.size.x / float(columns)
 	var rect := Rect2(
 		board_rect.position + Vector2(col * cell, row * cell),
-		Vector2(cell, cell)
-	).grow(-1.0)
+		Vector2(cell - 1.0, cell - 1.0)
+	)
 	var color := _piece_color(value)
 	color.a *= alpha
 	draw_rect(rect, color, true)
-	draw_rect(rect, color.lightened(0.25), false, 1.2)
 
 
 func _draw_target_cell(board_rect: Rect2, col: int, row: int) -> void:
 	if col < 0 or col >= columns or row < 0 or row >= rows:
 		return
 	var value := int(active_piece.get("type", PieceData.Type.I)) + 1 if not active_piece.is_empty() else PieceData.Type.I + 1
-	_draw_ghost_cell_at(board_rect, float(col), float(row), value, 0.26)
+	_draw_ghost_cell_at(board_rect, float(col), float(row), value, 0.14)
 
 
 func _draw_ghost_cell_at(board_rect: Rect2, col: float, row: float, value: int, alpha: float) -> void:

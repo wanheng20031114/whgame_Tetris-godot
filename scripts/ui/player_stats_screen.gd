@@ -8,7 +8,7 @@ const VALUE_HIGHLIGHT_COLOR := Color(0.3, 0.85, 1.0, 1.0)
 const BODY_FONT_SIZE: int = 18
 
 @onready var btn_back: Button = %BtnBack
-@onready var settings_menu: TextureButton = %SettingsMenu
+@onready var settings_menu: TextureButton = $SettingsMenu
 @onready var lbl_title: Label = %LblTitle
 @onready var lbl_no_data: Label = %LblNoData
 @onready var radar_chart: Control = %RadarChart

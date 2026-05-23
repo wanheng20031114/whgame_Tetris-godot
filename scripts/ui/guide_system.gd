@@ -70,14 +70,17 @@ func _notification(what: int) -> void:
 		board_view.queue_redraw()
 
 
-func _unhandled_input(event: InputEvent) -> void:
+func _input(event: InputEvent) -> void:
 	if not in_simulation:
 		return
 	# 只有棋盘聚焦时才接受输入
 	if board_view and not board_view.focused:
 		return
 	if event.is_action_pressed("ui_cancel"):
-		_show_chapter(selected_index)
+		if board_view:
+			board_view.focused = false
+			if board_view is Control:
+				(board_view as Control).release_focus()
 		get_viewport().set_input_as_handled()
 	elif event.is_action_pressed("move_left") or event.is_action_pressed("ui_left"):
 		_sim_move(-1, 0)
@@ -221,9 +224,11 @@ func _style_sidebar_button(btn: Button, active: bool) -> void:
 	var border_color := Color("0284c7") if active else Color("d8e4f1")
 	btn.add_theme_stylebox_override("normal", _style(normal_color, border_color, 8, 1))
 	btn.add_theme_stylebox_override("hover", _style(Color("f0f9ff"), Color("38bdf8"), 8, 1))
+	btn.add_theme_stylebox_override("pressed", _style(Color("bae6fd"), Color("0ea5e9"), 8, 1))
 	btn.add_theme_stylebox_override("focus", _style(Color("e0f2fe"), Color("0284c7"), 8, 1))
 	btn.add_theme_color_override("font_color", Color("12345a"))
 	btn.add_theme_color_override("font_hover_color", Color("075985"))
+	btn.add_theme_color_override("font_pressed_color", Color("0369a1"))
 	btn.add_theme_color_override("font_focus_color", Color("075985"))
 
 
@@ -402,10 +407,14 @@ func _build_demo_sequence(runner: RefCounted) -> Dictionary:
 		match String(op["op"]):
 			"drop_to":
 				_append_drop_frames(frames, runner, int(op["row"]), String(op["label"]))
+			"hard_drop":
+				_append_hard_drop_frames(frames, runner, String(op["label"]))
 			"move":
 				_append_move_frames(frames, runner, int(op["dx"]), int(op["count"]), String(op["label"]))
 			"rotate":
 				_append_rotate_frame(frames, runner, int(op["direction"]), String(op["label"]))
+			"wait":
+				_append_wait_frame(frames, runner, float(op.get("duration", 1.0)), String(op["label"]))
 
 	var locked_grid: Array = runner.grid_with_active()
 	var result: Dictionary = runner.lock_piece()
@@ -424,6 +433,26 @@ func _append_drop_frames(frames: Array, runner: RefCounted, target_row: int, lab
 		if not runner.try_move(0, 1):
 			break
 		frames.append(_demo_frame(runner, from_piece, runner.piece_dict(), label, 0.045))
+
+
+func _append_hard_drop_frames(frames: Array, runner: RefCounted, label: String) -> void:
+	while true:
+		var from_piece: Dictionary = runner.piece_dict()
+		if not runner.try_move(0, 1):
+			break
+		frames.append(_demo_frame(runner, from_piece, runner.piece_dict(), label, 0.03))
+
+
+func _append_wait_frame(frames: Array, runner: RefCounted, duration: float, label: String) -> void:
+	var piece_dict: Dictionary = runner.piece_dict()
+	frames.append({
+		"grid": SCENARIO_RUNNER.copy_grid(runner.grid),
+		"from": piece_dict,
+		"to": piece_dict,
+		"label": label,
+		"rows": runner.highlight_rows(),
+		"duration": duration
+	})
 
 
 func _append_move_frames(frames: Array, runner: RefCounted, dx: int, count: int, label: String) -> void:
@@ -456,13 +485,21 @@ func _demo_operations(scene_id: String, phase: int) -> Array:
 	if scene_id == "tspin":
 		return [
 			{"op": "rotate", "direction": 1, "label": "顺时针旋转，调整入口方向"},
-			{"op": "drop_to", "row": 16, "label": "软降到槽口上方"},
+			{"op": "drop_to", "row": 18, "label": "软降到槽口上方"},
 			{"op": "rotate", "direction": 1, "label": "顺时针旋转，T 方块旋入 T 槽"}
 		]
 	if scene_id == "wallkick":
 		return [
-			{"op": "drop_to", "row": 13, "label": "软降到墙边位置"},
-			{"op": "rotate", "direction": 1, "label": "顺时针旋转——触发踢墙，中心点偏移"}
+			{"op": "rotate", "direction": -1, "label": "逆时针旋转 90°"},
+			{"op": "move", "dx": 1, "count": 3, "label": "向右移动直到贴住墙壁"},
+			{"op": "wait", "duration": 1.0, "label": "贴墙停顿"},
+			{"op": "rotate", "direction": 1, "label": "顺时针旋转 90°：踢墙，中心点向左移 1 格"},
+			{"op": "wait", "duration": 1.5, "label": "观察踢墙位移"},
+			{"op": "rotate", "direction": -1, "label": "再次逆时针旋转 90°"},
+			{"op": "move", "dx": 1, "count": 1, "label": "右移贴住墙壁"},
+			{"op": "hard_drop", "label": "下落到底部"},
+			{"op": "wait", "duration": 1.0, "label": "等待旋入时机"},
+			{"op": "rotate", "direction": 1, "label": "顺时针旋转：踢墙旋入，完成 L-Spin"}
 		]
 	if scene_id == "combo":
 		# O 方块直接硬降到右侧 2 列
@@ -631,11 +668,6 @@ func _sim_lock_now() -> void:
 func _lock_sim_piece() -> void:
 	sim_attempts += 1
 
-	# 记录消除前的行用于播放特效
-	var pre_lock_grid: Array = SCENARIO_RUNNER.copy_grid(scenario_runner.grid)
-	# 先将方块写入 grid 来检查哪些行会被消
-	var grid_with_piece: Array = scenario_runner.grid_with_active()
-
 	var result: Dictionary = scenario_runner.lock_piece()
 	var cleared := int(result["cleared"])
 	var cleared_rows: Array = result["rows"]
@@ -668,7 +700,8 @@ func _lock_sim_piece() -> void:
 					var extra: int = int(COMBO_ATTACK_TABLE[mini(sim_combo, COMBO_ATTACK_TABLE.size() - 1)])
 					_set_feedback("Combo %d！额外攻击力 +%d 行。继续保持连击。" % [sim_combo, extra], true)
 					sim_sequence_index += 1
-					scenario_runner.setup("combo", sim_sequence_index)
+					scenario_runner.phase = sim_sequence_index
+					scenario_runner.spawn(PieceData.Type.O, 7, 2, PieceData.RotationState.SPAWN)
 					sim_locked = false
 			else:
 				sim_combo = 0
@@ -676,11 +709,11 @@ func _lock_sim_piece() -> void:
 				_set_feedback("连击中断——这次落块没有消行。Combo 要求每次都消行。", false, true)
 		"wallkick":
 			sim_locked = true
-			if scenario_runner.last_was_rotation:
+			if bool(result["spin"]) and cleared >= 2:
 				sim_success = true
-				_set_feedback("观察到了踢墙！旋转后方块的中心点发生了偏移，这就是 Wall Kick。", true)
+				_set_feedback("成功！L-Spin —— 最后一次旋转靠踢墙进入空洞，并完成 2 行消除。", true)
 			else:
-				_set_feedback("这次不是旋转锁定。试试在墙边旋转方块。按重置再试。", false, true)
+				_set_feedback("还没有完成 L-Spin。需要最后一步靠踢墙旋入右下角，并完成 2 行消除。", false, true)
 		_:
 			if scenario_runner.piece_type == PieceData.Type.I and cleared == 4:
 				sim_success = true
@@ -956,13 +989,15 @@ func _style_button(btn: Button, filled: bool) -> void:
 	if filled:
 		btn.add_theme_stylebox_override("normal", _style(Color("2563eb"), Color("1d4ed8"), 8, 1))
 		btn.add_theme_stylebox_override("hover", _style(Color("1d4ed8"), Color("1e40af"), 8, 1))
+		btn.add_theme_stylebox_override("pressed", _style(Color("1e40af"), Color("1e3a8a"), 8, 1))
 		btn.add_theme_color_override("font_color", Color("ffffff"))
 		btn.add_theme_color_override("font_hover_color", Color("ffffff"))
-		btn.add_theme_color_override("font_pressed_color", Color("ffffff"))
+		btn.add_theme_color_override("font_pressed_color", Color("e0e7ff"))
 		btn.add_theme_color_override("font_focus_color", Color("ffffff"))
 	else:
 		btn.add_theme_stylebox_override("normal", _style(Color("ffffff"), Color("bfdbfe"), 8, 1))
 		btn.add_theme_stylebox_override("hover", _style(Color("eff6ff"), Color("60a5fa"), 8, 1))
+		btn.add_theme_stylebox_override("pressed", _style(Color("dbeafe"), Color("3b82f6"), 8, 1))
 		btn.add_theme_color_override("font_color", Color("1d4ed8"))
 		btn.add_theme_color_override("font_hover_color", Color("1d4ed8"))
 		btn.add_theme_color_override("font_pressed_color", Color("1e40af"))

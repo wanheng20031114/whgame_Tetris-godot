@@ -216,5 +216,6 @@ theme_override_font_sizes/font_size = 15
 [node name="BoardView" type="Control" parent="DemoPanel/DemoMargin/DemoBox"]
 unique_name_in_owner = true
 layout_mode = 2
-custom_minimum_size = Vector2(320, 500)
+size_flags_vertical = 3
+custom_minimum_size = Vector2(200, 300)
 script = ExtResource("1_board")

@@ -32,8 +32,7 @@ func setup(new_scene_id: String, new_phase: int = 0) -> void:
 			spawn(PieceData.Type.O, 7, 2, PieceData.RotationState.SPAWN)
 		"wallkick":
 			_fill_wallkick_grid()
-			# L 方块紧贴右墙
-			spawn(PieceData.Type.L, 8, 12, PieceData.RotationState.SPAWN)
+			spawn(PieceData.Type.L, 6, 8, PieceData.RotationState.SPAWN)
 		_:
 			_fill_tetris_grid()
 			spawn(PieceData.Type.I, 4, 5, PieceData.RotationState.SPAWN)
@@ -138,14 +137,10 @@ func target_cells() -> Array:
 		"tspin":
 			return piece_cells(PieceData.Type.T, PieceData.RotationState.TWO, 5, 18)
 		"combo":
-			# O 方块目标位置：右侧2列底部
-			var target_row := 19 - phase * 2
-			if target_row < 1:
-				target_row = 1
-			return piece_cells(PieceData.Type.O, PieceData.RotationState.SPAWN, 8, target_row)
+			# O 方块始终从右侧空列落到底部（row 19 时占据 row 18-19）
+			return piece_cells(PieceData.Type.O, PieceData.RotationState.SPAWN, 8, 19)
 		"wallkick":
-			# Wall kick 后 L 方块的位置
-			return piece_cells(PieceData.Type.L, PieceData.RotationState.R, 8, 12)
+			return piece_cells(PieceData.Type.L, PieceData.RotationState.SPAWN, 8, 19)
 		_:
 			return piece_cells(PieceData.Type.I, PieceData.RotationState.R, 8, 17)
 
@@ -155,12 +150,9 @@ func highlight_rows() -> Array:
 		"tspin":
 			return [18, 19]
 		"combo":
-			var base_row := 19 - phase * 2
-			if base_row < 1:
-				return [1, 2]
-			return [base_row - 1, base_row]
+			return [18, 19]
 		"wallkick":
-			return []
+			return [18, 19]
 		_:
 			return [16, 17, 18, 19]
 
@@ -168,7 +160,7 @@ func highlight_rows() -> Array:
 func focus_cells() -> Array:
 	match scene_id:
 		"tspin":
-			return [Vector2i(4, 18), Vector2i(5, 18), Vector2i(6, 18), Vector2i(4, 19), Vector2i(5, 19), Vector2i(6, 19)]
+			return []
 		_:
 			return []
 
@@ -180,6 +172,8 @@ func effect_text(cleared: int, spin: bool = false) -> String:
 		return "T-SPIN SINGLE"
 	if scene_id == "combo":
 		return "COMBO %d" % (phase + 1)
+	if scene_id == "wallkick" and spin and cleared >= 2:
+		return "L-SPIN"
 	if scene_id == "wallkick":
 		return "WALL KICK"
 	if cleared == 4:
@@ -258,32 +252,28 @@ func _fill_tspin_double_grid() -> void:
 
 
 ## Wall Kick 地形：右侧墙壁附近有简单堆叠
-## L 方块贴右墙旋转展示踢墙位移
+## 玩家可以在模拟中通过梯墙将 L 方块旋入右下角的空洞中
 func _fill_wallkick_grid() -> void:
-	# 在底部几行构造地形，让 L 方块必须踢墙
-	for r in range(14, 20):
-		for c in range(0, 7):
-			grid[r][c] = GARBAGE
-	# col 7,8,9 保留空间给 L 方块
-	# 底部 row 19 加一些方块限制
-	grid[19][7] = GARBAGE
-	grid[19][8] = GARBAGE
+	for c in range(0, 9):
+		grid[18][c] = GARBAGE
+	for c in range(0, 7):
+		grid[19][c] = GARBAGE
 
 
 ## Combo 地形：右侧空2列（col 8,9），其余8列填满，10层高
 ## 每个 phase O 方块落入右侧消除2行
 func _fill_combo_phase_grid(combo_phase: int) -> void:
-	# 根据已消除的 phase 数量确定顶部位置
+	# 重力调整：O 方块始终从右侧空列落到底部，每次消底部2行
 	# phase 0: 行 10-19 填满（10层），O 方块消 row 18-19
-	# phase 1: 行 10-17 填满（8层），O 方块消 row 16-17
-	# phase 2: 行 10-15 填满（6层），O 方块消 row 14-15
-	# phase 3: 行 10-13 填满（4层），O 方块消 row 12-13
-	# phase 4: 行 10-11 填满（2层），O 方块消 row 10-11
+	# phase 1: 行 12-19 填满（8层，因重力下移2行）
+	# phase 2: 行 14-19 填满（6层）
+	# phase 3: 行 16-19 填满（4层）
+	# phase 4: 行 18-19 填满（2层）
 
-	var top_row := 10
-	var bottom_row := 19 - combo_phase * 2
+	var top_row := 10 + combo_phase * 2
+	var bottom_row := 19
 
-	if bottom_row < top_row:
+	if top_row > bottom_row:
 		return
 
 	for r in range(top_row, bottom_row + 1):
