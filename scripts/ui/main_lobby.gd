@@ -163,7 +163,7 @@ func _update_texts() -> void:
 
 	var lbl_guide = get_node_or_null("%CardGuide/VBoxContainer/Title")
 	if lbl_guide:
-		lbl_guide.text = "教程百科"
+		lbl_guide.text = tr("TXT_LOBBY_GUIDE_TITLE")
 
 	var lbl_m_desc = get_node_or_null("%CardMarathon/VBoxContainer/Desc")
 	if lbl_m_desc:
@@ -171,7 +171,7 @@ func _update_texts() -> void:
 
 	var lbl_g_desc = get_node_or_null("%CardGuide/VBoxContainer/Desc")
 	if lbl_g_desc:
-		lbl_g_desc.text = "学习消除攻击\n旋转技巧\n和 AI 评价"
+		lbl_g_desc.text = tr("TXT_LOBBY_GUIDE_DESC")
 
 	var lbl_mp_desc = get_node_or_null("%CardMultiplayer/VBoxContainer/Desc")
 	if lbl_mp_desc:

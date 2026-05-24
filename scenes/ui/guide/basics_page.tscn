@@ -1,0 +1,48 @@
+[gd_scene format=3]
+
+[node name="GuideBasicsPage" type="ScrollContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+
+[node name="PageMargin" type="MarginContainer" parent="."]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/margin_right = 14
+
+[node name="Page" type="VBoxContainer" parent="PageMargin"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 18
+
+[node name="TitlePanel" type="PanelContainer" parent="PageMargin/Page"]
+layout_mode = 2
+
+[node name="TitleMargin" type="MarginContainer" parent="PageMargin/Page/TitlePanel"]
+layout_mode = 2
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 22
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 22
+
+[node name="TitleBox" type="VBoxContainer" parent="PageMargin/Page/TitlePanel/TitleMargin"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="Title" type="Label" parent="PageMargin/Page/TitlePanel/TitleMargin/TitleBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.058824, 0.121569, 0.270588, 1)
+theme_override_font_sizes/font_size = 30
+text = "基础知识"
+
+[node name="Body" type="Label" parent="PageMargin/Page/TitlePanel/TitleMargin/TitleBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.278431, 0.333333, 0.411765, 1)
+theme_override_font_sizes/font_size = 15
+text = "先确认每种消除的收益，再进入具体操作。"
+autowrap_mode = 3
+
+[node name="ContentHost" type="VBoxContainer" parent="PageMargin/Page"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 18

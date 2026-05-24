@@ -4,6 +4,7 @@ extends Control
 const BOARD_VIEW_SCENE := preload("res://scripts/ui/guide_board_view.gd")
 const SCENARIO_RUNNER := preload("res://scripts/ui/guide_scenario_runner.gd")
 const OVERVIEW_PAGE_SCENE := preload("res://scenes/ui/guide/overview_page.tscn")
+const BASICS_PAGE_SCENE := preload("res://scenes/ui/guide/basics_page.tscn")
 const CHAPTER_PAGE_SCENE := preload("res://scenes/ui/guide/chapter_page.tscn")
 const SIMULATION_PAGE_SCENE := preload("res://scenes/ui/guide/simulation_page.tscn")
 
@@ -14,14 +15,14 @@ const SIM_COLS := 10
 
 ## 攻击力表（对战标准）
 const ATTACK_TABLE: Array = [
-	["Single", "1", "0", "整理地形"],
-	["Double", "2", "1", "基础输出"],
-	["Triple", "3", "2", "中等输出"],
-	["Tetris", "4", "4", "核心爆发"],
-	["T-Spin Mini", "0", "0", "无攻击"],
-	["T-Spin Single", "1", "2", "高效攻击"],
-	["T-Spin Double", "2", "4", "核心进攻"],
-	["T-Spin Triple", "3", "6", "最强爆发"],
+	["Single", "1", "0"],
+	["Double", "2", "1"],
+	["Triple", "3", "2"],
+	["Tetris", "4", "4"],
+	["T-Spin Mini", "0", "0"],
+	["T-Spin Single", "1", "2"],
+	["T-Spin Double", "2", "4"],
+	["T-Spin Triple", "3", "6"],
 ]
 
 ## Combo 攻击力加成表
@@ -32,6 +33,7 @@ var selected_index: int = 0
 var content_root: Control
 var sidebar: VBoxContainer
 var overview_button: Button
+var basics_button: Button
 var board_view: Control
 var feedback_label: Label
 var objective_label: Label
@@ -81,83 +83,51 @@ func _input(event: InputEvent) -> void:
 			board_view.focused = false
 			if board_view is Control:
 				(board_view as Control).release_focus()
-		get_viewport().set_input_as_handled()
-	elif event.is_action_pressed("move_left") or event.is_action_pressed("ui_left"):
-		_sim_move(-1, 0)
-		get_viewport().set_input_as_handled()
-	elif event.is_action_pressed("move_right") or event.is_action_pressed("ui_right"):
-		_sim_move(1, 0)
-		get_viewport().set_input_as_handled()
-	elif event.is_action_pressed("soft_drop") or event.is_action_pressed("ui_down"):
-		_sim_move(0, 1)
-		get_viewport().set_input_as_handled()
-	elif event.is_action_pressed("rotate_cw") or event.is_action_pressed("ui_accept"):
-		_sim_rotate(1)
-		get_viewport().set_input_as_handled()
-	elif event.is_action_pressed("rotate_ccw"):
-		_sim_rotate(-1)
-		get_viewport().set_input_as_handled()
-	elif event.is_action_pressed("hard_drop"):
-		_sim_hard_drop()
-		get_viewport().set_input_as_handled()
+				get_viewport().set_input_as_handled()
 
 
 func _build_chapters() -> void:
 	chapters = [
 		{
-			"id": "attack",
-			"number": "01",
-			"title": "消除与攻击力",
-			"tag": "核心",
-			"time": "5 分钟",
-			"summary": "不同消除方式的攻击力差异，以及 B2B、Combo 加成。",
-			"concept": "对战中消行不是都一样。Single 通常没有攻击力，只用来整理地形。真正产生威胁的是 Tetris 四消、T-Spin、以及连续 Combo。\n\n理解攻击力表是一切进阶操作的基础——它解释了为什么高手不急着做小消，而是刻意保留结构来打出高价值消除。",
-			"why": ["区分哪些消除有攻击价值", "理解 B2B（连续困难消除）额外 +1 行加成", "Combo 连击的额外攻击力递增机制"],
-			"value": "Single 0 行 / Double 1 行 / Triple 2 行 / Tetris 4 行\nT-Spin Single 2 行 / T-Spin Double 4 行 / T-Spin Triple 6 行\nB2B 激活时额外 +1 行",
-			"steps": ["先看攻击力表，记住各消除的行数", "注意 Tetris 和 T-Spin Double 都是 4 行攻击，但 T-Spin 用更少空间", "B2B：连续打出 Tetris 或 T-Spin 可激活，额外 +1 行", "Combo：连续消行不中断，按次数额外加攻击力"],
-			"mistakes": ["把所有消行都当成一样好", "为了小消破坏 Tetris 井或 T 槽", "不知道 B2B 和 Combo 的加成存在"],
-			"sim": "tetris"
-		},
-		{
 			"id": "wallkick",
-			"number": "02",
-			"title": "Wall Kick 踢墙",
-			"tag": "机制",
-			"time": "3 分钟",
-			"summary": "方块旋转时碰到障碍，系统自动尝试偏移位置来完成旋转。",
-			"concept": "SRS 旋转系统中，当方块旋转后与墙壁或其它方块重叠时，系统会按顺序尝试多个偏移位置（称为 kick）。如果某个偏移位置合法，方块就会偏移到那个位置完成旋转。\n\n这意味着方块的旋转中心可能会发生横向甚至纵向位移。踢墙是 T-Spin 能够成立的核心原理。",
-			"why": ["理解旋转不只是原地转", "踢墙让方块能进入看似不可能的位置", "T-Spin 的本质就是利用踢墙偏移"],
-			"value": "踢墙本身不产生攻击力，但它是实现 T-Spin 等高价值消除的前提条件。",
-			"steps": ["观察演示中 L 方块贴墙旋转时中心点的位移", "红色圆圈标记了旋转中心点位置", "旋转前后中心点的横向偏移就是踢墙产生的位移", "所有方块（O 除外）都有踢墙数据"],
-			"mistakes": ["以为旋转一定是原地的", "不知道不同方块的踢墙表不同", "忽略 I 方块有独立的踢墙表"],
+			"number": "01",
+			"title": tr("TXT_GUIDE_CH1_TITLE"),
+			"tag": tr("TXT_GUIDE_CH1_TAG"),
+			"time": tr("TXT_GUIDE_CH1_TIME"),
+			"summary": tr("TXT_GUIDE_CH1_SUMMARY"),
+			"concept": tr("TXT_GUIDE_CH1_CONCEPT"),
+			"why": [tr("TXT_GUIDE_CH1_WHY_1"), tr("TXT_GUIDE_CH1_WHY_2"), tr("TXT_GUIDE_CH1_WHY_3")],
+			"value": tr("TXT_GUIDE_CH1_VALUE"),
+			"steps": [tr("TXT_GUIDE_CH1_STEP_1"), tr("TXT_GUIDE_CH1_STEP_2"), tr("TXT_GUIDE_CH1_STEP_3"), tr("TXT_GUIDE_CH1_STEP_4")],
+			"mistakes": [tr("TXT_GUIDE_CH1_ERR_1"), tr("TXT_GUIDE_CH1_ERR_2"), tr("TXT_GUIDE_CH1_ERR_3")],
 			"sim": "wallkick"
 		},
 		{
 			"id": "combo",
-			"number": "03",
-			"title": "Combo 连击",
-			"tag": "进攻",
-			"time": "5 分钟",
-			"summary": "每次落块都消行，连续不中断就是 Combo。",
-			"concept": "Combo 的规则很简单：只要每次锁定方块都消除了至少一行，Combo 计数就 +1。一旦某次落块没有消行，Combo 归零。\n\nCombo 的额外攻击力按次数递增：",
-			"why": ["训练连续消行的节奏感", "高 Combo 能累积大量额外攻击力", "适合在残局或地形混乱时转守为攻"],
-			"value": "Combo 额外攻击力：1→0  2→0  3→+1  4→+1  5→+2  6→+2  7→+3  8→+3  9→+4  10→+4  11→+4  12→+5",
-			"steps": ["观察右侧演示：O 方块持续落入右侧 2 列空位", "每次消除 2 行，Combo 计数持续增加", "注意 Combo 3 开始产生额外攻击力", "额外攻击力会叠加在消除本身的攻击力之上"],
-			"mistakes": ["中途有一次没消行，Combo 立刻归零", "每步都想做大消反而容易中断", "忽略了 Combo 的攻击力加成是额外的"],
+			"number": "02",
+			"title": tr("TXT_GUIDE_CH2_TITLE"),
+			"tag": tr("TXT_GUIDE_CH2_TAG"),
+			"time": tr("TXT_GUIDE_CH2_TIME"),
+			"summary": tr("TXT_GUIDE_CH2_SUMMARY"),
+			"concept": tr("TXT_GUIDE_CH2_CONCEPT"),
+			"why": [tr("TXT_GUIDE_CH2_WHY_1"), tr("TXT_GUIDE_CH2_WHY_2"), tr("TXT_GUIDE_CH2_WHY_3")],
+			"value": tr("TXT_GUIDE_CH2_VALUE"),
+			"steps": [tr("TXT_GUIDE_CH2_STEP_1"), tr("TXT_GUIDE_CH2_STEP_2"), tr("TXT_GUIDE_CH2_STEP_3"), tr("TXT_GUIDE_CH2_STEP_4")],
+			"mistakes": [tr("TXT_GUIDE_CH2_ERR_1"), tr("TXT_GUIDE_CH2_ERR_2"), tr("TXT_GUIDE_CH2_ERR_3")],
 			"sim": "combo"
 		},
 		{
 			"id": "tspin",
-			"number": "04",
-			"title": "T-Spin Double",
-			"tag": "核心进攻",
-			"time": "5 分钟",
-			"summary": "T 方块通过旋转卡入 T 槽，同时消除 2 行，攻击力 4 行。",
-			"concept": "T-Spin Double（TSD）是对战中最常用的高价值消除。它利用踢墙机制将 T 方块旋入一个特定的槽位，同时消除 2 行。\n\n攻击力 4 行，与 Tetris 相同，但只需要 2 行高度的结构就能完成——空间效率极高。配合 B2B 可达到 5 行攻击。",
-			"why": ["TSD 攻击力 = Tetris 但空间更省", "配合 B2B 可达 5 行攻击", "是进阶对战的核心技巧"],
-			"value": "T-Spin Double 基础攻击 4 行，B2B 加成后 5 行。\n用 2 行结构换取 4 行攻击，空间效率是 Tetris 的 2 倍。",
-			"steps": ["准备一个 T 形槽：底部 2 行留出 T 方块旋入的空间", "保留入口：T 槽上方需要留出通道", "将 T 方块移到槽口上方", "旋转卡入：利用踢墙让 T 方块嵌入槽位", "锁定后系统判定为 T-Spin（最后操作必须是旋转）"],
-			"mistakes": ["直接放下而不是旋转进入", "T 槽结构不对，无法消 2 行", "入口被提前堵死"],
+			"number": "03",
+			"title": tr("TXT_GUIDE_CH3_TITLE"),
+			"tag": tr("TXT_GUIDE_CH3_TAG"),
+			"time": tr("TXT_GUIDE_CH3_TIME"),
+			"summary": tr("TXT_GUIDE_CH3_SUMMARY"),
+			"concept": tr("TXT_GUIDE_CH3_CONCEPT"),
+			"why": [tr("TXT_GUIDE_CH3_WHY_1"), tr("TXT_GUIDE_CH3_WHY_2"), tr("TXT_GUIDE_CH3_WHY_3")],
+			"value": tr("TXT_GUIDE_CH3_VALUE"),
+			"steps": [tr("TXT_GUIDE_CH3_STEP_1"), tr("TXT_GUIDE_CH3_STEP_2"), tr("TXT_GUIDE_CH3_STEP_3"), tr("TXT_GUIDE_CH3_STEP_4"), tr("TXT_GUIDE_CH3_STEP_5")],
+			"mistakes": [tr("TXT_GUIDE_CH3_ERR_1"), tr("TXT_GUIDE_CH3_ERR_2"), tr("TXT_GUIDE_CH3_ERR_3")],
 			"sim": "tspin"
 		}
 	]
@@ -167,6 +137,8 @@ func _build_shell() -> void:
 	content_root = %ContentRoot
 	sidebar = %ChaptersList
 	overview_button = %OverviewButton
+	basics_button = %BasicsButton
+	_apply_shell_texts()
 
 	var header := get_node_or_null("Page/Header") as PanelContainer
 	if header:
@@ -185,6 +157,7 @@ func _build_shell() -> void:
 	back.pressed.connect(func(): get_tree().change_scene_to_file("res://scenes/ui/main.tscn"))
 
 	overview_button.pressed.connect(_show_overview)
+	basics_button.pressed.connect(_show_basics)
 
 	_rebuild_sidebar()
 
@@ -192,12 +165,25 @@ func _build_shell() -> void:
 	add_child(demo_timer)
 
 
+func _apply_shell_texts() -> void:
+	var back := %BackButton as Button
+	back.text = tr("TXT_GUIDE_BACK")
+	overview_button.text = "  " + tr("TXT_GUIDE_OVERVIEW_NAV")
+	basics_button.text = "  " + tr("TXT_GUIDE_BASICS")
+	(get_node("Page/Header/Margin/Row/Tabs/ReadTab") as Label).text = tr("TXT_GUIDE_READ")
+	(get_node("Page/Header/Margin/Row/Tabs/DemoTab") as Label).text = tr("TXT_GUIDE_DEMO")
+	(get_node("Page/Header/Margin/Row/Tabs/TryTab") as Label).text = tr("TXT_GUIDE_SIM")
+	(get_node("Page/BodyMargin/Body/SidebarPanel/SidebarMargin/Sidebar/SectionLabel") as Label).text = tr("TXT_GUIDE_CHAPTERS")
+
+
 func _rebuild_sidebar() -> void:
 	for child in sidebar.get_children():
 		child.queue_free()
 
 	if overview_button:
-		_style_sidebar_button(overview_button, selected_index < 0)
+		_style_sidebar_button(overview_button, selected_index == -1)
+	if basics_button:
+		_style_sidebar_button(basics_button, selected_index == -2)
 
 	for i in range(chapters.size()):
 		var chapter: Dictionary = chapters[i]
@@ -210,7 +196,7 @@ func _sidebar_button(text: String, index: int) -> Button:
 	btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	btn.custom_minimum_size = Vector2(0, 42)
 	btn.focus_mode = Control.FOCUS_ALL
-	var active := (index == selected_index and not in_simulation) or (index == -1 and selected_index < 0)
+	var active := index == selected_index and not in_simulation
 	_style_sidebar_button(btn, active)
 	if index == -1:
 		btn.pressed.connect(_show_overview)
@@ -241,20 +227,34 @@ func _show_overview() -> void:
 
 	var page := OVERVIEW_PAGE_SCENE.instantiate()
 	content_root.add_child(page)
-	_style_panel_node(page.get_node("Page/HeroPanel"))
-	_style_panel_node(page.get_node("Page/PathPanel"))
-	_style_panel_node(page.get_node("Page/CardsPanel"))
+	_style_panel_node(page.get_node("PageMargin/Page/HeroPanel"))
+	_style_panel_node(page.get_node("PageMargin/Page/PathPanel"))
+	_style_panel_node(page.get_node("PageMargin/Page/CardsPanel"))
+	(page.get_node("%HeroTitle") as Label).text = tr("TXT_GUIDE_HERO_TITLE")
+	(page.get_node("PageMargin/Page/HeroPanel/HeroMargin/HeroBox/HeroBody") as Label).text = tr("TXT_GUIDE_HERO_BODY")
 
 	var path := page.get_node("%PathBox") as HBoxContainer
-	for item in ["消除攻击力", "Wall Kick", "Combo", "T-Spin Double"]:
+	for item in [tr("TXT_GUIDE_BASICS"), "Wall Kick", "Combo", "T-Spin Double"]:
 		path.add_child(_chip(item, Color("ecfdf5"), Color("047857")))
 
 	var cards_grid := page.get_node("%CardsGrid") as GridContainer
 	for i in range(chapters.size()):
 		cards_grid.add_child(_chapter_card(i))
 
-	var attack_host := page.get_node("%AttackTableHost") as VBoxContainer
-	attack_host.add_child(_attack_table())
+func _show_basics() -> void:
+	in_simulation = false
+	selected_index = -2
+	_rebuild_sidebar()
+	_clear_content()
+	_stop_demo_animation()
+
+	var page := BASICS_PAGE_SCENE.instantiate()
+	content_root.add_child(page)
+	_style_panel_node(page.get_node("PageMargin/Page/TitlePanel"))
+	(page.get_node("PageMargin/Page/TitlePanel/TitleMargin/TitleBox/Title") as Label).text = tr("TXT_GUIDE_BASICS")
+	(page.get_node("PageMargin/Page/TitlePanel/TitleMargin/TitleBox/Body") as Label).text = tr("TXT_GUIDE_BASICS_DESC")
+	var host := page.get_node("%ContentHost") as VBoxContainer
+	host.add_child(_attack_table())
 
 
 func _chapter_card(index: int) -> Control:
@@ -275,15 +275,15 @@ func _chapter_card(index: int) -> Control:
 	top.add_child(_chip(chapter["tag"], Color("fef3c7"), Color("92400e")))
 
 	box.add_child(_paragraph(chapter["summary"]))
-	box.add_child(_label("预计 " + String(chapter["time"]), 13, Color("64748b")))
+	box.add_child(_label("%s %s" % [tr("TXT_GUIDE_ESTIMATE_PREFIX"), String(chapter["time"])], 13, Color("64748b")))
 
 	var buttons := HBoxContainer.new()
 	buttons.add_theme_constant_override("separation", 10)
 	box.add_child(buttons)
-	var read_btn := _primary_button("查看", false)
+	var read_btn := _primary_button(tr("TXT_GUIDE_VIEW"), false)
 	read_btn.pressed.connect(_show_chapter.bind(index))
 	buttons.add_child(read_btn)
-	var sim_btn := _primary_button("开始模拟", true)
+	var sim_btn := _primary_button(tr("TXT_GUIDE_START_SIM"), true)
 	sim_btn.pressed.connect(_start_simulation.bind(chapter["sim"], index))
 	buttons.add_child(sim_btn)
 	return card
@@ -298,17 +298,23 @@ func _show_chapter(index: int) -> void:
 
 	var page := CHAPTER_PAGE_SCENE.instantiate()
 	content_root.add_child(page)
-	_style_panel_node(page.get_node("ArticleScroll/Article/TitlePanel"))
-	_style_panel_node(page.get_node("ArticleScroll/Article/ConceptSection"))
-	_style_panel_node(page.get_node("ArticleScroll/Article/WhySection"))
-	_style_panel_node(page.get_node("ArticleScroll/Article/ValueSection"))
-	_style_panel_node(page.get_node("ArticleScroll/Article/StepsSection"))
-	_style_panel_node(page.get_node("ArticleScroll/Article/MistakesSection"))
+	_style_panel_node(page.get_node("ArticleScroll/ArticleMargin/Article/TitlePanel"))
+	_style_panel_node(page.get_node("ArticleScroll/ArticleMargin/Article/ConceptSection"))
+	_style_panel_node(page.get_node("ArticleScroll/ArticleMargin/Article/WhySection"))
+	_style_panel_node(page.get_node("ArticleScroll/ArticleMargin/Article/ValueSection"))
+	_style_panel_node(page.get_node("ArticleScroll/ArticleMargin/Article/StepsSection"))
+	_style_panel_node(page.get_node("ArticleScroll/ArticleMargin/Article/MistakesSection"))
 	_style_panel_node(page.get_node("DemoPanel"))
 
 	var chip := page.get_node("%Chip") as Label
 	chip.text = "  %s / %s / %s  " % [chapter["number"], chapter["tag"], chapter["time"]]
 	chip.add_theme_stylebox_override("normal", _style(Color("e0f2fe"), Color("e0f2fe"), 8, 0))
+	(page.get_node("ArticleScroll/ArticleMargin/Article/ConceptSection/ConceptMargin/ConceptBox/ConceptTitle") as Label).text = tr("TXT_GUIDE_CONCEPT")
+	(page.get_node("ArticleScroll/ArticleMargin/Article/WhySection/WhyMargin/WhyBox/WhyTitle") as Label).text = tr("TXT_GUIDE_WHY")
+	(page.get_node("ArticleScroll/ArticleMargin/Article/ValueSection/ValueMargin/ValueBox/ValueTitle") as Label).text = tr("TXT_GUIDE_VALUE")
+	(page.get_node("ArticleScroll/ArticleMargin/Article/StepsSection/StepsMargin/StepsBox/StepsTitle") as Label).text = tr("TXT_GUIDE_STEPS")
+	(page.get_node("ArticleScroll/ArticleMargin/Article/MistakesSection/MistakesMargin/MistakesBox/MistakesTitle") as Label).text = tr("TXT_GUIDE_MISTAKES")
+	(page.get_node("DemoPanel/DemoMargin/DemoBox/DemoTitle") as Label).text = tr("TXT_GUIDE_DEMO_TITLE")
 	(page.get_node("%Title") as Label).text = chapter["title"]
 	(page.get_node("%Summary") as Label).text = chapter["summary"]
 	(page.get_node("%ConceptText") as Label).text = chapter["concept"]
@@ -319,15 +325,17 @@ func _show_chapter(index: int) -> void:
 	_populate_static_list(page.get_node("%MistakesBox") as VBoxContainer, chapter["mistakes"])
 
 	var sim_btn := page.get_node("%SimButton") as Button
+	sim_btn.text = tr("TXT_GUIDE_ENTER_SIM")
 	_style_button(sim_btn, true)
 	sim_btn.pressed.connect(_start_simulation.bind(chapter["sim"], index))
 	var next_btn := page.get_node("%NextButton") as Button
+	next_btn.text = tr("TXT_GUIDE_NEXT_CH")
 	_style_button(next_btn, false)
 	next_btn.disabled = index >= chapters.size() - 1
 	next_btn.pressed.connect(_show_chapter.bind(index + 1))
 
 	demo_action_label = page.get_node("%ActionLabel") as Label
-	demo_action_label.text = "准备"
+	demo_action_label.text = tr("TXT_GUIDE_READY")
 	demo_action_label.add_theme_stylebox_override("normal", _style(Color("ecfdf5"), Color("bbf7d0"), 8, 1))
 	board_view = page.get_node("%BoardView")
 	_start_demo_for_chapter(chapter["sim"])
@@ -376,7 +384,7 @@ func _play_demo_cycle() -> void:
 			float(frame.get("duration", 0.08))
 		)
 
-	demo_tween.tween_callback(_set_demo_action.bind("锁定"))
+	demo_tween.tween_callback(_set_demo_action.bind(tr("TXT_GUIDE_LOCKED")))
 	demo_tween.tween_callback(func(): board_view.set_state(demo["locked_grid"], {}, targets, demo["rows"], []))
 
 	# 播放消行特效
@@ -387,7 +395,7 @@ func _play_demo_cycle() -> void:
 		)
 
 	demo_tween.tween_interval(0.22)
-	demo_tween.tween_callback(_set_demo_action.bind("消除"))
+	demo_tween.tween_callback(_set_demo_action.bind(tr("TXT_GUIDE_CLEAR")))
 	demo_tween.tween_callback(func():
 		board_view.set_state(demo["cleared_grid"], {}, [], [], [])
 		board_view.set_effect_text(demo["effect"])
@@ -484,36 +492,36 @@ func _demo_frame(runner: RefCounted, from_piece: Dictionary, to_piece: Dictionar
 func _demo_operations(scene_id: String, phase: int) -> Array:
 	if scene_id == "tspin":
 		return [
-			{"op": "rotate", "direction": 1, "label": "顺时针旋转，调整入口方向"},
-			{"op": "drop_to", "row": 18, "label": "软降到槽口上方"},
-			{"op": "rotate", "direction": 1, "label": "顺时针旋转，T 方块旋入 T 槽"}
+			{"op": "rotate", "direction": 1, "label": tr("TXT_GUIDE_OP_ROT_CW_ENTRY")},
+			{"op": "drop_to", "row": 18, "label": tr("TXT_GUIDE_OP_DROP_SLOT")},
+			{"op": "rotate", "direction": 1, "label": tr("TXT_GUIDE_OP_ROT_CW_TSPIN")}
 		]
 	if scene_id == "wallkick":
 		return [
-			{"op": "rotate", "direction": -1, "label": "逆时针旋转 90°"},
-			{"op": "move", "dx": 1, "count": 3, "label": "向右移动直到贴住墙壁"},
-			{"op": "wait", "duration": 1.0, "label": "贴墙停顿"},
-			{"op": "rotate", "direction": 1, "label": "顺时针旋转 90°：踢墙，中心点向左移 1 格"},
-			{"op": "wait", "duration": 1.5, "label": "观察踢墙位移"},
-			{"op": "rotate", "direction": -1, "label": "再次逆时针旋转 90°"},
-			{"op": "move", "dx": 1, "count": 1, "label": "右移贴住墙壁"},
-			{"op": "hard_drop", "label": "下落到底部"},
-			{"op": "wait", "duration": 1.0, "label": "等待旋入时机"},
-			{"op": "rotate", "direction": 1, "label": "顺时针旋转：踢墙旋入，完成 L-Spin"}
+			{"op": "rotate", "direction": -1, "label": tr("TXT_GUIDE_OP_ROT_CCW")},
+			{"op": "move", "dx": 1, "count": 3, "label": tr("TXT_GUIDE_OP_MOVE_RIGHT_WALL")},
+			{"op": "wait", "duration": 1.0, "label": tr("TXT_GUIDE_OP_WAIT_WALL")},
+			{"op": "rotate", "direction": 1, "label": tr("TXT_GUIDE_OP_ROT_KICK_L")},
+			{"op": "wait", "duration": 1.5, "label": tr("TXT_GUIDE_OP_OBSERVE_KICK")},
+			{"op": "rotate", "direction": -1, "label": tr("TXT_GUIDE_OP_ROT_CCW_AGAIN")},
+			{"op": "move", "dx": 1, "count": 1, "label": tr("TXT_GUIDE_OP_MOVE_RIGHT_WALL_AGAIN")},
+			{"op": "hard_drop", "label": tr("TXT_GUIDE_OP_HARD_DROP")},
+			{"op": "wait", "duration": 1.0, "label": tr("TXT_GUIDE_OP_WAIT_SPIN")},
+			{"op": "rotate", "direction": 1, "label": tr("TXT_GUIDE_OP_ROT_LSPIN")}
 		]
 	if scene_id == "combo":
 		# O 方块直接硬降到右侧 2 列
 		return [
-			{"op": "move", "dx": 1, "count": 1, "label": "移动到右侧空位上方"},
-			{"op": "drop_to", "row": 19, "label": "下落到底部，消除 2 行"}
+			{"op": "move", "dx": 1, "count": 1, "label": tr("TXT_GUIDE_OP_MOVE_RIGHT")},
+			{"op": "drop_to", "row": 19, "label": tr("TXT_GUIDE_OP_DROP_CLEAR2")}
 		]
 	# tetris
 	return [
-		{"op": "drop_to", "row": 8, "label": "软降"},
-		{"op": "move", "dx": 1, "count": 3, "label": "右移到井旁"},
-		{"op": "rotate", "direction": 1, "label": "顺时针旋转 90°"},
-		{"op": "move", "dx": 1, "count": 1, "label": "贴住井口"},
-		{"op": "drop_to", "row": 17, "label": "下落插入井"}
+		{"op": "drop_to", "row": 8, "label": tr("TXT_GUIDE_OP_SOFT_DROP")},
+		{"op": "move", "dx": 1, "count": 3, "label": tr("TXT_GUIDE_OP_MOVE_RIGHT_WELL")},
+		{"op": "rotate", "direction": 1, "label": tr("TXT_GUIDE_OP_ROT_CW_90")},
+		{"op": "move", "dx": 1, "count": 1, "label": tr("TXT_GUIDE_OP_MOVE_WELL_EDGE")},
+		{"op": "drop_to", "row": 17, "label": tr("TXT_GUIDE_OP_DROP_WELL")}
 	]
 
 
@@ -558,6 +566,9 @@ func _start_simulation(chapter_sim_id: String, chapter_index: int) -> void:
 	content_root.add_child(page)
 	_style_panel_node(page.get_node("SidePanel"))
 	_style_panel_node(page.get_node("BoardPanel"))
+	(page.get_node("%FocusHint") as Label).text = tr("TXT_GUIDE_SIM_HINT")
+	(page.get_node("%ResetButton") as Button).text = tr("TXT_GUIDE_RESET")
+	(page.get_node("%ExitButton") as Button).text = tr("TXT_GUIDE_EXIT_SIM")
 
 	objective_label = page.get_node("%ObjectiveLabel")
 	feedback_label = page.get_node("%FeedbackLabel")
@@ -587,13 +598,13 @@ func _reset_simulation() -> void:
 
 	match sim_id:
 		"tspin":
-			_set_feedback("目标：将 T 方块旋入 T 槽，同时消除 2 行，完成 T-Spin Double。")
+			_set_feedback(tr("TXT_GUIDE_OBJ_TSPIN"))
 		"combo":
-			_set_feedback("目标：用 O 方块连续落入右侧空位消行，完成 Combo 5。")
+			_set_feedback(tr("TXT_GUIDE_OBJ_COMBO"))
 		"wallkick":
-			_set_feedback("目标：将 L 方块旋转，观察踢墙导致的中心点偏移。")
+			_set_feedback(tr("TXT_GUIDE_OBJ_WALLKICK"))
 		_:
-			_set_feedback("目标：将 I 方块旋成竖直，放入右侧井，完成 Tetris 四消。")
+			_set_feedback(tr("TXT_GUIDE_OBJ_TETRIS"))
 
 	_update_objective()
 	_refresh_sim_view()
@@ -604,13 +615,13 @@ func _update_objective() -> void:
 		return
 	match sim_id:
 		"tspin":
-			objective_label.text = "T-Spin Double 模拟"
+			objective_label.text = tr("TXT_GUIDE_SIM_TSPIN")
 		"combo":
-			objective_label.text = "Combo 模拟  当前 Combo: %d" % sim_combo
+			objective_label.text = tr("TXT_GUIDE_SIM_COMBO") % sim_combo
 		"wallkick":
-			objective_label.text = "Wall Kick 踢墙模拟"
+			objective_label.text = tr("TXT_GUIDE_SIM_WALLKICK")
 		_:
-			objective_label.text = "Tetris 四消模拟"
+			objective_label.text = tr("TXT_GUIDE_SIM_TETRIS")
 
 
 func _set_feedback(text: String, success: bool = false, danger: bool = false) -> void:
@@ -646,7 +657,7 @@ func _sim_rotate(direction: int) -> void:
 	if scenario_runner.try_rotate(direction):
 		_refresh_sim_view()
 		return
-	_set_feedback("这里转不进去。先移动到合适位置再旋转。", false, true)
+	_set_feedback(tr("TXT_GUIDE_ERR_ROT"), false, true)
 
 
 func _sim_hard_drop() -> void:
@@ -660,7 +671,7 @@ func _sim_lock_now() -> void:
 	if sim_success or sim_locked or scenario_runner == null:
 		return
 	if scenario_runner.is_valid(scenario_runner.piece_type, scenario_runner.rot, scenario_runner.col, scenario_runner.row + 1):
-		_set_feedback("还没有贴住地形。继续软降，或者用硬降。", false, true)
+		_set_feedback(tr("TXT_GUIDE_ERR_LOCK"), false, true)
 		return
 	_lock_sim_piece()
 
@@ -682,23 +693,23 @@ func _lock_sim_piece() -> void:
 			if scenario_runner.piece_type == PieceData.Type.T and bool(result["spin"]) and cleared >= 2:
 				sim_success = true
 				sim_locked = true
-				_set_feedback("成功！T-Spin Double —— 旋入 T 槽消除 2 行，攻击力 4 行。用时 %.1f 秒。" % elapsed, true)
+				_set_feedback(tr("TXT_GUIDE_SUC_TSPIN") % elapsed, true)
 			elif scenario_runner.piece_type == PieceData.Type.T and bool(result["spin"]) and cleared == 1:
 				sim_locked = true
-				_set_feedback("完成了 T-Spin Single（消 1 行），但目标是 T-Spin Double（消 2 行）。检查 T 槽结构，按重置再试。", false, true)
+				_set_feedback(tr("TXT_GUIDE_ERR_TSPIN_1"), false, true)
 			else:
 				sim_locked = true
-				_set_feedback("没有达成 T-Spin。最后一步必须是旋转卡入，而且要消 2 行。按重置再试。", false, true)
+				_set_feedback(tr("TXT_GUIDE_ERR_TSPIN_0"), false, true)
 		"combo":
 			if cleared > 0:
 				sim_combo += 1
 				if sim_combo >= 5:
 					sim_success = true
 					sim_locked = true
-					_set_feedback("成功！Combo 5 —— 连续 5 次消行，用时 %.1f 秒。" % elapsed, true)
+					_set_feedback(tr("TXT_GUIDE_SUC_COMBO") % elapsed, true)
 				else:
 					var extra: int = int(COMBO_ATTACK_TABLE[mini(sim_combo, COMBO_ATTACK_TABLE.size() - 1)])
-					_set_feedback("Combo %d！额外攻击力 +%d 行。继续保持连击。" % [sim_combo, extra], true)
+					_set_feedback(tr("TXT_GUIDE_SUC_COMBO_N") % [sim_combo, extra], true)
 					sim_sequence_index += 1
 					scenario_runner.phase = sim_sequence_index
 					scenario_runner.spawn(PieceData.Type.O, 7, 2, PieceData.RotationState.SPAWN)
@@ -706,22 +717,22 @@ func _lock_sim_piece() -> void:
 			else:
 				sim_combo = 0
 				sim_locked = true
-				_set_feedback("连击中断——这次落块没有消行。Combo 要求每次都消行。", false, true)
+				_set_feedback(tr("TXT_GUIDE_ERR_COMBO"), false, true)
 		"wallkick":
 			sim_locked = true
 			if bool(result["spin"]) and cleared >= 2:
 				sim_success = true
-				_set_feedback("成功！L-Spin —— 最后一次旋转靠踢墙进入空洞，并完成 2 行消除。", true)
+				_set_feedback(tr("TXT_GUIDE_SUC_LSPIN"), true)
 			else:
-				_set_feedback("还没有完成 L-Spin。需要最后一步靠踢墙旋入右下角，并完成 2 行消除。", false, true)
+				_set_feedback(tr("TXT_GUIDE_ERR_LSPIN"), false, true)
 		_:
 			if scenario_runner.piece_type == PieceData.Type.I and cleared == 4:
 				sim_success = true
 				sim_locked = true
-				_set_feedback("成功！Tetris 四消 —— I 方块竖直插入井中消除 4 行，攻击力 4 行。用时 %.1f 秒。" % elapsed, true)
+				_set_feedback(tr("TXT_GUIDE_SUC_TETRIS") % elapsed, true)
 			else:
 				sim_locked = true
-				_set_feedback("没有达成四消。I 方块要旋成竖直放入井中。按重置再试。", false, true)
+				_set_feedback(tr("TXT_GUIDE_ERR_TETRIS"), false, true)
 
 	_update_objective()
 	_refresh_sim_view()
@@ -869,22 +880,25 @@ func _attack_table() -> Control:
 	margin.add_child(box)
 
 	# 标题
-	box.add_child(_label("攻击力速查表", 22, Color("0f1f45")))
-	box.add_child(_paragraph("对战中，消除行数不等于攻击力。以下是各消除类型发送的垃圾行数："))
+	box.add_child(_label(tr("TXT_GUIDE_ATK_TITLE"), 22, Color("0f1f45")))
+	box.add_child(_paragraph(tr("TXT_GUIDE_ATK_DESC")))
 
 	# 攻击力表格
 	var table_grid := GridContainer.new()
-	table_grid.columns = 4
-	table_grid.add_theme_constant_override("h_separation", 4)
+	table_grid.columns = 3
+	table_grid.add_theme_constant_override("h_separation", 6)
 	table_grid.add_theme_constant_override("v_separation", 4)
 	box.add_child(table_grid)
 
 	# 表头
-	for header_text in ["消除类型", "消除行数", "攻击力", "备注"]:
+	var headers := [tr("TXT_GUIDE_ATK_H1"), tr("TXT_GUIDE_ATK_H2"), tr("TXT_GUIDE_ATK_H3")]
+	for header_index in range(3):
+		var header_text: String = headers[header_index]
 		var header := _label(header_text, 14, Color("ffffff"))
-		header.custom_minimum_size = Vector2(120, 32)
+		header.custom_minimum_size = Vector2(170 if header_index == 0 else 120, 32)
 		header.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		header.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		header.autowrap_mode = TextServer.AUTOWRAP_OFF
 		header.add_theme_stylebox_override("normal", _style(Color("1d4ed8"), Color("1d4ed8"), 4, 0))
 		table_grid.add_child(header)
 
@@ -892,11 +906,12 @@ func _attack_table() -> Control:
 	for row_data in ATTACK_TABLE:
 		var is_high := int(row_data[2]) >= 4
 		var bg := Color("fef3c7") if is_high else Color("f8fafc")
-		for cell_idx in range(4):
+		for cell_idx in range(3):
 			var cell_label := _label(row_data[cell_idx], 14, Color("1e293b"))
-			cell_label.custom_minimum_size = Vector2(120, 30)
+			cell_label.custom_minimum_size = Vector2(170 if cell_idx == 0 else 120, 30)
 			cell_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 			cell_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+			cell_label.autowrap_mode = TextServer.AUTOWRAP_OFF
 			cell_label.add_theme_stylebox_override("normal", _style(bg, Color("e2e8f0"), 2, 1))
 			table_grid.add_child(cell_label)
 
@@ -907,8 +922,8 @@ func _attack_table() -> Control:
 	var b2b_box := VBoxContainer.new()
 	b2b_box.add_theme_constant_override("separation", 4)
 	b2b_margin.add_child(b2b_box)
-	b2b_box.add_child(_label("B2B（Back-to-Back）", 15, Color("1d4ed8")))
-	b2b_box.add_child(_paragraph("连续打出「困难消除」（Tetris 或 T-Spin）不中断，额外 +1 行攻击力。中间穿插普通消除会中断 B2B。"))
+	b2b_box.add_child(_label(tr("TXT_GUIDE_B2B_TITLE"), 15, Color("1d4ed8")))
+	b2b_box.add_child(_paragraph(tr("TXT_GUIDE_B2B_DESC")))
 	box.add_child(b2b_panel)
 
 	# Combo 说明
@@ -918,9 +933,9 @@ func _attack_table() -> Control:
 	var combo_box := VBoxContainer.new()
 	combo_box.add_theme_constant_override("separation", 4)
 	combo_margin.add_child(combo_box)
-	combo_box.add_child(_label("Combo 额外攻击力", 15, Color("047857")))
-	combo_box.add_child(_paragraph("连击次数 → 额外行数：1→0  2→0  3→+1  4→+1  5→+2  6→+2  7→+3  8→+3  9→+4  10+→+4~5"))
-	combo_box.add_child(_paragraph("额外攻击力叠加在消除本身的攻击力之上。"))
+	combo_box.add_child(_label(tr("TXT_GUIDE_COMBO_TITLE"), 15, Color("047857")))
+	combo_box.add_child(_paragraph(tr("TXT_GUIDE_COMBO_DESC1")))
+	combo_box.add_child(_paragraph(tr("TXT_GUIDE_COMBO_DESC2")))
 	box.add_child(combo_panel)
 
 	return panel

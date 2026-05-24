@@ -115,6 +115,13 @@ custom_minimum_size = Vector2(0, 42)
 text = "  总览"
 alignment = 0
 
+[node name="BasicsButton" type="Button" parent="Page/BodyMargin/Body/SidebarPanel/SidebarMargin/Sidebar"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(0, 42)
+text = "  基础知识"
+alignment = 0
+
 [node name="SectionLabel" type="Label" parent="Page/BodyMargin/Body/SidebarPanel/SidebarMargin/Sidebar"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.392157, 0.454902, 0.545098, 1)

@@ -124,21 +124,28 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_card_normal")
 [node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MainContent/CardsHBox/CardMarathon" unique_id=553669273]
 layout_mode = 2
 alignment = 1
+theme_override_constants/separation = 8
 
 [node name="Title" type="Label" parent="VBoxContainer/MainContent/CardsHBox/CardMarathon/VBoxContainer" unique_id=1266518568]
 layout_mode = 2
-theme_override_font_sizes/font_size = 36
+custom_minimum_size = Vector2(220, 56)
+theme_override_font_sizes/font_size = 32
 theme_override_colors/font_color = Color(0.9, 0.9, 1, 1)
 text = "MARATHON"
 horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 3
 
 [node name="Desc" type="Label" parent="VBoxContainer/MainContent/CardsHBox/CardMarathon/VBoxContainer" unique_id=1506513589]
 layout_mode = 2
+custom_minimum_size = Vector2(220, 80)
 theme_override_colors/font_color = Color(0.6, 0.6, 0.7, 1)
 text = "ENDLESS SURVIVAL
 CLEAR LIVES TO
 INCREASE SPEED."
 horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 3
 
 [node name="CardGuide" type="PanelContainer" parent="VBoxContainer/MainContent/CardsHBox" unique_id=2000000010]
 unique_name_in_owner = true
@@ -150,21 +157,28 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_card_normal")
 [node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MainContent/CardsHBox/CardGuide" unique_id=2000000011]
 layout_mode = 2
 alignment = 1
+theme_override_constants/separation = 8
 
 [node name="Title" type="Label" parent="VBoxContainer/MainContent/CardsHBox/CardGuide/VBoxContainer" unique_id=2000000012]
 layout_mode = 2
-theme_override_font_sizes/font_size = 34
+custom_minimum_size = Vector2(220, 56)
+theme_override_font_sizes/font_size = 32
 theme_override_colors/font_color = Color(0.9, 0.9, 1, 1)
 text = "GUIDE"
 horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 3
 
 [node name="Desc" type="Label" parent="VBoxContainer/MainContent/CardsHBox/CardGuide/VBoxContainer" unique_id=2000000013]
 layout_mode = 2
+custom_minimum_size = Vector2(220, 80)
 theme_override_colors/font_color = Color(0.6, 0.6, 0.7, 1)
 text = "LEARN ATTACK
 SPINS AND
 AI FEEDBACK."
 horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 3
 
 [node name="CardMultiplayer" type="PanelContainer" parent="VBoxContainer/MainContent/CardsHBox" unique_id=779226]
 unique_name_in_owner = true
@@ -176,21 +190,28 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_card_normal")
 [node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MainContent/CardsHBox/CardMultiplayer" unique_id=1310079491]
 layout_mode = 2
 alignment = 1
+theme_override_constants/separation = 8
 
 [node name="Title" type="Label" parent="VBoxContainer/MainContent/CardsHBox/CardMultiplayer/VBoxContainer" unique_id=1845887401]
 layout_mode = 2
-theme_override_font_sizes/font_size = 36
+custom_minimum_size = Vector2(220, 56)
+theme_override_font_sizes/font_size = 32
 theme_override_colors/font_color = Color(0.9, 0.9, 1, 1)
 text = "MULTIPLAYER"
 horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 3
 
 [node name="Desc" type="Label" parent="VBoxContainer/MainContent/CardsHBox/CardMultiplayer/VBoxContainer" unique_id=1736134039]
 layout_mode = 2
+custom_minimum_size = Vector2(220, 80)
 theme_override_colors/font_color = Color(0.6, 0.6, 0.7, 1)
 text = "BATTLE OTHERS
 ONLINE VIA
 STEAM RELAY."
 horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 3
 
 [node name="CardReplay" type="PanelContainer" parent="VBoxContainer/MainContent/CardsHBox" unique_id=2000000001]
 unique_name_in_owner = true
@@ -202,21 +223,28 @@ theme_override_styles/panel = SubResource("StyleBoxFlat_card_normal")
 [node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MainContent/CardsHBox/CardReplay" unique_id=2000000002]
 layout_mode = 2
 alignment = 1
+theme_override_constants/separation = 8
 
 [node name="Title" type="Label" parent="VBoxContainer/MainContent/CardsHBox/CardReplay/VBoxContainer" unique_id=2000000003]
 layout_mode = 2
+custom_minimum_size = Vector2(220, 56)
 theme_override_colors/font_color = Color(0.9, 0.9, 1, 1)
-theme_override_font_sizes/font_size = 36
+theme_override_font_sizes/font_size = 32
 text = "REPLAY"
 horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 3
 
 [node name="Desc" type="Label" parent="VBoxContainer/MainContent/CardsHBox/CardReplay/VBoxContainer" unique_id=2000000004]
 layout_mode = 2
+custom_minimum_size = Vector2(220, 80)
 theme_override_colors/font_color = Color(0.6, 0.6, 0.7, 1)
 text = "REVIEW YOUR
 GAMES WITH
 AI ANALYSIS."
 horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 3
 
 
 [node name="PlayerNameLabel" type="Label" parent="." unique_id=149902058]

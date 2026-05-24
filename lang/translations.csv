@@ -15,12 +15,12 @@ TXT_ENTER_NAME,输入用户名,ENTER NAME,名前を入力
 TXT_CALLSIGN,用户名：,NAME:,名前：
 TXT_CONNECTING,中继连接中...,CONNECTING TO RELAY...,リレーに接続中...
 TXT_WELCOME,欢迎,WELCOME,ようこそ
-TXT_MARATHON,马拉松模式,MARATHON,マラソンモード
-TXT_MULTIPLAYER,多人对战,MULTIPLAYER,マルチプレイヤー
+TXT_MARATHON,马拉松模式,MARATHON,マラソン
+TXT_MULTIPLAYER,多人对战,ONLINE,オンライン対戦
 TXT_RESTART,重新开始,RESTART,リスタート
 TXT_RETURN_LOBBY,返回大厅,RETURN LOBBY,ロビーへ戻る
-TXT_MARATHON_DESC,无限生存，消行越多速度越快,ENDLESS SURVIVAL. CLEAR LINES TO GO FASTER.,エンドレス生存。ラインを消すほどスピードアップ。
-TXT_MULTIPLAYER_DESC,与其他玩家在线对战,ONLINE BATTLE AGAINST OTHER PLAYERS,他プレイヤーとオンライン対戦
+TXT_MARATHON_DESC,一个人进行练习，熟悉操作、堆叠和节奏。,"PRACTICE SOLO\nBUILD CONTROL\nAND RHYTHM","一人で練習して\n操作・積み方・\nリズムを身につける"
+TXT_MULTIPLAYER_DESC,连接服务器，与其他玩家进行 1v1 或多人对战。,"CONNECT ONLINE\nPLAY 1V1 OR\nMULTIPLAYER","サーバーに接続して\n1v1やマルチ対戦を\n遊ぶ"
 TXT_OK,确定,OK,OK
 TXT_CLOSE,关闭,CLOSE,閉じる
 TXT_BLOCK_STYLE,方块风格,BLOCK STYLE,ブロックスタイル
@@ -187,8 +187,8 @@ TXT_ACTION_ROTATE_180,180旋转,Rotate 180,180度回転
 TXT_ACTION_HOLD,暂存,Hold,ホールド
 TXT_ACTION_PAUSE,暂停,Pause,一時停止
 
-TXT_REPLAY,复盘系统,REPLAY SYSTEM,リプレイシステム
-TXT_REPLAY_DESC,AI辅助局后分析,AI ASSISTED ANALYSIS,AI支援リプレイ分析
+TXT_REPLAY,复盘系统,REPLAY,リプレイ
+TXT_REPLAY_DESC,通过 AI 辅助复盘，发现问题并提升水平。,"REVIEW WITH AI\nFIND MISTAKES\nIMPROVE PLAY","AI分析つきの\nリプレイで課題を見つけ\n上達につなげる"
 TXT_REPLAY_ANALYSIS,复盘分析,REPLAY ANALYSIS,リプレイ分析
 TXT_PIECE_INFO,方块信息,PIECE INFO,ブロック情報
 TXT_TYPE,种类:,Type:,種類:
@@ -218,3 +218,142 @@ TXT_AI_ANALYSIS_WAIT,分析耗时可能较长，请稍候,This can take a while.
 TXT_AI_ANALYSIS_PROGRESS,正在生成分析文件 %d / %d,Generating analysis %d / %d,分析ファイル生成中 %d / %d
 TXT_AI_ANALYSIS_FAILED,AI 分析失败,AI analysis failed,AI分析に失敗
 TXT_STEP_FORMAT,Step %d / %d,Step %d / %d,Step %d / %d
+TXT_LOBBY_GUIDE_TITLE,教程百科,GUIDE BOOK,ガイドブック
+TXT_LOBBY_GUIDE_DESC,"学习基础知识\n攻击力计算\n技巧与复盘用法","LEARN BASICS\nDAMAGE MATH\nSKILLS & REPLAY","基礎知識から\n攻撃力計算・技術・\nリプレイ活用まで"
+TXT_GUIDE_BACK,返回大厅,Back to Lobby,ロビーへ戻る
+TXT_GUIDE_READ,阅读,Read,読む
+TXT_GUIDE_DEMO,演示,Demo,デモ
+TXT_GUIDE_SIM,模拟,Sim,シミュ
+TXT_GUIDE_OVERVIEW_TITLE,教程百科,GUIDE BOOK,ガイドブック
+TXT_GUIDE_OVERVIEW_DESC,在这里学习核心机制，通过固定场景演示和实战演练掌握高级技巧。,Learn core mechanics and practice advanced techniques.,固定場面で基本ルールと操作を確認します。
+TXT_GUIDE_HERO_TITLE,先看收益，再练操作,Learn value first. Then practice.,まず価値を見て、次に操作する
+TXT_GUIDE_HERO_BODY,从基础规则进入固定场景，按真实操作理解每一种技巧。,Start from basic rules, then use fixed scenarios to learn each technique through real inputs.,基礎ルールから固定場面に入り、実際の操作に近い流れで各テクニックを確認します。
+TXT_GUIDE_OVERVIEW_NAV,总览,Overview,概要
+TXT_GUIDE_PROGRESS,学习进度,PROGRESS,学習進度
+TXT_GUIDE_ATTACK_TABLE_TITLE,攻击力换算表,ATTACK POWER TABLE,攻撃力換算表
+TXT_GUIDE_ATTACK_HEADER,消除类型 | 基础攻击力 | B2B 加成,Clear Type | Base Attack | B2B Bonus,消去タイプ | 基本攻撃力 | B2Bボーナス
+TXT_GUIDE_ATTACK_NOTE,注：表中数据为标准对战模式配置,Note: Values reflect standard battle rules.,注：表のデータは標準対戦ルールのものです。
+TXT_GUIDE_START_LEARNING,开始学习,START LEARNING,学習を開始
+TXT_GUIDE_CONCEPT,介绍,Intro,紹介
+TXT_GUIDE_WHY,适用场景,When to Use,使う場面
+TXT_GUIDE_VALUE,收益,Benefit,得られるもの
+TXT_GUIDE_STEPS,操作顺序,Steps,操作手順
+TXT_GUIDE_MISTAKES,Tips,Tips,Tips
+TXT_GUIDE_ENTER_SIM,进入固定场景模拟,ENTER SIMULATION,シミュレーション開始
+TXT_GUIDE_NEXT_CH,下一章,NEXT CHAPTER,次へ
+TXT_GUIDE_DEMO_TITLE,渐进式示范,DEMONSTRATION,デモンストレーション
+TXT_GUIDE_CHAPTERS,学习章节,CHAPTERS,学習チャプター
+TXT_GUIDE_EXIT,退出百科,EXIT GUIDE,ガイドを終了
+TXT_GUIDE_SIM_HINT,"点击右侧棋盘聚焦，使用游戏按键操作方块。\n方块不会自动下落。","Click the board to focus, then use game controls.\nPieces do not fall automatically.","盤面をクリックしてフォーカスし、ゲームの操作キーを使用します。\nブロックは自動落下しません。"
+TXT_GUIDE_RESET,重置,RESET,リセット
+TXT_GUIDE_EXIT_SIM,退出模拟,EXIT SIM,シミュレーション終了
+TXT_GUIDE_CH1_TITLE,Wall Kick 踢墙,Wall Kick,Wall Kick
+TXT_GUIDE_CH1_TAG,机制,Mechanics,メカニクス
+TXT_GUIDE_CH1_TIME,3 分钟,3 mins,3分
+TXT_GUIDE_CH1_SUMMARY,旋转被墙或堆叠挡住时，系统会尝试把方块挪到附近位置。,When rotation is blocked the system tries nearby offsets to complete it.,回転が壁や地形に当たる時、システムは近くの位置へずらして回転できるか試します。
+TXT_GUIDE_CH1_CONCEPT,"Wall Kick 是 SRS 旋转系统的一部分。按下旋转后，如果方块会撞墙或撞到已有方块，系统不会立刻判定失败，而是按固定顺序尝试几个偏移位置。\n\n只要其中一个位置能放下，方块就会一边旋转、一边被“踢”到那个位置。","Wall Kick is part of SRS. When a rotation would collide with a wall or stack, the game checks several offsets in order.\n\nIf one offset is valid, the piece rotates and shifts into that position.","Wall Kick は SRS の一部です。回転後に壁や地形と重なる場合、ゲームは決まった順番でいくつかのずらし位置を試します。\n\n置ける位置があれば、ブロックは回転しながらその位置へ移動します。"
+TXT_GUIDE_CH1_WHY_1,贴墙时完成旋转,Rotate while touching a wall,壁に接した状態で回転したい時
+TXT_GUIDE_CH1_WHY_2,把方块旋进狭窄入口,Spin into a narrow opening,狭い入口へSpinしたい時
+TXT_GUIDE_CH1_WHY_3,理解 T-Spin、L-Spin 这类旋入操作,Understand T-Spin and L-Spin entries,T-Spin や L-Spin の入り方を理解したい時
+TXT_GUIDE_CH1_VALUE,踢墙本身没有额外攻击力。它的价值在于让方块进入普通移动到不了的位置，从而完成 Spin 或清线。,Wall Kick does not add damage by itself. It lets pieces reach positions normal movement cannot.,Wall Kick 自体に追加攻撃力はありません。通常移動では届かない位置へブロックを入れるための仕組みです。
+TXT_GUIDE_CH1_STEP_1,L 方块先贴到右墙,Move the L piece against the right wall,L ブロックを右壁につける
+TXT_GUIDE_CH1_STEP_2,顺时针旋转时，中心点会被向左推开一格,Rotate clockwise; the center is pushed one cell left,時計回りに回転し、中心が左へ 1 マスずれる
+TXT_GUIDE_CH1_STEP_3,再次调整入口后下落到底,Adjust the entry and drop to the bottom,入口を調整して下まで落とす
+TXT_GUIDE_CH1_STEP_4,最后一次旋转靠踢墙进入槽位并完成 L-Spin,Use the final Wall Kick to enter the slot and complete L-Spin,最後の Wall Kick で穴へ入り、L-Spin を完成させる
+TXT_GUIDE_CH1_ERR_1,贴墙前先确认入口方向,Check the entry direction before hugging the wall,壁につける前に入口の向きを確認する
+TXT_GUIDE_CH1_ERR_2,看中心点移动，比只看外形更容易理解踢墙,Watch the center point; it explains the kick better than the outline,外形だけでなく中心点の移動を見る
+TXT_GUIDE_CH1_ERR_3,I 方块的踢墙规则和其它方块不同,The I piece has its own kick table,I ブロックの Wall Kick ルールは他のブロックと異なる
+TXT_GUIDE_CH2_TITLE,Combo 连击,Combo,Combo
+TXT_GUIDE_CH2_TAG,进攻,Offense,攻撃
+TXT_GUIDE_CH2_TIME,5 分钟,5 mins,5分
+TXT_GUIDE_CH2_SUMMARY,每次落块都消行，连续不中断就是 Combo。,Clear with every piece without breaking the chain.,毎回のブロックでラインを消し続けると Combo になります。
+TXT_GUIDE_CH2_CONCEPT,"Combo 指连续多次清线。每次方块锁定后只要清掉至少一行，Combo 就继续；如果这一步没有清线，Combo 立刻断掉。\n\n它不要求每次都大消，重点是让每一步都能接着清。","Combo means clearing lines with consecutive pieces. If a placed piece clears at least one line, the Combo continues. If it clears nothing, the Combo ends.\n\nThe goal is not a big clear every time. The goal is to keep the next clear available.","Combo は連続してラインを消すことです。ブロックを固定した時に 1 ライン以上消せば Combo は継続し、何も消せなければ切れます。\n\n毎回大きく消す必要はありません。次も消せる形を残すことが重要です。"
+TXT_GUIDE_CH2_WHY_1,地形已经很高，需要边降高度边反击,The stack is high and you need to lower it while attacking,地形が高く、下げながら攻撃したい時
+TXT_GUIDE_CH2_WHY_2,手里连续有适合补线的小块,You have pieces that can keep filling the gap,溝を埋め続けられるブロックが続く時
+TXT_GUIDE_CH2_WHY_3,想用低风险方式持续给对手压力,You want steady pressure with low risk,低リスクで圧力をかけ続けたい時
+TXT_GUIDE_CH2_VALUE,从 Combo 3 开始会有额外攻击力。连击越长，额外行数越高，并且会叠加在本次清线本身的攻击力上。,Bonus damage starts at Combo 3. Longer Combos add more damage on top of the current clear.,Combo 3 から追加攻撃力が入ります。Combo が長いほど、本来の消去攻撃力に追加分が乗ります。
+TXT_GUIDE_CH2_STEP_1,先留出能连续补线的竖槽,Leave a vertical gap that can be filled repeatedly,連続して埋められる縦の溝を残す
+TXT_GUIDE_CH2_STEP_2,把小块放进槽内，每一步都至少清一行,Place pieces into the gap so every move clears at least one line,毎手 1 ライン以上消えるように溝へ置く
+TXT_GUIDE_CH2_STEP_3,不要为了大消破坏下一步的入口,Do not break the next entry just to chase a bigger clear,大きく消すために次の入口を壊さない
+TXT_GUIDE_CH2_STEP_4,观察计数，目标是不中断地推到 Combo 3 以上,Watch the counter and push past Combo 3 without breaking,カウントを見ながら Combo 3 以上までつなげる
+TXT_GUIDE_CH2_ERR_1,优先保留下一个方块能清线的位置,Keep a place where the next piece can clear,次のブロックで消せる場所を優先して残す
+TXT_GUIDE_CH2_ERR_2,地形越简单，Combo 越容易延续,Simple terrain makes Combo easier to continue,地形が単純なほど Combo は続けやすい
+TXT_GUIDE_CH2_ERR_3,断连通常不是因为这一步错，而是上一步没有给下一步留空间,A broken Combo often starts from the previous move not leaving space,Combo 切れは今の手ではなく、前の手で次の空間を残せていないことが多い
+TXT_GUIDE_CH3_TITLE,T-Spin Double,T-Spin Double,T-Spin Double
+TXT_GUIDE_CH3_TAG,核心进攻,Core Offense,コア攻撃
+TXT_GUIDE_CH3_TIME,5 分钟,5 mins,5分
+TXT_GUIDE_CH3_SUMMARY,T 方块通过旋转卡入 T 槽，同时消除 2 行，攻击力 4 行。,Spin the T piece into a T-slot to clear 2 lines and send 4 damage.,T ブロックを T-slot へSpinさせ、2ライン消して4ライン攻撃します。
+TXT_GUIDE_CH3_CONCEPT,"T-Spin Double 通常简称 TSD。做法是先准备一个 T 槽，再让 T 方块通过旋转进入槽位，并一次清掉 2 行。\n\n关键不是“把 T 放进去”，而是最后一步必须通过旋转进入。","T-Spin Double is often shortened to TSD. Build a T-slot, then rotate the T piece into it and clear 2 lines.\n\nThe important part is not simply placing T there: the final entry must be a rotation.","T-Spin Double は TSD とも呼ばれます。先に T-slot を作り、T ブロックを回転で入れて2ライン消します。\n\n重要なのは T を置くだけではなく、最後に回転で入ることです。"
+TXT_GUIDE_CH3_WHY_1,想用较低高度打出 4 行攻击,You want 4 damage from a low structure,低い地形から4ライン攻撃したい時
+TXT_GUIDE_CH3_WHY_2,已经有 T 槽雏形，可以顺势补完,A T-slot is already forming and can be completed,T-slot の形ができかけている時
+TXT_GUIDE_CH3_WHY_3,需要维持 B2B 压力,You want to keep B2B pressure,B2B の圧力を維持したい時
+TXT_GUIDE_CH3_VALUE,TSD 基础攻击力是 4 行，和 Tetris 相同。若处于 B2B 状态，会变成 5 行攻击。,TSD sends 4 lines, the same as Tetris. With B2B, it sends 5.,TSD は Tetris と同じ4ライン攻撃です。B2B 中なら5ラインになります。
+TXT_GUIDE_CH3_STEP_1,先确认 T 槽底部能清 2 行,Confirm the bottom of the T-slot can clear 2 lines,T-slot の底で2ライン消えることを確認する
+TXT_GUIDE_CH3_STEP_2,保留 T 方块进入槽口的通道,Keep the entry path open for the T piece,T ブロックが入る通路を残す
+TXT_GUIDE_CH3_STEP_3,把 T 移到槽口附近，不要直接硬塞,Move T near the opening without forcing it in,T を入口近くへ移動し、無理に押し込まない
+TXT_GUIDE_CH3_STEP_4,最后用旋转卡入槽位,Rotate into the slot at the end,最後に回転で穴へ入る
+TXT_GUIDE_CH3_STEP_5,锁定后出现 T-Spin Double 判定,Lock and get the T-Spin Double callout,固定後に T-Spin Double 判定が出る
+TXT_GUIDE_CH3_ERR_1,最后一步必须是旋转,The final input must be rotation,最後の入力は回転にする
+TXT_GUIDE_CH3_ERR_2,入口太早封住就无法旋入,If the entrance is closed too early T cannot spin in,入口を早く塞ぐとSpinで入れない
+TXT_GUIDE_CH3_ERR_3,T 槽附近不要堆出多余凸起,Avoid extra bumps around the T-slot,T-slot 周辺に余計な凸を作らない
+TXT_GUIDE_OP_ROT_CCW,逆时针旋转 90°,Rotate CCW 90°,左に90度回転
+TXT_GUIDE_OP_MOVE_WALL,一直向右靠墙壁,Move right against the wall,右の壁まで移動
+TXT_GUIDE_OP_ROT_CW_KICK,顺时针旋转——受墙壁阻挡，中心点向左踢墙,Rotate CW — blocked by wall kicks left,時計回り回転 — 壁で止まり左へ Wall Kick
+TXT_GUIDE_OP_ROT_CW_ENTRY,顺时针旋转，调整入口方向,Rotate CW to adjust entry angle,右に回転して入口の向きを調整
+TXT_GUIDE_OP_DROP_SLOT,软降到槽口上方,Soft drop above the slot,穴の上までソフトドロップ
+TXT_GUIDE_OP_ROT_CW_TSPIN,顺时针旋转，T 方块旋入 T 槽,Rotate CW to spin into T-slot,時計回り回転で T ブロックを T-slot へ入れる
+TXT_GUIDE_OP_MOVE_RIGHT,移动到右侧空位上方,Move over the right gap,右側の空きスペースに移動
+TXT_GUIDE_OP_DROP_CLEAR2,下落到底部，消除 2 行,Drop to bottom clear 2 lines,一番下まで落として2ライン消去
+TXT_GUIDE_BASICS,基础知识,Basics,基礎知識
+TXT_GUIDE_BASICS_DESC,先确认每种消除的收益，再进入具体操作。,Check the value of each clear before practicing execution.,各消去の価値を確認してから、具体的な操作へ進みます。
+TXT_GUIDE_ESTIMATE_PREFIX,预计,Est.,目安
+TXT_GUIDE_ESTIMATE,预估,Est.,予想
+TXT_GUIDE_VIEW,查看,View,見る
+TXT_GUIDE_START_SIM,开始模拟,Simulate,シミュレーション
+TXT_GUIDE_READY,准备,Ready,準備
+TXT_GUIDE_LOCKED,锁定,Locked,ロック
+TXT_GUIDE_CLEAR,消除,Clear,消去
+TXT_GUIDE_OP_MOVE_RIGHT_WALL,向右移动直到贴住墙壁,Move right to wall,右の壁まで移動
+TXT_GUIDE_OP_WAIT_WALL,贴墙停顿,Wait at wall,壁で待機
+TXT_GUIDE_OP_ROT_KICK_L,顺时针旋转 90°：踢墙，中心点向左移 1 格,Rotate CW 90: Kick left 1 cell,時計回り90度: Wall Kick で左へ1マス
+TXT_GUIDE_OP_OBSERVE_KICK,观察踢墙位移,Observe wall kick,Wall Kick のズレを見る
+TXT_GUIDE_OP_ROT_CCW_AGAIN,再次逆时针旋转 90°,Rotate CCW 90 again,再び左回転90度
+TXT_GUIDE_OP_MOVE_RIGHT_WALL_AGAIN,右移贴住墙壁,Move right to wall again,再び右の壁まで移動
+TXT_GUIDE_OP_HARD_DROP,下落到底部,Hard drop to bottom,一番下までハードドロップ
+TXT_GUIDE_OP_WAIT_SPIN,等待旋入时机,Wait for spin timing,回転のタイミングを待つ
+TXT_GUIDE_OP_ROT_LSPIN,顺时针旋转：踢墙旋入，完成 L-Spin,Rotate CW: Kick and complete L-Spin,時計回り回転: Wall Kick で L-Spin 完成
+TXT_GUIDE_OP_SOFT_DROP,软降,Soft drop,ソフトドロップ
+TXT_GUIDE_OP_MOVE_RIGHT_WELL,右移到井旁,Move right near well,井戸の横に移動
+TXT_GUIDE_OP_MOVE_WELL_EDGE,贴住井口,Align with well edge,井戸の端に合わせる
+TXT_GUIDE_OP_DROP_WELL,下落插入井,Drop into well,井戸の中に落とす
+TXT_GUIDE_OBJ_TSPIN,目标：将 T 方块旋入 T 槽，同时消除 2 行，完成 T-Spin Double。,Objective: Spin T into slot to clear 2 lines (TSD).,目標: T ブロックを T-slot へSpinさせ、2ライン消して T-Spin Double を完成させる。
+TXT_GUIDE_OBJ_COMBO,目标：用 O 方块连续落入右侧空位消行，完成 Combo 5。,Objective: Drop O piece to clear lines consecutively (Combo 5).,目標: O ブロックで連続消去し、Combo 5 を完成させる。
+TXT_GUIDE_OBJ_WALLKICK,目标：将 L 方块旋转，观察踢墙导致的中心点偏移。,Objective: Rotate L piece and observe wall kick offset.,目標: L ブロックを回転させ、Wall Kick による中心点のズレを見る。
+TXT_GUIDE_OBJ_TETRIS,目标：将 I 方块旋成竖直，放入右侧井，完成 Tetris 四消。,Objective: Rotate I piece and drop into well for Tetris.,目標: I ブロックを縦にして井戸へ入れ、Tetris を完成させる。
+TXT_GUIDE_SIM_TSPIN,T-Spin Double 模拟,T-Spin Double Sim,T-Spin Double シミュ
+TXT_GUIDE_SIM_COMBO,Combo 模拟  当前 Combo: %d,Combo Sim  Current: %d,Combo シミュ 現在: %d
+TXT_GUIDE_SIM_WALLKICK,Wall Kick 踢墙模拟,Wall Kick Sim,Wall Kick シミュ
+TXT_GUIDE_SIM_TETRIS,Tetris 四消模拟,Tetris Sim,Tetris シミュ
+TXT_GUIDE_ERR_ROT,这里转不进去。先移动到合适位置再旋转。,Cannot rotate here. Move to a proper position first.,ここでは回転できません。移動してから回転してください。
+TXT_GUIDE_ERR_LOCK,还没有贴住地形。继续软降，或者用硬降。,Not resting on surface yet. Keep dropping.,まだ地形に接地していません。ドロップを続けてください。
+TXT_GUIDE_SUC_TSPIN,成功！T-Spin Double —— 旋入 T 槽消除 2 行，攻击力 4 行。用时 %.1f 秒。,Success! T-Spin Double! Cleared 2 lines. Time: %.1f s.,成功！T-Spin Double！2ライン消去。時間: %.1f 秒。
+TXT_GUIDE_ERR_TSPIN_1,完成了 T-Spin Single（消 1 行），但目标是 T-Spin Double（消 2 行）。检查 T 槽结构，按重置再试。,Did a T-Spin Single. Target is Double. Reset and retry.,T-Spin Single です。目標は T-Spin Double です。リセットして再試行してください。
+TXT_GUIDE_ERR_TSPIN_0,没有达成 T-Spin。最后一步必须是旋转卡入，而且要消 2 行。按重置再试。,Failed T-Spin. Last move must be rotation clearing 2 lines.,T-Spin失敗。最後は回転で2ライン消去する必要があります。
+TXT_GUIDE_SUC_COMBO,成功！Combo 5 —— 连续 5 次消行，用时 %.1f 秒。,Success! Combo 5! Time: %.1f s.,成功！Combo 5！時間: %.1f 秒。
+TXT_GUIDE_SUC_COMBO_N,Combo %d！额外攻击力 +%d 行。继续保持连击。,Combo %d! Bonus +%d lines. Keep it up.,Combo %d！ボーナス +%d ライン。続けて！
+TXT_GUIDE_ERR_COMBO,连击中断——这次落块没有消行。Combo 要求每次都消行。,Combo broken. You must clear lines every piece.,Combo が途切れました。毎回ラインを消す必要があります。
+TXT_GUIDE_SUC_LSPIN,成功！L-Spin —— 最后一次旋转靠踢墙进入空洞，并完成 2 行消除。,Success! L-Spin completed.,成功！L-Spin 完了。
+TXT_GUIDE_ERR_LSPIN,还没有完成 L-Spin。需要最后一步靠踢墙旋入右下角，并完成 2 行消除。,L-Spin not completed. Spin into bottom right corner.,L-Spin未完了。右下に回転して入れてください。
+TXT_GUIDE_SUC_TETRIS,成功！Tetris 四消 —— I 方块竖直插入井中消除 4 行，攻击力 4 行。用时 %.1f 秒。,Success! Tetris! Time: %.1f s.,成功！Tetris！時間: %.1f 秒。
+TXT_GUIDE_ERR_TETRIS,没有达成四消。I 方块要旋成竖直放入井中。按重置再试。,Failed Tetris. Rotate I piece vertically into well.,Tetris 失敗。I ブロックを縦にして井戸へ入れてください。
+TXT_GUIDE_ATK_TITLE,攻击力速查表,Attack Power Table,攻撃力早見表
+TXT_GUIDE_ATK_DESC,对战中，消除行数不等于攻击力。以下是各消除类型发送的垃圾行数：,Clear lines do not equal damage. Damage table:,消去ライン数と攻撃力は異なります。攻撃力表:
+TXT_GUIDE_ATK_H1,消除类型,Clear Type,消去タイプ
+TXT_GUIDE_ATK_H2,消除行数,Lines Cleared,消去ライン
+TXT_GUIDE_ATK_H3,攻击力,Damage,攻撃力
+TXT_GUIDE_B2B_TITLE,B2B（Back-to-Back）,B2B (Back-to-Back),B2B (Back-to-Back)
+TXT_GUIDE_B2B_DESC,连续打出「困难消除」（Tetris 或 T-Spin）不中断，额外 +1 行攻击力。中间穿插普通消除会中断 B2B。,Consecutive difficult clears (Tetris/T-Spin) give +1 damage.,Tetris または T-Spin を連続で行うと +1 のボーナス。普通の消去を挟むと B2B は切れます。
+TXT_GUIDE_COMBO_TITLE,Combo 额外攻击力,Combo Bonus Damage,Combo 追加攻撃力
+TXT_GUIDE_COMBO_DESC1,连击次数 → 额外行数：1→0  2→0  3→+1  4→+1  5→+2  6→+2  7→+3  8→+3  9→+4  10+→+4~5,Combo -> Bonus: 1->0 2->0 3->+1 4->+1 5->+2 6->+2 7->+3 8->+3 9->+4 10+->+4~5,Combo -> 追加: 1->0 2->0 3->+1 4->+1 5->+2 6->+2 7->+3 8->+3 9->+4 10+->+4~5
+TXT_GUIDE_COMBO_DESC2,额外攻击力叠加在消除本身的攻击力之上。,Bonus damage is added to the base damage of the clear.,追加攻撃力は基本攻撃力に加算されます。
+TXT_GUIDE_OP_ROT_CW_90,顺时针旋转 90°,Rotate CW 90°,右回転 90°

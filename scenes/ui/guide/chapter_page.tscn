@@ -13,26 +13,31 @@ layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
 
-[node name="Article" type="VBoxContainer" parent="ArticleScroll"]
+[node name="ArticleMargin" type="MarginContainer" parent="ArticleScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/margin_right = 14
+
+[node name="Article" type="VBoxContainer" parent="ArticleScroll/ArticleMargin"]
 layout_mode = 2
 size_flags_horizontal = 3
 theme_override_constants/separation = 16
 
-[node name="TitlePanel" type="PanelContainer" parent="ArticleScroll/Article"]
+[node name="TitlePanel" type="PanelContainer" parent="ArticleScroll/ArticleMargin/Article"]
 layout_mode = 2
 
-[node name="TitleMargin" type="MarginContainer" parent="ArticleScroll/Article/TitlePanel"]
+[node name="TitleMargin" type="MarginContainer" parent="ArticleScroll/ArticleMargin/Article/TitlePanel"]
 layout_mode = 2
 theme_override_constants/margin_left = 22
 theme_override_constants/margin_top = 20
 theme_override_constants/margin_right = 22
 theme_override_constants/margin_bottom = 20
 
-[node name="TitleBox" type="VBoxContainer" parent="ArticleScroll/Article/TitlePanel/TitleMargin"]
+[node name="TitleBox" type="VBoxContainer" parent="ArticleScroll/ArticleMargin/Article/TitlePanel/TitleMargin"]
 layout_mode = 2
 theme_override_constants/separation = 8
 
-[node name="Chip" type="Label" parent="ArticleScroll/Article/TitlePanel/TitleMargin/TitleBox"]
+[node name="Chip" type="Label" parent="ArticleScroll/ArticleMargin/Article/TitlePanel/TitleMargin/TitleBox"]
 unique_name_in_owner = true
 layout_mode = 2
 custom_minimum_size = Vector2(0, 28)
@@ -40,147 +45,147 @@ theme_override_colors/font_color = Color(0.011765, 0.411765, 0.631373, 1)
 theme_override_font_sizes/font_size = 13
 vertical_alignment = 1
 
-[node name="Title" type="Label" parent="ArticleScroll/Article/TitlePanel/TitleMargin/TitleBox"]
+[node name="Title" type="Label" parent="ArticleScroll/ArticleMargin/Article/TitlePanel/TitleMargin/TitleBox"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.058824, 0.121569, 0.270588, 1)
 theme_override_font_sizes/font_size = 30
 
-[node name="Summary" type="Label" parent="ArticleScroll/Article/TitlePanel/TitleMargin/TitleBox"]
+[node name="Summary" type="Label" parent="ArticleScroll/ArticleMargin/Article/TitlePanel/TitleMargin/TitleBox"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.278431, 0.333333, 0.411765, 1)
 theme_override_font_sizes/font_size = 15
 autowrap_mode = 3
 
-[node name="ConceptSection" type="PanelContainer" parent="ArticleScroll/Article"]
+[node name="ConceptSection" type="PanelContainer" parent="ArticleScroll/ArticleMargin/Article"]
 layout_mode = 2
 
-[node name="ConceptMargin" type="MarginContainer" parent="ArticleScroll/Article/ConceptSection"]
+[node name="ConceptMargin" type="MarginContainer" parent="ArticleScroll/ArticleMargin/Article/ConceptSection"]
 layout_mode = 2
 theme_override_constants/margin_left = 18
 theme_override_constants/margin_top = 16
 theme_override_constants/margin_right = 18
 theme_override_constants/margin_bottom = 16
 
-[node name="ConceptBox" type="VBoxContainer" parent="ArticleScroll/Article/ConceptSection/ConceptMargin"]
+[node name="ConceptBox" type="VBoxContainer" parent="ArticleScroll/ArticleMargin/Article/ConceptSection/ConceptMargin"]
 layout_mode = 2
 theme_override_constants/separation = 8
 
-[node name="ConceptTitle" type="Label" parent="ArticleScroll/Article/ConceptSection/ConceptMargin/ConceptBox"]
+[node name="ConceptTitle" type="Label" parent="ArticleScroll/ArticleMargin/Article/ConceptSection/ConceptMargin/ConceptBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.058824, 0.121569, 0.270588, 1)
 theme_override_font_sizes/font_size = 19
-text = "它是什么"
+text = "介绍"
 
-[node name="ConceptText" type="Label" parent="ArticleScroll/Article/ConceptSection/ConceptMargin/ConceptBox"]
+[node name="ConceptText" type="Label" parent="ArticleScroll/ArticleMargin/Article/ConceptSection/ConceptMargin/ConceptBox"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.278431, 0.333333, 0.411765, 1)
 theme_override_font_sizes/font_size = 15
 autowrap_mode = 3
 
-[node name="WhySection" type="PanelContainer" parent="ArticleScroll/Article"]
+[node name="WhySection" type="PanelContainer" parent="ArticleScroll/ArticleMargin/Article"]
 layout_mode = 2
 
-[node name="WhyMargin" type="MarginContainer" parent="ArticleScroll/Article/WhySection"]
+[node name="WhyMargin" type="MarginContainer" parent="ArticleScroll/ArticleMargin/Article/WhySection"]
 layout_mode = 2
 theme_override_constants/margin_left = 18
 theme_override_constants/margin_top = 16
 theme_override_constants/margin_right = 18
 theme_override_constants/margin_bottom = 16
 
-[node name="WhyBox" type="VBoxContainer" parent="ArticleScroll/Article/WhySection/WhyMargin"]
+[node name="WhyBox" type="VBoxContainer" parent="ArticleScroll/ArticleMargin/Article/WhySection/WhyMargin"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 8
 
-[node name="WhyTitle" type="Label" parent="ArticleScroll/Article/WhySection/WhyMargin/WhyBox"]
+[node name="WhyTitle" type="Label" parent="ArticleScroll/ArticleMargin/Article/WhySection/WhyMargin/WhyBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.058824, 0.121569, 0.270588, 1)
 theme_override_font_sizes/font_size = 19
-text = "为什么重要"
+text = "适用场景"
 
-[node name="ValueSection" type="PanelContainer" parent="ArticleScroll/Article"]
+[node name="ValueSection" type="PanelContainer" parent="ArticleScroll/ArticleMargin/Article"]
 layout_mode = 2
 
-[node name="ValueMargin" type="MarginContainer" parent="ArticleScroll/Article/ValueSection"]
+[node name="ValueMargin" type="MarginContainer" parent="ArticleScroll/ArticleMargin/Article/ValueSection"]
 layout_mode = 2
 theme_override_constants/margin_left = 18
 theme_override_constants/margin_top = 16
 theme_override_constants/margin_right = 18
 theme_override_constants/margin_bottom = 16
 
-[node name="ValueBox" type="VBoxContainer" parent="ArticleScroll/Article/ValueSection/ValueMargin"]
+[node name="ValueBox" type="VBoxContainer" parent="ArticleScroll/ArticleMargin/Article/ValueSection/ValueMargin"]
 layout_mode = 2
 theme_override_constants/separation = 8
 
-[node name="ValueTitle" type="Label" parent="ArticleScroll/Article/ValueSection/ValueMargin/ValueBox"]
+[node name="ValueTitle" type="Label" parent="ArticleScroll/ArticleMargin/Article/ValueSection/ValueMargin/ValueBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.058824, 0.121569, 0.270588, 1)
 theme_override_font_sizes/font_size = 19
-text = "攻击价值"
+text = "收益"
 
-[node name="ValueText" type="Label" parent="ArticleScroll/Article/ValueSection/ValueMargin/ValueBox"]
+[node name="ValueText" type="Label" parent="ArticleScroll/ArticleMargin/Article/ValueSection/ValueMargin/ValueBox"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_colors/font_color = Color(0.278431, 0.333333, 0.411765, 1)
 theme_override_font_sizes/font_size = 15
 autowrap_mode = 3
 
-[node name="StepsSection" type="PanelContainer" parent="ArticleScroll/Article"]
+[node name="StepsSection" type="PanelContainer" parent="ArticleScroll/ArticleMargin/Article"]
 layout_mode = 2
 
-[node name="StepsMargin" type="MarginContainer" parent="ArticleScroll/Article/StepsSection"]
-layout_mode = 2
-theme_override_constants/margin_left = 18
-theme_override_constants/margin_top = 16
-theme_override_constants/margin_right = 18
-theme_override_constants/margin_bottom = 16
-
-[node name="StepsBox" type="VBoxContainer" parent="ArticleScroll/Article/StepsSection/StepsMargin"]
-unique_name_in_owner = true
-layout_mode = 2
-theme_override_constants/separation = 8
-
-[node name="StepsTitle" type="Label" parent="ArticleScroll/Article/StepsSection/StepsMargin/StepsBox"]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.058824, 0.121569, 0.270588, 1)
-theme_override_font_sizes/font_size = 19
-text = "分步骤引导"
-
-[node name="MistakesSection" type="PanelContainer" parent="ArticleScroll/Article"]
-layout_mode = 2
-
-[node name="MistakesMargin" type="MarginContainer" parent="ArticleScroll/Article/MistakesSection"]
+[node name="StepsMargin" type="MarginContainer" parent="ArticleScroll/ArticleMargin/Article/StepsSection"]
 layout_mode = 2
 theme_override_constants/margin_left = 18
 theme_override_constants/margin_top = 16
 theme_override_constants/margin_right = 18
 theme_override_constants/margin_bottom = 16
 
-[node name="MistakesBox" type="VBoxContainer" parent="ArticleScroll/Article/MistakesSection/MistakesMargin"]
+[node name="StepsBox" type="VBoxContainer" parent="ArticleScroll/ArticleMargin/Article/StepsSection/StepsMargin"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 8
 
-[node name="MistakesTitle" type="Label" parent="ArticleScroll/Article/MistakesSection/MistakesMargin/MistakesBox"]
+[node name="StepsTitle" type="Label" parent="ArticleScroll/ArticleMargin/Article/StepsSection/StepsMargin/StepsBox"]
 layout_mode = 2
 theme_override_colors/font_color = Color(0.058824, 0.121569, 0.270588, 1)
 theme_override_font_sizes/font_size = 19
-text = "常见错误"
+text = "操作顺序"
 
-[node name="Actions" type="HBoxContainer" parent="ArticleScroll/Article"]
+[node name="MistakesSection" type="PanelContainer" parent="ArticleScroll/ArticleMargin/Article"]
+layout_mode = 2
+
+[node name="MistakesMargin" type="MarginContainer" parent="ArticleScroll/ArticleMargin/Article/MistakesSection"]
+layout_mode = 2
+theme_override_constants/margin_left = 18
+theme_override_constants/margin_top = 16
+theme_override_constants/margin_right = 18
+theme_override_constants/margin_bottom = 16
+
+[node name="MistakesBox" type="VBoxContainer" parent="ArticleScroll/ArticleMargin/Article/MistakesSection/MistakesMargin"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="MistakesTitle" type="Label" parent="ArticleScroll/ArticleMargin/Article/MistakesSection/MistakesMargin/MistakesBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.058824, 0.121569, 0.270588, 1)
+theme_override_font_sizes/font_size = 19
+text = "Tips"
+
+[node name="Actions" type="HBoxContainer" parent="ArticleScroll/ArticleMargin/Article"]
 layout_mode = 2
 theme_override_constants/separation = 10
 
-[node name="SimButton" type="Button" parent="ArticleScroll/Article/Actions"]
+[node name="SimButton" type="Button" parent="ArticleScroll/ArticleMargin/Article/Actions"]
 unique_name_in_owner = true
 layout_mode = 2
 custom_minimum_size = Vector2(120, 42)
 text = "进入固定场景模拟"
 
-[node name="NextButton" type="Button" parent="ArticleScroll/Article/Actions"]
+[node name="NextButton" type="Button" parent="ArticleScroll/ArticleMargin/Article/Actions"]
 unique_name_in_owner = true
 layout_mode = 2
 custom_minimum_size = Vector2(120, 42)
@@ -219,3 +224,4 @@ layout_mode = 2
 size_flags_vertical = 3
 custom_minimum_size = Vector2(200, 300)
 script = ExtResource("1_board")
+
