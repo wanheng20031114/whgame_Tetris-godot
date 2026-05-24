@@ -68,7 +68,32 @@ theme_override_constants/margin_top = 16
 theme_override_constants/margin_right = 16
 theme_override_constants/margin_bottom = 16
 
-[node name="CardsGrid" type="GridContainer" parent="PageMargin/Page/CardsPanel/CardsMargin"]
+[node name="CardsBox" type="VBoxContainer" parent="PageMargin/Page/CardsPanel/CardsMargin"]
+layout_mode = 2
+theme_override_constants/separation = 16
+
+[node name="BasicsTitle" type="Label" parent="PageMargin/Page/CardsPanel/CardsMargin/CardsBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.058824, 0.121569, 0.270588, 1)
+theme_override_font_sizes/font_size = 22
+text = "基础知识"
+
+[node name="BasicsGrid" type="GridContainer" parent="PageMargin/Page/CardsPanel/CardsMargin/CardsBox"]
+unique_name_in_owner = true
+layout_mode = 2
+columns = 2
+theme_override_constants/h_separation = 14
+theme_override_constants/v_separation = 14
+
+[node name="LearningTitle" type="Label" parent="PageMargin/Page/CardsPanel/CardsMargin/CardsBox"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_colors/font_color = Color(0.058824, 0.121569, 0.270588, 1)
+theme_override_font_sizes/font_size = 22
+text = "学习章节"
+
+[node name="CardsGrid" type="GridContainer" parent="PageMargin/Page/CardsPanel/CardsMargin/CardsBox"]
 unique_name_in_owner = true
 layout_mode = 2
 columns = 2

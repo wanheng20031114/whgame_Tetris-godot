@@ -5,7 +5,9 @@
       "Bash(python -c ' *)",
       "Bash(git add *)",
       "Bash(git commit *)",
-      "Bash(git push *)"
+      "Bash(git push *)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\wh\\\\Documents\\\\whgame_Tetris-godot\" -Force)",
+      "Bash(Select-Object Mode, Name)"
     ]
   }
 }

@@ -242,7 +242,7 @@ func _build_session_detail_text(entry: Dictionary) -> String:
 		int(session.get("final_lines", entry.get("lines", 0))),
 		tr("TXT_DURATION"),
 		_format_duration(float(session.get("duration_seconds", entry.get("duration_seconds", 0.0))))
-	])
+	]) 
 	lines.append("%s: %.2f | %s: %.1f | %s: %.2f | %s: %.2f" % [
 		tr("TXT_PPS_EXPLAIN"),
 		float(session.get("pps", entry.get("pps", 0.0))),

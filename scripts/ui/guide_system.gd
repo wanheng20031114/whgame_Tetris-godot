@@ -7,6 +7,8 @@ const OVERVIEW_PAGE_SCENE := preload("res://scenes/ui/guide/overview_page.tscn")
 const BASICS_PAGE_SCENE := preload("res://scenes/ui/guide/basics_page.tscn")
 const CHAPTER_PAGE_SCENE := preload("res://scenes/ui/guide/chapter_page.tscn")
 const SIMULATION_PAGE_SCENE := preload("res://scenes/ui/guide/simulation_page.tscn")
+const ATTACK_TO_GARBAGE_IMAGE := "res://presentation/attack_to_garbage_lines.png"
+const INCOMING_ATTACK_BAR_IMAGE := "res://presentation/incoming_attack_bar_rise.png"
 
 const EMPTY := 0
 const GARBAGE := 8
@@ -29,11 +31,12 @@ const ATTACK_TABLE: Array = [
 const COMBO_ATTACK_TABLE: Array = [0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 4, 5]
 
 var chapters: Array = []
+var basics_chapters: Array = []
 var selected_index: int = 0
 var content_root: Control
-var sidebar: VBoxContainer
+var basics_list: VBoxContainer
+var chapters_list: VBoxContainer
 var overview_button: Button
-var basics_button: Button
 var board_view: Control
 var feedback_label: Label
 var objective_label: Label
@@ -87,6 +90,41 @@ func _input(event: InputEvent) -> void:
 
 
 func _build_chapters() -> void:
+	basics_chapters = [
+		{
+			"id": "versus",
+			"number": "01",
+			"title": "对战俄罗斯方块",
+			"tag": "规则",
+			"time": "5 分钟",
+			"summary": "先理解攻击、垃圾行、攻击条与抵消，这是对战判断的基础。"
+		},
+		{
+			"id": "attack",
+			"number": "02",
+			"title": "消除造成的攻击力",
+			"tag": "数值",
+			"time": "5 分钟",
+			"summary": "用表格确认 Tetris、T-Spin、B2B、Combo 会带来多少攻击。"
+		},
+		{
+			"id": "technique",
+			"number": "03",
+			"title": "游戏技巧",
+			"tag": "习惯",
+			"time": "8 分钟",
+			"summary": "整理新手最先该练的通用思路：堆叠、预览、垃圾与操作效率。"
+		},
+		{
+			"id": "replay",
+			"number": "04",
+			"title": "Replay 复盘与成长",
+			"tag": "占位",
+			"time": "后续",
+			"summary": "后续连接 Replay 系统，说明如何阅读 AI 分析并复盘自己的局。"
+		}
+	]
+
 	chapters = [
 		{
 			"id": "wallkick",
@@ -135,9 +173,9 @@ func _build_chapters() -> void:
 
 func _build_shell() -> void:
 	content_root = %ContentRoot
-	sidebar = %ChaptersList
+	basics_list = %BasicsList
+	chapters_list = %ChaptersList
 	overview_button = %OverviewButton
-	basics_button = %BasicsButton
 	_apply_shell_texts()
 
 	var header := get_node_or_null("Page/Header") as PanelContainer
@@ -157,7 +195,6 @@ func _build_shell() -> void:
 	back.pressed.connect(func(): get_tree().change_scene_to_file("res://scenes/ui/main.tscn"))
 
 	overview_button.pressed.connect(_show_overview)
-	basics_button.pressed.connect(_show_basics)
 
 	_rebuild_sidebar()
 
@@ -169,25 +206,37 @@ func _apply_shell_texts() -> void:
 	var back := %BackButton as Button
 	back.text = tr("TXT_GUIDE_BACK")
 	overview_button.text = "  " + tr("TXT_GUIDE_OVERVIEW_NAV")
-	basics_button.text = "  " + tr("TXT_GUIDE_BASICS")
 	(get_node("Page/Header/Margin/Row/Tabs/ReadTab") as Label).text = tr("TXT_GUIDE_READ")
 	(get_node("Page/Header/Margin/Row/Tabs/DemoTab") as Label).text = tr("TXT_GUIDE_DEMO")
 	(get_node("Page/Header/Margin/Row/Tabs/TryTab") as Label).text = tr("TXT_GUIDE_SIM")
+	(get_node("Page/BodyMargin/Body/SidebarPanel/SidebarMargin/Sidebar/BasicsSectionLabel") as Label).text = tr("TXT_GUIDE_BASICS")
 	(get_node("Page/BodyMargin/Body/SidebarPanel/SidebarMargin/Sidebar/SectionLabel") as Label).text = tr("TXT_GUIDE_CHAPTERS")
 
 
 func _rebuild_sidebar() -> void:
-	for child in sidebar.get_children():
+	for child in basics_list.get_children():
+		child.queue_free()
+	for child in chapters_list.get_children():
 		child.queue_free()
 
 	if overview_button:
 		_style_sidebar_button(overview_button, selected_index == -1)
-	if basics_button:
-		_style_sidebar_button(basics_button, selected_index == -2)
+
+	for i in range(basics_chapters.size()):
+		var basics: Dictionary = basics_chapters[i]
+		basics_list.add_child(_sidebar_button("%s  %s" % [basics["number"], basics["title"]], _basic_selection(i)))
 
 	for i in range(chapters.size()):
 		var chapter: Dictionary = chapters[i]
-		sidebar.add_child(_sidebar_button("%s  %s" % [chapter["number"], chapter["title"]], i))
+		chapters_list.add_child(_sidebar_button("%s  %s" % [chapter["number"], chapter["title"]], i))
+
+
+func _basic_selection(index: int) -> int:
+	return -100 - index
+
+
+func _basic_index_from_selection(value: int) -> int:
+	return -100 - value
 
 
 func _sidebar_button(text: String, index: int) -> Button:
@@ -200,6 +249,8 @@ func _sidebar_button(text: String, index: int) -> Button:
 	_style_sidebar_button(btn, active)
 	if index == -1:
 		btn.pressed.connect(_show_overview)
+	elif index <= -100:
+		btn.pressed.connect(_show_basic_chapter.bind(_basic_index_from_selection(index)))
 	else:
 		btn.pressed.connect(_show_chapter.bind(index))
 	return btn
@@ -234,27 +285,69 @@ func _show_overview() -> void:
 	(page.get_node("PageMargin/Page/HeroPanel/HeroMargin/HeroBox/HeroBody") as Label).text = tr("TXT_GUIDE_HERO_BODY")
 
 	var path := page.get_node("%PathBox") as HBoxContainer
-	for item in [tr("TXT_GUIDE_BASICS"), "Wall Kick", "Combo", "T-Spin Double"]:
+	for item in [tr("TXT_GUIDE_BASICS"), "对战机制", "攻击力", "游戏技巧", "Wall Kick", "Combo", "T-Spin Double"]:
 		path.add_child(_chip(item, Color("ecfdf5"), Color("047857")))
 
+	var basics_grid := page.get_node("%BasicsGrid") as GridContainer
+	(page.get_node("%BasicsTitle") as Label).text = tr("TXT_GUIDE_BASICS")
+	for i in range(basics_chapters.size()):
+		basics_grid.add_child(_basic_overview_card(i))
+
+	(page.get_node("%LearningTitle") as Label).text = tr("TXT_GUIDE_CHAPTERS")
 	var cards_grid := page.get_node("%CardsGrid") as GridContainer
 	for i in range(chapters.size()):
 		cards_grid.add_child(_chapter_card(i))
 
-func _show_basics() -> void:
+
+func _show_basic_chapter(index: int) -> void:
 	in_simulation = false
-	selected_index = -2
+	selected_index = _basic_selection(index)
 	_rebuild_sidebar()
 	_clear_content()
 	_stop_demo_animation()
 
+	var chapter: Dictionary = basics_chapters[index]
 	var page := BASICS_PAGE_SCENE.instantiate()
 	content_root.add_child(page)
 	_style_panel_node(page.get_node("PageMargin/Page/TitlePanel"))
-	(page.get_node("PageMargin/Page/TitlePanel/TitleMargin/TitleBox/Title") as Label).text = tr("TXT_GUIDE_BASICS")
-	(page.get_node("PageMargin/Page/TitlePanel/TitleMargin/TitleBox/Body") as Label).text = tr("TXT_GUIDE_BASICS_DESC")
+	(page.get_node("PageMargin/Page/TitlePanel/TitleMargin/TitleBox/Title") as Label).text = "%s %s" % [chapter["number"], chapter["title"]]
+	(page.get_node("PageMargin/Page/TitlePanel/TitleMargin/TitleBox/Body") as Label).text = chapter["summary"]
 	var host := page.get_node("%ContentHost") as VBoxContainer
-	host.add_child(_attack_table())
+	match String(chapter["id"]):
+		"versus":
+			host.add_child(_versus_tetris_section(false))
+		"attack":
+			host.add_child(_attack_table())
+		"technique":
+			host.add_child(_general_technique_section(false))
+		_:
+			host.add_child(_basics_placeholder_section())
+
+
+func _basic_overview_card(index: int) -> Control:
+	var chapter: Dictionary = basics_chapters[index]
+	var card := _panel()
+	card.custom_minimum_size = Vector2(360, 150)
+	var margin := _margin(card, 18, 16, 18, 16)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 8)
+	margin.add_child(box)
+
+	var top := HBoxContainer.new()
+	box.add_child(top)
+	top.add_child(_chip(chapter["number"], Color("dbeafe"), Color("1d4ed8")))
+	var title := _label(chapter["title"], 20, Color("0f1f45"))
+	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	top.add_child(title)
+	top.add_child(_chip(chapter["tag"], Color("fef3c7"), Color("92400e")))
+
+	box.add_child(_paragraph(chapter["summary"]))
+	box.add_child(_label("%s %s" % [tr("TXT_GUIDE_ESTIMATE_PREFIX"), String(chapter["time"])], 13, Color("64748b")))
+
+	var read_btn := _primary_button(tr("TXT_GUIDE_VIEW"), false)
+	read_btn.pressed.connect(_show_basic_chapter.bind(index))
+	box.add_child(read_btn)
+	return card
 
 
 func _chapter_card(index: int) -> Control:
@@ -870,6 +963,95 @@ func _empty_row() -> Array:
 	for _c in range(SIM_COLS):
 		grid_row.append(EMPTY)
 	return grid_row
+
+
+func _versus_tetris_section(show_title: bool = true) -> Control:
+	var panel := _panel()
+	var margin := _margin(panel, 20, 18, 20, 18)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 14)
+	margin.add_child(box)
+
+	if show_title:
+		box.add_child(_label("01 对战俄罗斯方块", 22, Color("0f1f45")))
+	box.add_child(_paragraph("对战的目标不是单纯消行，而是在保证自己不被顶出场地的同时，把攻击转化为对手需要处理的垃圾行。你打出的攻击越高，对手的攻击条压力越大；对手打来的攻击也会先进入你的攻击条，随后变成垃圾行进入棋盘。"))
+	box.add_child(_paragraph("因此，对战中的每一步都要同时考虑两件事：这一手能不能制造攻击，以及这一手能不能处理即将到来的垃圾。很多时候，先用消行抵消攻击，比继续堆高准备大招更安全。"))
+
+	var image_grid := GridContainer.new()
+	image_grid.columns = 2
+	image_grid.add_theme_constant_override("h_separation", 14)
+	image_grid.add_theme_constant_override("v_separation", 14)
+	box.add_child(image_grid)
+	image_grid.add_child(_image_explain_card("被攻击后攻击条上升", INCOMING_ATTACK_BAR_IMAGE, "受到攻击时，垃圾不会立刻全部进入棋盘，而是先显示在攻击条中。玩家可以用自己的消行去抵消。"))
+	image_grid.add_child(_image_explain_card("攻击转化为垃圾行", ATTACK_TO_GARBAGE_IMAGE, "消除产生的攻击会被换算成对手需要接收的垃圾行。攻击越高，对手越难安全处理。"))
+
+	box.add_child(_list_section("阅读攻击条时先看三件事", [
+		"攻击条越高，下一次不消行锁定时越危险。",
+		"如果当前地形已经很高，优先考虑清线和抵消垃圾。",
+		"如果攻击条压力较低，可以继续准备 Tetris、T-Spin 或 Combo。"
+	]))
+	return panel
+
+
+func _image_explain_card(title: String, texture_path: String, body: String) -> Control:
+	var card := _panel()
+	card.custom_minimum_size = Vector2(360, 320)
+	var margin := _margin(card, 14, 14, 14, 14)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 10)
+	margin.add_child(box)
+	box.add_child(_label(title, 18, Color("0f1f45")))
+
+	var texture := load(texture_path) as Texture2D
+	var image := TextureRect.new()
+	image.custom_minimum_size = Vector2(320, 190)
+	image.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	image.texture = texture
+	image.expand_mode = TextureRect.EXPAND_FIT_WIDTH
+	image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	box.add_child(image)
+	box.add_child(_paragraph(body))
+	return card
+
+
+func _general_technique_section(show_title: bool = true) -> Control:
+	var panel := _panel()
+	var margin := _margin(panel, 20, 18, 20, 18)
+	var box := VBoxContainer.new()
+	box.add_theme_constant_override("separation", 14)
+	margin.add_child(box)
+
+	if show_title:
+		box.add_child(_label("03 游戏技巧", 22, Color("0f1f45")))
+	box.add_child(_paragraph("这些不是固定开局，也不是必须背下来的答案，而是适合现代俄罗斯方块的通用判断方式。新手先掌握这些习惯，再进入具体的 Tetris、Combo 和 T-Spin 教学，会更容易理解为什么要这样摆。"))
+	box.add_child(_list_section("多堆高价值消除", [
+		"不要只看到能消 1 行就立刻清掉。很多时候，保留结构等待 Tetris 或 T-Spin，会带来更高攻击。",
+		"如果地形危险，先清线保命；如果地形稳定，就可以主动准备高价值消除。"
+	]))
+	box.add_child(_list_section("留心垃圾与攻击条", [
+		"对战中存活是第一目标。攻击条明显升高时，先想办法抵消或降低地形。",
+		"不要在垃圾即将进入时继续盲目堆高。能安全清线，往往比强行做大攻击更好。"
+	]))
+	box.add_child(_list_section("阅读 Next 预览", [
+		"本项目会显示 5 个 Next。新手至少先看当前块和下一个块，再逐渐练习用余光看更多。",
+		"看到后续有 I、T、S/Z 时，可以提前决定井、T 槽或表面形状，减少临时补救。"
+	]))
+	box.add_child(_list_section("保持可继续操作的堆叠", [
+		"平整的地形更容易处理垃圾，但过于平坦也会让 S/Z 这类方块难摆。",
+		"好的堆叠不是完全平，而是保留能接住下一批方块的形状。"
+	]))
+	box.add_child(_list_section("减少不必要的软降", [
+		"硬降更快，软降会增加操作时间和按键数。",
+		"T-Spin 等技巧确实需要软降，但普通堆叠时应尽量减少长距离软降。"
+	]))
+	return panel
+
+
+func _basics_placeholder_section() -> Control:
+	return _text_section(
+		"04 Replay 复盘与成长",
+		"这一章后续连接 Replay 系统：解释如何查看自己的消行、攻击、Combo、T-Spin、地形风险与 AI 建议。当前先保留位置，等 Replay 的 Guide 文案定稿后再展开。"
+	)
 
 
 func _attack_table() -> Control:
