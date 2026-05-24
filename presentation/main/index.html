@@ -1,0 +1,499 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>现代俄罗斯方块学习与复盘系统 | 中文核心文档草案</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="progress" aria-hidden="true"><span id="scrollProgress"></span></div>
+
+  <header class="site-header">
+    <a class="brand" href="#top" aria-label="回到文档顶部">
+      <span class="brand-mark"></span>
+      <span>现代俄罗斯方块学习系统</span>
+    </a>
+    <nav class="toc" aria-label="文档目录">
+      <a href="#foreword">前言</a>
+      <a href="#intro">引言</a>
+      <a href="#origin">起因</a>
+      <a href="#rules">对战规则</a>
+      <a href="#journey">玩家路径</a>
+      <a href="#guidebook">Guidebook</a>
+      <a href="#replay">Replay</a>
+      <a href="#architecture">架构</a>
+      <a href="#tech">技术</a>
+    </nav>
+  </header>
+
+  <main id="top">
+    <section class="cover" id="foreword">
+      <div class="cover-copy">
+        <div class="doc-label">中文核心文档草案</div>
+        <h1>从现代俄罗斯方块的竞技性出发，设计一个帮助玩家变强的学习与复盘系统。</h1>
+        <p class="cover-lead">
+          现代俄罗斯方块并不只是把方块排满一行再消掉。它包含攻击、防守、规划、速度和复盘，
+          可以被理解为一种玩家之间持续对抗的竞技游戏。这个项目围绕“玩家如何从入门走向进阶”展开，
+          重点讨论学习系统、复盘分析与整体技术结构。
+        </p>
+        <div class="cover-flow" aria-label="全文脉络">
+          <div>
+            <strong>前言</strong>
+            <span>先用普通语言说明现代俄罗斯方块为什么具有竞技性。</span>
+          </div>
+          <div>
+            <strong>起因</strong>
+            <span>玩家想提升水平、击败更强对手，却缺少足够好用的辅助工具。</span>
+          </div>
+          <div>
+            <strong>设计</strong>
+            <span>通过 Guidebook 与 Replay，分别解决“怎么学”和“哪里错”。</span>
+          </div>
+          <div>
+            <strong>结构</strong>
+            <span>最后说明游戏、数据采集、AI 分析、多人对战和工具链如何组合。</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="intro">
+      <div class="section-head">
+        <span class="chapter">01</span>
+        <div>
+          <p class="kicker">引言：先理解现代俄罗斯方块</p>
+          <h2>俄罗斯方块不只是“把方块排满一行再消掉”。</h2>
+        </div>
+      </div>
+
+      <div class="article-grid">
+        <article class="prose">
+          <p>
+            很多人第一次想到俄罗斯方块时，脑中出现的是一个很简单的画面：方块从上往下落，
+            玩家把它们排整齐，凑满一行就消掉。如果只看这一层，它确实像一个单人益智游戏。
+            但现代俄罗斯方块，尤其是对战型俄罗斯方块，已经发展成了很接近电子竞技的系统。
+          </p>
+          <p>
+            在对战中，玩家并不是单纯追求“活得久”。每一次消行都可能转化成对对手的攻击。
+            对手收到攻击后，棋盘下方会出现垃圾行，场地被不断向上推高。谁能更快地制造压力，
+            谁能更稳定地处理压力，谁就更接近胜利。
+          </p>
+          <p>
+            因此，现代俄罗斯方块的玩家也可以被看作选手。选手需要练习操作速度，也需要理解攻击效率、
+            堆叠结构、预览判断、Hold 的使用、T-Spin、Combo、Back-to-Back 等概念。
+            这些概念组合起来，构成了一个有学习曲线、有策略深度、也有复盘价值的竞技系统。
+          </p>
+        </article>
+
+        <aside class="explain-card">
+          <h3>面向完全不了解现代俄罗斯方块的读者</h3>
+          <p>
+            现代对战俄罗斯方块的重点不只是消行，而是把消行转化为压力，再把压力施加给对手。
+            玩家既要制造攻击，也要处理自己收到的攻击。
+          </p>
+        </aside>
+      </div>
+
+      <div class="image-pair competition-pair">
+        <figure>
+          <img src="../incoming_attack_bar_rise.png" alt="被攻击后攻击条上升">
+          <figcaption>受到攻击时，压力会先显示在攻击条中，玩家还有机会通过自己的消行去抵消。</figcaption>
+        </figure>
+        <figure>
+          <img src="../attack_to_garbage_lines.png" alt="攻击转化为垃圾行">
+          <figcaption>如果压力没有被处理，攻击会转化为棋盘底部的垃圾行，直接改变接下来的局面。</figcaption>
+        </figure>
+      </div>
+
+      <p class="section-footnote">
+        这两张 1v1 图展示了基本机制：攻击不会凭空出现，它先作为压力显示出来；
+        如果玩家没有通过自己的消行抵消，压力就会进入棋盘，变成必须处理的垃圾行。
+      </p>
+    </section>
+
+    <section class="section tinted" id="origin">
+      <div class="section-head">
+        <span class="chapter">02</span>
+        <div>
+          <p class="kicker">项目起因</p>
+          <h2>想要变强的玩家，往往缺少能直接帮助自己进步的工具。</h2>
+        </div>
+      </div>
+
+      <div class="article-grid">
+        <article class="prose">
+          <p>
+            玩家接触现代俄罗斯方块后，很快会产生一个自然目标：不仅要能稳定生存，
+            还要能在对战中击败更多、更强的对手。这个目标会推动玩家继续学习攻击方式、
+            堆叠方法、T-Spin、Combo，以及如何在压力下保持局面稳定。
+          </p>
+          <p>
+            现有资料中确实存在俄罗斯方块百科、视频教程和社区讨论，但这些内容通常更像资料库。
+            它们能解释概念，却不一定能让玩家马上进入一个固定局面亲自尝试；
+            也能展示高手操作，却不一定能指出普通玩家在自己对局中具体哪一步出现问题。
+          </p>
+          <p>
+            因此，系统设计的起点不是再增加一个普通模式，而是补上两类学习工具：
+            一个负责把知识和操作连接起来，一个负责把玩家自己的对局拆开分析。
+            前者是 Guidebook，后者是 Replay。
+          </p>
+        </article>
+        <aside class="explain-card strong">
+          <h3>设计起点</h3>
+          <p>
+            玩家真正需要的是可操作的学习环境和可回看的错误分析。
+            只阅读概念不够，只反复游玩也不一定能发现问题。
+          </p>
+        </aside>
+      </div>
+    </section>
+
+    <section class="section" id="rules">
+      <div class="section-head">
+        <span class="chapter">03</span>
+        <div>
+          <p class="kicker">对战规则的最小解释</p>
+          <h2>要理解这个项目，先要知道“消行为什么会变成攻击”。</h2>
+        </div>
+      </div>
+
+      <div class="rule-layout">
+        <article class="prose">
+          <p>
+            在普通印象里，消一行只是得分。但在现代对战俄罗斯方块里，消行同时也是一种攻击行为。
+            消得越有价值，给对手制造的压力越大。例如一次消四行，也就是 Tetris，
+            通常比零散地消一两行更有攻击价值。
+          </p>
+          <p>
+            更进一步，T-Spin Double 这类技巧虽然只消两行，却因为操作难度和结构要求更高，
+            在很多现代规则中能产生接近甚至等同于 Tetris 的攻击力。这就是为什么进阶玩家会主动学习 T-Spin：
+            它不是炫技，而是更高效率地把有限方块转化为攻击。
+          </p>
+          <p>
+            同时，玩家还可以看到接下来 5 个方块，并可以把一个方块暂存在 Hold 中。
+            这让俄罗斯方块不再只是反应游戏，也像棋类游戏一样，需要提前规划几步之后的局面。
+          </p>
+        </article>
+
+        <div class="concept-stack">
+          <div>
+            <strong>棋盘</strong>
+            <span>标准场地是 10 列 × 20 行。越接近顶部，死亡风险越高。</span>
+          </div>
+          <div>
+            <strong>Next 5 + Hold</strong>
+            <span>玩家能看到后续 5 个方块，并能暂存 1 个方块，因此每一步都带有规划性质。</span>
+          </div>
+          <div>
+            <strong>攻击与垃圾行</strong>
+            <span>高价值消行会给对手发送垃圾行。垃圾行会抬高场地，压缩可操作空间。</span>
+          </div>
+          <div>
+            <strong>抵消</strong>
+            <span>自己即将受到攻击时，可以通过消行抵消部分压力，而不是只能被动承受。</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section tinted" id="journey">
+      <div class="section-head">
+        <span class="chapter">04</span>
+        <div>
+          <p class="kicker">从玩家需求逆推系统</p>
+          <h2>系统不是先列功能，而是先整理玩家会怎样一步步想变强。</h2>
+        </div>
+      </div>
+
+      <div class="timeline">
+        <article>
+          <span>1</span>
+          <h3>首先，玩家需要知道自己在玩什么。</h3>
+          <p>
+            新手最先需要的不是复杂技巧，而是基础知识：棋盘结构、方块种类、Hold、Next、
+            消行、攻击、垃圾行，以及为什么有些消除方式更有价值。
+          </p>
+        </article>
+        <article>
+          <span>2</span>
+          <h3>然后，玩家需要一个人安全地练习。</h3>
+          <p>
+            单人 Marathon 模式承担这个任务。玩家可以不被对手干扰，先熟悉操作、堆叠、
+            消行节奏和游戏速度。这个阶段解决的是“能不能稳定玩下去”。
+          </p>
+        </article>
+        <article>
+          <span>3</span>
+          <h3>接着，玩家会开始思考怎样才能打得更好。</h3>
+          <p>
+            这时需要 Guidebook。它负责解释 Wall Kick、Combo、T-Spin 等技巧背后的原理，
+            并通过模拟演练让玩家在预设棋盘中实际操作一次。
+          </p>
+        </article>
+        <article>
+          <span>4</span>
+          <h3>再往后，玩家会想知道自己哪里错了。</h3>
+          <p>
+            单纯多玩并不一定会变强，因为玩家可能不断重复同样的问题。Replay 系统把一局游戏拆成每一步，
+            让玩家快速发现低质量操作。AI 还会给出具体到接下来每一步的建议路线，
+            玩家可以一边观察推荐落点，一边思考差异，并把这种判断带回之后的练习中。
+          </p>
+        </article>
+        <article>
+          <span>5</span>
+          <h3>最后，玩家需要确认自己的进步。</h3>
+          <p>
+            玩家可以通过长期数据、雷达图和对战结果确认成长。进步有时很小，体感不明显，
+            但数据可以把这种变化留下来。
+          </p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section" id="guidebook">
+      <div class="section-head">
+        <span class="chapter">05</span>
+        <div>
+          <p class="kicker">Guidebook：从“知道概念”到“亲手做过”</p>
+          <h2>教程不应该只停留在文字和视频里。</h2>
+        </div>
+      </div>
+
+      <div class="article-grid">
+        <article class="prose">
+          <p>
+            很多玩家看过 T-Spin 或 Combo 的视频，但真正回到游戏里时，仍然不知道该怎样构造局面。
+            原因很简单：现代俄罗斯方块的技巧不是只靠“看懂”就能掌握的，玩家必须在真实棋盘上完成移动、
+            旋转、下落和消除，才能理解这个技巧为什么成立。
+          </p>
+          <p>
+            所以 Guidebook 的设计不是传统说明书，而是一个学习入口。它先用普通语言解释技巧，
+            再给出必要的背景知识和操作顺序，最后让玩家进入模拟演练。
+            在模拟演练里，棋盘、当前方块、目标和成功条件都是固定的，玩家只需要聚焦在这一个知识点上。
+          </p>
+          <p>
+            这样做的目的，是把学习压力拆小。玩家不需要在完整对局里碰运气等到合适局面，
+            也不需要一边被对手攻击一边学习新技巧。他可以在一个可控场景中，先把核心动作做对一次。
+          </p>
+        </article>
+
+        <div class="guide-modules">
+          <div>
+            <strong>基础知识</strong>
+            <span>攻击力、垃圾行、抵消、B2B、Combo 等规则先讲清楚。</span>
+          </div>
+          <div>
+            <strong>操作章节</strong>
+            <span>Wall Kick、Combo、T-Spin Double 等内容拆成可学习的小章节。</span>
+          </div>
+          <div>
+            <strong>模拟演练</strong>
+            <span>玩家进入固定局面，用真实操作完成一次目标动作。</span>
+          </div>
+          <div>
+            <strong>反馈</strong>
+            <span>系统判断是否完成目标，让玩家知道动作是否真正成立。</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section tinted" id="replay">
+      <div class="section-head">
+        <span class="chapter">06</span>
+        <div>
+          <p class="kicker">Replay：把“感觉打得还行”变成可观察的数据</p>
+          <h2>AI 分析更适合放在对局之后，而不是直接插入对局之中。</h2>
+        </div>
+      </div>
+
+      <div class="article-grid">
+        <article class="prose">
+          <p>
+            如果 AI 在对局中不断提示玩家应该怎么放，短期看起来很方便，但它可能会干扰玩家自己的判断。
+            玩家会变成跟随提示操作，而不是建立自己的局面理解。俄罗斯方块的核心乐趣之一，
+            正是玩家在压力中独立做出选择。
+          </p>
+          <p>
+            因此，AI 的主要作用被放在对局之后。玩家先完整打一局，
+            保留原本的游戏体验；结束后再进入 Replay，像看比赛录像一样查看自己每一步的选择。
+            这样 AI 不替玩家玩，而是在游戏外帮助玩家理解自己。
+          </p>
+          <p>
+            Replay 首先给出逐步评分。玩家可以快速定位一局中损失较大的操作。
+            找到问题后，玩家自然会问：那这一步有没有更好的放法？于是系统显示 AI 推荐的下落位置，
+            并给出接下来数步的路线参考。它不是一句抽象建议，而是直接把“更好的选择”放到棋盘上。
+          </p>
+          <p>
+            另一方面，玩家也需要知道整局表现如何。左侧数据面板统计一局的整体表现，
+            雷达图则把速度、攻击、效率、结构、稳定性、视野等维度可视化。
+            当玩家一段时间后再次比较这些数据，就能看到自己一点点变强的证据。
+          </p>
+        </article>
+
+        <aside class="explain-card strong">
+          <h3>Replay 的设计原则</h3>
+          <p>
+            AI 不应该抢走玩家的操作权。它更像赛后的教练：先让玩家完成比赛，
+            再指出问题、展示参考答案，并把进步记录下来。
+          </p>
+        </aside>
+      </div>
+
+      <div class="replay-showcase">
+        <figure class="replay-shot">
+          <img src="../20260522/包含面板具体解释的replay界面.png" alt="Replay 分析界面">
+          <figcaption>Replay 界面把棋盘、时间线、AI 推荐和解释面板放在一起，帮助玩家逐步检查自己的选择。</figcaption>
+        </figure>
+        <div class="stats-pair">
+          <figure>
+            <img src="./replay_match_summary.png" alt="Replay 单局概要数据">
+            <figcaption>单局概要数据让玩家知道这一局整体表现如何。</figcaption>
+          </figure>
+          <figure>
+            <img src="../20260522/用户总游戏雷达图.png" alt="用户总游戏雷达图">
+            <figcaption>雷达图把长期能力变化变成可以比较的形状。</figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="architecture">
+      <div class="section-head">
+        <span class="chapter">07</span>
+        <div>
+          <p class="kicker">项目结构</p>
+          <h2>整个系统围绕玩家成长闭环组织，而不是把功能简单堆在一起。</h2>
+        </div>
+      </div>
+
+      <div class="architecture-diagram">
+        <div class="arch-layer entry">
+          <div class="arch-title">大厅入口</div>
+          <div class="arch-grid four">
+            <div>Marathon<br><span>单人练习</span></div>
+            <div>Guidebook<br><span>知识与模拟演练</span></div>
+            <div>Replay<br><span>赛后分析</span></div>
+            <div>Online<br><span>1v1 / 多人对战</span></div>
+          </div>
+        </div>
+
+        <div class="arch-connector">玩家在不同模式之间循环：练习 → 学习 → 复盘 → 对战 → 再练习</div>
+
+        <div class="arch-grid three">
+          <div class="arch-layer">
+            <div class="arch-title">游戏运行层</div>
+            <ul>
+              <li>10 × 20 棋盘</li>
+              <li>SRS 旋转与 Wall Kick</li>
+              <li>Hold / Next 5</li>
+              <li>Combo / B2B / T-Spin 判定</li>
+            </ul>
+          </div>
+          <div class="arch-layer">
+            <div class="arch-title">数据采集层</div>
+            <ul>
+              <li>每一步落点</li>
+              <li>棋盘快照</li>
+              <li>消行与攻击</li>
+              <li>时间、速度与操作结果</li>
+            </ul>
+          </div>
+          <div class="arch-layer">
+            <div class="arch-title">多人同步层</div>
+            <ul>
+              <li>WebSocket 服务器</li>
+              <li>房间与玩家状态</li>
+              <li>攻击发送与接收</li>
+              <li>1v1 / 多人模式扩展</li>
+            </ul>
+          </div>
+        </div>
+
+        <div class="arch-flow">
+          <div>
+            <strong>对局数据</strong>
+            <span>玩家真实游玩产生的逐步记录</span>
+          </div>
+          <b>→</b>
+          <div>
+            <strong>分析算法</strong>
+            <span>搜索候选路线并用评价函数打分</span>
+          </div>
+          <b>→</b>
+          <div>
+            <strong>Replay 可视化</strong>
+            <span>时间线、推荐落点、数据面板、雷达图</span>
+          </div>
+        </div>
+
+        <div class="arch-layer support">
+          <div class="arch-title">支撑系统</div>
+          <div class="arch-grid four">
+            <div>三语本地化<br><span>中 / 日 / 英</span></div>
+            <div>输入适配<br><span>键盘与手柄</span></div>
+            <div>素材与 UI<br><span>大厅、棋盘、复盘界面</span></div>
+            <div>开发工具链<br><span>Agent / MCP / CLI</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section tinted" id="tech">
+      <div class="section-head">
+        <span class="chapter">08</span>
+        <div>
+          <p class="kicker">技术解释</p>
+          <h2>这里的 AI 核心不是大语言模型，而是搜索与评价。</h2>
+        </div>
+      </div>
+
+      <div class="article-grid">
+        <article class="prose">
+          <p>
+            俄罗斯方块的 AI 分析更接近棋类游戏。原因是玩家并不是完全盲目地接收方块：
+            现代规则中，玩家可以看到接下来的 5 个方块，还可以通过 Hold 保存一个方块。
+            也就是说，系统可以在一定范围内预测接下来的局面，并搜索不同放法带来的结果。
+          </p>
+          <p>
+            因此，这里的 AI 核心并不需要 CNN、RNN，也不需要 LLM。它更像 AlphaGo 时代的思路：
+            先生成候选操作，再向后搜索几步，最后用评价函数判断局面质量。
+            评价函数会把 10 × 20 棋盘上的情况拆成许多指标，例如高度、空洞、表面凹凸、
+            攻击机会、未来可持续性等。
+          </p>
+          <p>
+            当 Replay 分析某一步时，算法会比较玩家实际选择和搜索得到的推荐选择。
+            如果两者差距很大，系统就能标出这一步可能是问题操作。这样，AI 的作用不是给出一句模糊评价，
+            而是把“这个局面下更好的路线”计算出来，再通过界面展示给玩家。
+          </p>
+          <p>
+            项目本体基于 Godot 开发。Godot 是一个开源游戏引擎，定位上类似 Unity，
+            但更轻量，适合快速制作 2D/3D 游戏原型并持续迭代。配合 Agent、MCP、CLI 化工具，
+            小型项目可以更快地修改 UI、调试流程、整理文档和扩展工具链。
+          </p>
+        </article>
+
+        <div class="tech-cards">
+          <div><strong>Godot</strong><span>负责游戏画面、UI、输入、场景和主要玩法逻辑。</span></div>
+          <div><strong>搜索算法</strong><span>围绕 Next 5 与 Hold 搜索未来几步的候选路线。</span></div>
+          <div><strong>评价函数</strong><span>把棋盘结构拆成多项指标，对每条路线进行打分。</span></div>
+          <div><strong>WebSocket</strong><span>用于在线对战中的房间、同步和攻击传递。</span></div>
+          <div><strong>开发工具链</strong><span>Agent / MCP / CLI 帮助快速完成修改、检查和文档化。</span></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="closing">
+      <div class="doc-label">结语</div>
+      <h2>系统的重点，是把“玩家想变强”这件事拆成可以学习、可以操作、可以复盘、也可以验证的过程。</h2>
+      <p>
+        Guidebook 解决“应该学什么、怎么亲手做一次”的问题；Replay 解决“哪里做得不好、有没有更好选择”的问题；
+        多人对战则提供最终的验证环境。整个项目不是单个功能的集合，而是一条围绕玩家成长逆向设计出来的路径。
+      </p>
+    </section>
+  </main>
+
+  <script src="./app.js"></script>
+</body>
+</html>
