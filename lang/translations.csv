@@ -186,7 +186,6 @@ TXT_ACTION_ROTATE_CCW,逆时针旋转,Rotate CCW,左回転
 TXT_ACTION_ROTATE_180,180旋转,Rotate 180,180度回転
 TXT_ACTION_HOLD,暂存,Hold,ホールド
 TXT_ACTION_PAUSE,暂停,Pause,一時停止
-
 TXT_REPLAY,复盘系统,REPLAY,リプレイ
 TXT_REPLAY_DESC,通过 AI 辅助复盘，发现问题并提升水平。,"REVIEW WITH AI\nFIND MISTAKES\nIMPROVE PLAY","AI分析つきの\nリプレイで課題を見つけ\n上達につなげる"
 TXT_REPLAY_ANALYSIS,复盘分析,REPLAY ANALYSIS,リプレイ分析
@@ -225,9 +224,9 @@ TXT_GUIDE_READ,阅读,Read,読む
 TXT_GUIDE_DEMO,演示,Demo,デモ
 TXT_GUIDE_SIM,模拟,Sim,シミュ
 TXT_GUIDE_OVERVIEW_TITLE,教程百科,GUIDE BOOK,ガイドブック
-TXT_GUIDE_OVERVIEW_DESC,在这里学习核心机制，通过固定场景演示和实战演练掌握高级技巧。,Learn core mechanics and practice advanced techniques.,固定場面で基本ルールと操作を確認します。
+TXT_GUIDE_OVERVIEW_DESC,在这里学习核心机制，通过固定场景演示和实战演练掌握高级技巧。,Learn core mechanics and practice advanced techniques.,基本ルールを確認し、固定場面で上級テクニックを練習します。
 TXT_GUIDE_HERO_TITLE,先看收益，再练操作,Learn value first. Then practice.,まず価値を見て、次に操作する
-TXT_GUIDE_HERO_BODY,从基础规则进入固定场景，按真实操作理解每一种技巧。,Start from basic rules, then use fixed scenarios to learn each technique through real inputs.,基礎ルールから固定場面に入り、実際の操作に近い流れで各テクニックを確認します。
+TXT_GUIDE_HERO_BODY,从基础规则进入固定场景，按真实操作理解每一种技巧。,"Start from basic rules, then use fixed scenarios to learn each technique through real inputs.",基礎ルールから固定場面に入り、実際の操作に近い流れで各テクニックを確認します。
 TXT_GUIDE_OVERVIEW_NAV,总览,Overview,概要
 TXT_GUIDE_PROGRESS,学习进度,PROGRESS,学習進度
 TXT_GUIDE_ATTACK_TABLE_TITLE,攻击力换算表,ATTACK POWER TABLE,攻撃力換算表
@@ -282,26 +281,26 @@ TXT_GUIDE_CH2_ERR_3,断连通常不是因为这一步错，而是上一步没有
 TXT_GUIDE_CH3_TITLE,T-Spin Double,T-Spin Double,T-Spin Double
 TXT_GUIDE_CH3_TAG,核心进攻,Core Offense,コア攻撃
 TXT_GUIDE_CH3_TIME,5 分钟,5 mins,5分
-TXT_GUIDE_CH3_SUMMARY,T 方块通过旋转卡入 T 槽，同时消除 2 行，攻击力 4 行。,Spin the T piece into a T-slot to clear 2 lines and send 4 damage.,T ブロックを T-slot へSpinさせ、2ライン消して4ライン攻撃します。
-TXT_GUIDE_CH3_CONCEPT,"T-Spin Double 通常简称 TSD。做法是先准备一个 T 槽，再让 T 方块通过旋转进入槽位，并一次清掉 2 行。\n\n关键不是“把 T 放进去”，而是最后一步必须通过旋转进入。","T-Spin Double is often shortened to TSD. Build a T-slot, then rotate the T piece into it and clear 2 lines.\n\nThe important part is not simply placing T there: the final entry must be a rotation.","T-Spin Double は TSD とも呼ばれます。先に T-slot を作り、T ブロックを回転で入れて2ライン消します。\n\n重要なのは T を置くだけではなく、最後に回転で入ることです。"
+TXT_GUIDE_CH3_SUMMARY,T 方块通过旋转卡入 T 槽，同时消除 2 行，攻击力 4 行。,Spin the T piece into a T-slot to clear 2 lines and send 4 damage.,T ブロックを Tスロットへ回転で入れ、2ライン消して4ライン攻撃します。
+TXT_GUIDE_CH3_CONCEPT,"T-Spin Double 通常简称 TSD。做法是先准备一个 T 槽，再让 T 方块通过旋转进入槽位，并一次清掉 2 行。\n\n关键不是“把 T 放进去”，而是最后一步必须通过旋转进入。","T-Spin Double is often shortened to TSD. Build a T-slot, then rotate the T piece into it and clear 2 lines.\n\nThe important part is not simply placing T there: the final entry must be a rotation.","T-Spin Double は TSD とも呼ばれます。先に Tスロットを作り、T ブロックを回転で入れて2ライン消します。\n\n重要なのは T を置くだけではなく、最後に回転で入ることです。"
 TXT_GUIDE_CH3_WHY_1,想用较低高度打出 4 行攻击,You want 4 damage from a low structure,低い地形から4ライン攻撃したい時
-TXT_GUIDE_CH3_WHY_2,已经有 T 槽雏形，可以顺势补完,A T-slot is already forming and can be completed,T-slot の形ができかけている時
+TXT_GUIDE_CH3_WHY_2,已经有 T 槽雏形，可以顺势补完,A T-slot is already forming and can be completed,Tスロットの形ができかけている時
 TXT_GUIDE_CH3_WHY_3,需要维持 B2B 压力,You want to keep B2B pressure,B2B の圧力を維持したい時
-TXT_GUIDE_CH3_VALUE,TSD 基础攻击力是 4 行，和 Tetris 相同。若处于 B2B 状态，会变成 5 行攻击。,TSD sends 4 lines, the same as Tetris. With B2B, it sends 5.,TSD は Tetris と同じ4ライン攻撃です。B2B 中なら5ラインになります。
-TXT_GUIDE_CH3_STEP_1,先确认 T 槽底部能清 2 行,Confirm the bottom of the T-slot can clear 2 lines,T-slot の底で2ライン消えることを確認する
+TXT_GUIDE_CH3_VALUE,TSD 基础攻击力是 4 行，和 Tetris 相同。若处于 B2B 状态，会变成 5 行攻击。,"TSD sends 4 lines, the same as Tetris. With B2B, it sends 5.",TSD は Tetris と同じ4ライン攻撃です。B2B 中なら5ラインになります。
+TXT_GUIDE_CH3_STEP_1,先确认 T 槽底部能清 2 行,Confirm the bottom of the T-slot can clear 2 lines,Tスロットの底で2ライン消えることを確認する
 TXT_GUIDE_CH3_STEP_2,保留 T 方块进入槽口的通道,Keep the entry path open for the T piece,T ブロックが入る通路を残す
 TXT_GUIDE_CH3_STEP_3,把 T 移到槽口附近，不要直接硬塞,Move T near the opening without forcing it in,T を入口近くへ移動し、無理に押し込まない
 TXT_GUIDE_CH3_STEP_4,最后用旋转卡入槽位,Rotate into the slot at the end,最後に回転で穴へ入る
 TXT_GUIDE_CH3_STEP_5,锁定后出现 T-Spin Double 判定,Lock and get the T-Spin Double callout,固定後に T-Spin Double 判定が出る
 TXT_GUIDE_CH3_ERR_1,最后一步必须是旋转,The final input must be rotation,最後の入力は回転にする
 TXT_GUIDE_CH3_ERR_2,入口太早封住就无法旋入,If the entrance is closed too early T cannot spin in,入口を早く塞ぐとSpinで入れない
-TXT_GUIDE_CH3_ERR_3,T 槽附近不要堆出多余凸起,Avoid extra bumps around the T-slot,T-slot 周辺に余計な凸を作らない
+TXT_GUIDE_CH3_ERR_3,T 槽附近不要堆出多余凸起,Avoid extra bumps around the T-slot,Tスロット周辺に余計な凸を作らない
 TXT_GUIDE_OP_ROT_CCW,逆时针旋转 90°,Rotate CCW 90°,左に90度回転
 TXT_GUIDE_OP_MOVE_WALL,一直向右靠墙壁,Move right against the wall,右の壁まで移動
 TXT_GUIDE_OP_ROT_CW_KICK,顺时针旋转——受墙壁阻挡，中心点向左踢墙,Rotate CW — blocked by wall kicks left,時計回り回転 — 壁で止まり左へ Wall Kick
 TXT_GUIDE_OP_ROT_CW_ENTRY,顺时针旋转，调整入口方向,Rotate CW to adjust entry angle,右に回転して入口の向きを調整
 TXT_GUIDE_OP_DROP_SLOT,软降到槽口上方,Soft drop above the slot,穴の上までソフトドロップ
-TXT_GUIDE_OP_ROT_CW_TSPIN,顺时针旋转，T 方块旋入 T 槽,Rotate CW to spin into T-slot,時計回り回転で T ブロックを T-slot へ入れる
+TXT_GUIDE_OP_ROT_CW_TSPIN,顺时针旋转，T 方块旋入 T 槽,Rotate CW to spin into T-slot,時計回り回転で T ブロックを Tスロットへ入れる
 TXT_GUIDE_OP_MOVE_RIGHT,移动到右侧空位上方,Move over the right gap,右側の空きスペースに移動
 TXT_GUIDE_OP_DROP_CLEAR2,下落到底部，消除 2 行,Drop to bottom clear 2 lines,一番下まで落として2ライン消去
 TXT_GUIDE_BASICS,基础知识,Basics,基礎知識
@@ -326,7 +325,7 @@ TXT_GUIDE_OP_SOFT_DROP,软降,Soft drop,ソフトドロップ
 TXT_GUIDE_OP_MOVE_RIGHT_WELL,右移到井旁,Move right near well,井戸の横に移動
 TXT_GUIDE_OP_MOVE_WELL_EDGE,贴住井口,Align with well edge,井戸の端に合わせる
 TXT_GUIDE_OP_DROP_WELL,下落插入井,Drop into well,井戸の中に落とす
-TXT_GUIDE_OBJ_TSPIN,目标：将 T 方块旋入 T 槽，同时消除 2 行，完成 T-Spin Double。,Objective: Spin T into slot to clear 2 lines (TSD).,目標: T ブロックを T-slot へSpinさせ、2ライン消して T-Spin Double を完成させる。
+TXT_GUIDE_OBJ_TSPIN,目标：将 T 方块旋入 T 槽，同时消除 2 行，完成 T-Spin Double。,Objective: Spin T into slot to clear 2 lines (TSD).,目標: T ブロックを Tスロットへ回転で入れ、2ライン消して T-Spin Double を完成させる。
 TXT_GUIDE_OBJ_COMBO,目标：用 O 方块连续落入右侧空位消行，完成 Combo 5。,Objective: Drop O piece to clear lines consecutively (Combo 5).,目標: O ブロックで連続消去し、Combo 5 を完成させる。
 TXT_GUIDE_OBJ_WALLKICK,目标：将 L 方块旋转，观察踢墙导致的中心点偏移。,Objective: Rotate L piece and observe wall kick offset.,目標: L ブロックを回転させ、Wall Kick による中心点のズレを見る。
 TXT_GUIDE_OBJ_TETRIS,目标：将 I 方块旋成竖直，放入右侧井，完成 Tetris 四消。,Objective: Rotate I piece and drop into well for Tetris.,目標: I ブロックを縦にして井戸へ入れ、Tetris を完成させる。
