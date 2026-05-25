@@ -73,8 +73,8 @@
 
 使用图片：
 
-- `presentation/incoming_attack_bar_rise.png`
-- `presentation/attack_to_garbage_lines.png`
+- `presentation/main/assets/incoming_attack_bar_rise.png`
+- `presentation/main/assets/attack_to_garbage_lines.png`
 
 这两张图应该放在“引言：先理解现代俄罗斯方块”里，因为该章节正在解释对战、攻击条和垃圾行机制。
 
@@ -177,9 +177,9 @@ Replay 对应回答：
 
 使用图片：
 
-- `presentation/20260522/包含面板具体解释的replay界面.png`
-- `presentation/main/replay_match_summary.png`
-- `presentation/20260522/用户总游戏雷达图.png`
+- `presentation/main/assets/replay_interface_overview.png`
+- `presentation/main/assets/replay_match_summary.png`
+- `presentation/main/assets/player_radar_chart.png`
 
 注意：`用户总游戏数据.png` 是玩家生涯数据，不适合作为 Replay 单局概要。Replay 段落需要使用从复盘截图左侧裁出的单局概要数据。
 
@@ -241,6 +241,17 @@ AI 核心不是 CNN、RNN、LLM，而是：
 动效：
 
 - `presentation/main/app.js`
+
+资源：
+
+- `presentation/main/assets/`
+- `presentation/main/.gdignore`
+
+当前原则：
+
+每个具体 presentation 子目录尽量自包含自己的资源。即使图片在其他 presentation 页面中已经存在，也可以复制一份到当前子目录的 `assets` 中。这样 HTML 不需要跨目录引用大量旧素材，后续移动、打包、交给他人查看时更稳定。
+
+`presentation/main` 是普通 HTML 文档包，不作为 Godot 资源目录使用，因此放置 `.gdignore`，避免 Godot 为网页素材生成 `.import` 文件。
 
 ## 后续扩写方向
 

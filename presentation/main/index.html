@@ -97,11 +97,11 @@
 
       <div class="image-pair competition-pair">
         <figure>
-          <img src="../incoming_attack_bar_rise.png" alt="被攻击后攻击条上升">
+          <img src="./assets/incoming_attack_bar_rise.png" alt="被攻击后攻击条上升">
           <figcaption>受到攻击时，压力会先显示在攻击条中，玩家还有机会通过自己的消行去抵消。</figcaption>
         </figure>
         <figure>
-          <img src="../attack_to_garbage_lines.png" alt="攻击转化为垃圾行">
+          <img src="./assets/attack_to_garbage_lines.png" alt="攻击转化为垃圾行">
           <figcaption>如果压力没有被处理，攻击会转化为棋盘底部的垃圾行，直接改变接下来的局面。</figcaption>
         </figure>
       </div>
@@ -343,18 +343,29 @@
 
       <div class="replay-showcase">
         <figure class="replay-shot">
-          <img src="../20260522/包含面板具体解释的replay界面.png" alt="Replay 分析界面">
+          <img src="./assets/replay_interface_overview.png" alt="Replay 分析界面">
           <figcaption>Replay 界面把棋盘、时间线、AI 推荐和解释面板放在一起，帮助玩家逐步检查自己的选择。</figcaption>
         </figure>
-        <div class="stats-pair">
-          <figure>
-            <img src="./replay_match_summary.png" alt="Replay 单局概要数据">
+        <div class="replay-metrics">
+          <figure class="metric-card">
+            <div class="metric-image tall">
+              <img src="./assets/replay_match_summary.png" alt="Replay 单局概要数据">
+            </div>
             <figcaption>单局概要数据让玩家知道这一局整体表现如何。</figcaption>
           </figure>
-          <figure>
-            <img src="../20260522/用户总游戏雷达图.png" alt="用户总游戏雷达图">
-            <figcaption>雷达图把长期能力变化变成可以比较的形状。</figcaption>
+          <figure class="metric-card">
+            <div class="metric-image square">
+              <img src="./assets/player_radar_chart.png" alt="用户总游戏雷达图">
+            </div>
+            <figcaption>雷达图把不同能力维度压缩成一个容易比较的形状。</figcaption>
           </figure>
+          <div class="metric-note">
+            <h3>从一局到长期变化</h3>
+            <p>
+              单局概要回答“这一局发生了什么”，雷达图回答“能力结构有什么特点”。
+              当玩家反复复盘，就能把每一局的经验连接成长期进步。
+            </p>
+          </div>
         </div>
       </div>
     </section>
