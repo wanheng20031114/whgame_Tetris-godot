@@ -1,6 +1,6 @@
 const translations = {
   "zh-CN": {
-    "page_title": "俄罗斯方块学习与复盘系统 | 中文核心文档草案",
+    "page_title": "俄罗斯方块学习与复盘系统 | 中文核心文档",
     "nav_foreword": "前言",
     "nav_intro": "引言",
     "nav_origin": "起因",
@@ -11,7 +11,7 @@ const translations = {
     "nav_architecture": "架构",
     "nav_tech": "技术",
     "brand_title": "俄罗斯方块学习系统",
-    "cover_label": "中文核心文档草案",
+    "cover_label": "中文核心文档",
     "cover_h1": "从俄罗斯方块的竞技性出发，设计一个帮助玩家变强的学习与复盘系统。",
     "cover_lead": "俄罗斯方块并不只是把方块排满一行再消掉。它包含攻击、防守、规划、速度和复盘，可以被理解为一种玩家之间持续对抗的竞技游戏。这个项目围绕“玩家如何从入门走向进阶”展开，重点讨论学习系统、复盘分析与整体技术结构。",
     "cover_flow_1_title": "前言",
@@ -148,7 +148,7 @@ const translations = {
     "closing_p": "Guidebook 解决“应该学什么、怎么亲手做一次”的问题；Replay 解决“哪里做得不好、有没有更好选择”的问题；多人对战则提供最终的验证环境。整个项目不是单个功能的集合，而是一条围绕玩家成长逆向设计出来的路径。"
   },
   "ja": {
-    "page_title": "テトリス学習とリプレイシステム | コア・ドキュメント草案",
+    "page_title": "テトリス学習とリプレイシステム | コア・ドキュメント",
     "nav_foreword": "はじめに",
     "nav_intro": "イントロダクション",
     "nav_origin": "きっかけ",
@@ -159,9 +159,9 @@ const translations = {
     "nav_architecture": "アーキテクチャ",
     "nav_tech": "テクノロジー",
     "brand_title": "テトリス学習システム",
-    "cover_label": "コア・ドキュメント草案",
+    "cover_label": "コア・ドキュメント",
     "cover_h1": "テトリスの競技性に基づき、プレイヤーの上達を支援する学習とリプレイシステムを設計する。",
-    "cover_lead": "テトリスは、ブロック（ミノ）を横一列に並べて消すだけではありません。攻撃、防御、計画、スピード、そして振り返り（リプレイ）が含まれており、プレイヤー同士が継続的に競い合う対戦ゲームとして捉えることができます。このプロジェクトは「プレイヤーが初心者から上級者へどのように成長するか」を軸に、学習システム、リプレイ分析、および全体的な技術構造について議論します。",
+    "cover_lead": "テトリスは、ブロックを横一列に並べて消すだけではありません。攻撃、防御、計画、スピード、そして振り返り（リプレイ）が含まれており、プレイヤー同士が継続的に競い合う対戦ゲームとして捉えることができます。このプロジェクトは「プレイヤーが初心者から上級者へどのように成長するか」を軸に、学習システム、リプレイ分析、および全体的な技術構造について議論します。",
     "cover_flow_1_title": "はじめに",
     "cover_flow_1_desc": "まず、テトリスがなぜ競技性を持っているのかを分かりやすい言葉で説明します。",
     "cover_flow_2_title": "きっかけ",
@@ -296,7 +296,7 @@ const translations = {
     "closing_p": "Guidebook は「何を学ぶべきか、どうやって実際に手を動かすか」という問題を解決し、Replay は「どこが悪かったのか、もっと良い選択肢はなかったか」という問題を解決します。そしてマルチプレイ対戦が最終的な検証の場を提供します。プロジェクト全体は単なる機能の集合体ではなく、プレイヤーの成長を軸に逆算して設計された「上達への道」なのです。"
   },
   "en": {
-    "page_title": "Tetris Learning & Replay System | Core Document Draft",
+    "page_title": "Tetris Learning & Replay System | Core Document",
     "nav_foreword": "Foreword",
     "nav_intro": "Intro",
     "nav_origin": "Origin",
@@ -307,7 +307,7 @@ const translations = {
     "nav_architecture": "Architecture",
     "nav_tech": "Tech",
     "brand_title": "Tetris Learning System",
-    "cover_label": "Core Document Draft",
+    "cover_label": "Core Document",
     "cover_h1": "Designing a learning and replay system to help players improve, based on the competitive nature of Tetris.",
     "cover_lead": "Tetris is not just about placing blocks in a row to clear them. It involves attacks, defense, planning, speed, and replays, making it a competitive game of continuous confrontation between players. This project revolves around \"how players progress from beginners to advanced,\" focusing on the learning system, replay analysis, and overall technical architecture.",
     "cover_flow_1_title": "Foreword",
