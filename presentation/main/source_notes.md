@@ -12,7 +12,7 @@
 1. 先介绍现代俄罗斯方块本身。
 2. 再说明它为什么可以成为玩家之间的竞技游戏。
 3. 然后说明系统开发的起因：玩家想要提升水平，但现有资料和工具不够直接。
-4. 接着带入一个新玩家的视角，解释他会怎样一步步想变强。
+4. 接着带入一个新玩家的视角，解释他会怎样一步步变强。
 5. 从这些需求逆推出 Guidebook 和 Replay 的设计。
 6. 最后解释 AI 分析和 Godot 技术架构。
 
@@ -75,8 +75,12 @@
 
 - `presentation/main/assets/incoming_attack_bar_rise.png`
 - `presentation/main/assets/attack_to_garbage_lines.png`
+- `presentation/main/assets/wall_kick.gif`
+- `presentation/main/assets/t-spin.gif`
 
 这两张图应该放在“引言：先理解现代俄罗斯方块”里，因为该章节正在解释对战、攻击条和垃圾行机制。
+
+两个 GIF 适合放在“对战规则的最小解释”中，作为规则如何落到具体操作上的补充：Wall Kick 展示旋转撞墙后产生位移，使 L 方块插入空隙；T-Spin 展示 T 方块通过旋转进入槽位并同时消除 2 行。
 
 不要使用大厅背景图作为首屏主图。那张图更像气氛图，但当前文档需要的是解释现代俄罗斯方块。
 

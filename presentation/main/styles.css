@@ -380,6 +380,7 @@ h3 {
 .tech-cards div,
 .timeline article,
 .image-pair figure,
+.mechanic-demos figure,
 .replay-shot,
 .metric-card,
 .metric-note,
@@ -419,6 +420,44 @@ h3 {
   object-fit: cover;
 }
 
+.guide-annotation-card {
+  display: grid;
+  overflow: hidden;
+  margin-top: 12px;
+  border: 1px solid #bcd5ef;
+  border-radius: var(--radius);
+  background: #fff;
+  box-shadow: 0 14px 30px rgba(32, 54, 88, 0.08);
+}
+
+.guide-annotation-card figcaption {
+  display: grid;
+  gap: 5px;
+  padding: 16px 18px;
+  background: #f8fbff;
+}
+
+.guide-annotation-card strong {
+  color: #0f1b33;
+  font-size: 18px;
+  font-weight: 950;
+}
+
+.guide-annotation-card span {
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.62;
+  font-weight: 700;
+}
+
+.guide-annotation-card img {
+  width: 100%;
+  aspect-ratio: 1672 / 941;
+  object-fit: contain;
+  background: #fff;
+  border-top: 1px solid var(--line);
+}
+
 figcaption {
   padding: 14px 16px;
   color: #43536d;
@@ -444,9 +483,65 @@ figcaption {
 
 .rule-layout {
   display: grid;
-  grid-template-columns: minmax(0, 0.9fr) minmax(360px, 0.7fr);
-  gap: 40px;
+  grid-template-columns: minmax(0, 1fr) minmax(420px, 0.58fr);
+  gap: 34px;
   align-items: start;
+  margin-top: 8px;
+}
+
+.rule-left {
+  display: grid;
+  gap: 28px;
+}
+
+.rule-copy {
+  max-width: none;
+}
+
+.mechanic-demos {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.mechanic-demos figure {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  overflow: hidden;
+}
+
+.mechanic-demos img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 400 / 711;
+  object-fit: contain;
+  object-position: center;
+  padding: 8px;
+  background:
+    linear-gradient(180deg, rgba(8, 13, 28, 0.95), rgba(10, 16, 34, 0.98)),
+    #0f172a;
+}
+
+.mechanic-demos figcaption {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+  min-height: 94px;
+  padding: 11px 13px;
+}
+
+.mechanic-demos strong {
+  color: #0f1b33;
+  font-size: 17px;
+  font-weight: 950;
+}
+
+.mechanic-demos span {
+  color: #43536d;
+  font-size: 14px;
+  line-height: 1.58;
+  font-weight: 700;
 }
 
 .concept-stack,
@@ -456,12 +551,21 @@ figcaption {
   gap: 14px;
 }
 
+.concept-stack {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-rows: repeat(2, minmax(148px, auto));
+}
+
 .concept-stack div,
 .guide-modules div,
 .tech-cards div {
   display: grid;
   gap: 7px;
   padding: 20px;
+}
+
+.concept-stack div {
+  align-content: start;
 }
 
 .concept-stack strong,
@@ -743,6 +847,8 @@ figcaption {
   .replay-showcase,
   .replay-metrics,
   .image-pair,
+  .mechanic-demos,
+  .concept-stack,
   .cover-grid,
   .cover-flow,
   .arch-grid.four,

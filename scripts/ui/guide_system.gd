@@ -421,6 +421,11 @@ func _show_chapter(index: int) -> void:
 	sim_btn.text = tr("TXT_GUIDE_ENTER_SIM")
 	_style_button(sim_btn, true)
 	sim_btn.pressed.connect(_start_simulation.bind(chapter["sim"], index))
+	var prev_btn := page.get_node("%PrevButton") as Button
+	prev_btn.text = tr("TXT_GUIDE_PREV_CH")
+	_style_button(prev_btn, false)
+	prev_btn.disabled = index <= 0
+	prev_btn.pressed.connect(_show_chapter.bind(index - 1))
 	var next_btn := page.get_node("%NextButton") as Button
 	next_btn.text = tr("TXT_GUIDE_NEXT_CH")
 	_style_button(next_btn, false)

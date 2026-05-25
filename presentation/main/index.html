@@ -20,8 +20,8 @@
     <nav class="toc" aria-label="文档目录">
       <a href="#foreword" data-i18n="nav_foreword">はじめに</a>
       <a href="#intro" data-i18n="nav_intro">イントロダクション</a>
-      <a href="#origin" data-i18n="nav_origin">きっかけ</a>
       <a href="#rules" data-i18n="nav_rules">対戦ルール</a>
+      <a href="#origin" data-i18n="nav_origin">きっかけ</a>
       <a href="#journey" data-i18n="nav_journey">プレイヤーの道のり</a>
       <a href="#guidebook" data-i18n="nav_guidebook">Guidebook</a>
       <a href="#replay" data-i18n="nav_replay">Replay</a>
@@ -117,12 +117,74 @@
       </p>
     </section>
 
-    <section class="section tinted" id="origin">
+    <section class="section tinted" id="rules">
       <div class="section-head">
         <span class="chapter">02</span>
         <div>
+          <p class="kicker" data-i18n="rules_kicker">対戦ルールの最小限の解説</p>
+          <h2 data-i18n="rules_h2">その競技的な深さを理解するには、まず一つ知っておくべきことがあります。ライン消去は、攻撃です。</h2>
+        </div>
+      </div>
+
+      <div class="rule-layout">
+        <div class="rule-left">
+          <article class="prose rule-copy">
+            <p data-i18n="rules_p1">
+              一般的なイメージでは、ラインを消すことは単なるスコア獲得です。しかし、対戦テトリスでは、ライン消去は同時に「攻撃行動」でもあります。価値の高い消し方をするほど、相手に大きなプレッシャーを与えられます。例えば、一度に4ラインを消すこと（Tetris）は、通常、バラバラに1～2ラインを消すよりも高い攻撃力（攻撃価値）を持ちます。
+            </p>
+            <p data-i18n="rules_p2">
+              さらに一歩進んで、T-Spin Double のようなテクニックは2ラインしか消しませんが、操作の難易度と構造の要求が高いため、多くの現代のルールでは Tetris に近い、あるいは同等の攻撃力を生み出します。これこそが、上級プレイヤーが自発的に T-Spin を学ぶ理由です。それは単なる魅せプレイではなく、限られたブロックをより高い効率で攻撃に変換するための手段なのです。
+            </p>
+            <p data-i18n="rules_p3">
+              同時に、プレイヤーは次に来る5つのブロック（NEXT）を見ることができ、1つのブロックを Hold に一時保存（ホールド）することができます。これにより、テトリスは単なる反射神経のゲームではなくなり、チェスや将棋のように数手先の盤面を計画することが求められます。
+            </p>
+          </article>
+
+          <div class="concept-stack">
+            <div>
+              <strong data-i18n="rules_stack_1_title">盤面（フィールド）</strong>
+              <span data-i18n="rules_stack_1_desc">標準的なフィールドは 幅10マス × 高さ20マス です。頂上に近づくほど、ゲームオーバーのリスクが高まります。</span>
+            </div>
+            <div>
+              <strong data-i18n="rules_stack_2_title">Next 5 + Hold</strong>
+              <span data-i18n="rules_stack_2_desc">今後の5つのブロックを確認でき、1つを保存できるため、毎手ごとに計画的な要素が伴います。</span>
+            </div>
+            <div>
+              <strong data-i18n="rules_stack_3_title">攻撃とお邪魔ブロック（Garbage Lines）</strong>
+              <span data-i18n="rules_stack_3_desc">価値の高いライン消去は相手にお邪魔ブロックを送ります。これが盤面を押し上げ、操作可能なスペースを圧迫します。</span>
+            </div>
+            <div>
+              <strong data-i18n="rules_stack_4_title">相殺</strong>
+              <span data-i18n="rules_stack_4_desc">自分が攻撃を受けそうな時、ただ受動的に耐えるのではなく、自身のライン消去でプレッシャーの一部を打ち消すことができます。</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="mechanic-demos" aria-label="操作机制演示">
+          <figure>
+            <img src="./assets/wall_kick.gif" alt="Wall Kick 演示">
+            <figcaption>
+              <strong data-i18n="rules_demo_wall_title">Wall Kick</strong>
+              <span data-i18n="rules_demo_wall_desc">回転が壁に当たった時、ブロックが少しずれて、L ブロックを隙間へ入れられる。</span>
+            </figcaption>
+          </figure>
+          <figure>
+            <img src="./assets/t-spin.gif" alt="T-Spin 演示">
+            <figcaption>
+              <strong data-i18n="rules_demo_tspin_title">T-Spin</strong>
+              <span data-i18n="rules_demo_tspin_desc">T ブロックを回転で入れ、同時に2ラインを消す。</span>
+            </figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="origin">
+      <div class="section-head">
+        <span class="chapter">03</span>
+        <div>
           <p class="kicker" data-i18n="origin_kicker">プロジェクトのきっかけ</p>
-          <h2 data-i18n="origin_h2">上達したいプレイヤーには、自身の成長を直接助けてくれるツールが不足しがちです。</h2>
+          <h2 data-i18n="origin_h2">それを理解した上で、上達したいプレイヤーはあることに気づきます——使いやすい学習ツールがほとんどないのです。</h2>
         </div>
       </div>
 
@@ -147,55 +209,12 @@
       </div>
     </section>
 
-    <section class="section" id="rules">
-      <div class="section-head">
-        <span class="chapter">03</span>
-        <div>
-          <p class="kicker" data-i18n="rules_kicker">対戦ルールの最小限の解説</p>
-          <h2 data-i18n="rules_h2">このプロジェクトを理解するには、まず「なぜライン消去が攻撃になるのか」を知る必要があります。</h2>
-        </div>
-      </div>
-
-      <div class="rule-layout">
-        <article class="prose">
-          <p data-i18n="rules_p1">
-            一般的なイメージでは、ラインを消すことは単なるスコア獲得です。しかし、対戦テトリスでは、ライン消去は同時に「攻撃行動」でもあります。価値の高い消し方をするほど、相手に大きなプレッシャーを与えられます。例えば、一度に4ラインを消すこと（Tetris）は、通常、バラバラに1～2ラインを消すよりも高い攻撃力（攻撃価値）を持ちます。
-          </p>
-          <p data-i18n="rules_p2">
-            さらに一歩進んで、T-Spin Double のようなテクニックは2ラインしか消しませんが、操作の難易度と構造の要求が高いため、多くの現代のルールでは Tetris に近い、あるいは同等の攻撃力を生み出します。これこそが、上級プレイヤーが自発的に T-Spin を学ぶ理由です。それは単なる魅せプレイではなく、限られたブロックをより高い効率で攻撃に変換するための手段なのです。
-          </p>
-          <p data-i18n="rules_p3">
-            同時に、プレイヤーは次に来る5つのブロック（NEXT）を見ることができ、1つのブロックを Hold に一時保存（ホールド）することができます。これにより、テトリスは単なる反射神経のゲームではなくなり、チェスや将棋のように数手先の盤面を計画することが求められます。
-          </p>
-        </article>
-
-        <div class="concept-stack">
-          <div>
-            <strong data-i18n="rules_stack_1_title">盤面（フィールド）</strong>
-            <span data-i18n="rules_stack_1_desc">標準的なフィールドは 幅10マス × 高さ20マス です。頂上に近づくほど、ゲームオーバーのリスクが高まります。</span>
-          </div>
-          <div>
-            <strong data-i18n="rules_stack_2_title">Next 5 + Hold</strong>
-            <span data-i18n="rules_stack_2_desc">今後の5つのブロックを確認でき、1つを保存できるため、毎手ごとに計画的な要素が伴います。</span>
-          </div>
-          <div>
-            <strong data-i18n="rules_stack_3_title">攻撃とお邪魔ブロック（Garbage Lines）</strong>
-            <span data-i18n="rules_stack_3_desc">価値の高いライン消去は相手にお邪魔ブロックを送ります。これが盤面を押し上げ、操作可能なスペースを圧迫します。</span>
-          </div>
-          <div>
-            <strong data-i18n="rules_stack_4_title">相殺</strong>
-            <span data-i18n="rules_stack_4_desc">自分が攻撃を受けそうな時、ただ受動的に耐えるのではなく、自身のライン消去でプレッシャーの一部を打ち消すことができます。</span>
-          </div>
-        </div>
-      </div>
-    </section>
-
     <section class="section tinted" id="journey">
       <div class="section-head">
         <span class="chapter">04</span>
         <div>
           <p class="kicker" data-i18n="journey_kicker">プレイヤーのニーズからのシステム逆算</p>
-          <h2 data-i18n="journey_h2">機能から考えるのではなく、プレイヤーが「どうやって少しずつ強くなりたいか」を整理することから始めます。</h2>
+          <h2 data-i18n="journey_h2">プレイヤーの道のり：どうやって少しずつ強くなるのか。</h2>
         </div>
       </div>
 
@@ -243,7 +262,7 @@
         <span class="chapter">05</span>
         <div>
           <p class="kicker" data-i18n="guide_kicker">Guidebook：「概念を知る」から「実際にやってみる」へ</p>
-          <h2 data-i18n="guide_h2">チュートリアルは、テキストや動画の中だけに留まるべきではありません。</h2>
+          <h2 data-i18n="guide_h2">第一の答え。「どう学ぶか」を解決する——テキストを読むだけでなく、実際に手を動かしてもらう。</h2>
         </div>
       </div>
 
@@ -258,6 +277,13 @@
           <p data-i18n="guide_p3">
             この目的は、学習のプレッシャーを小さく分割することです。プレイヤーは、実際の対局で都合の良い局面が運良く訪れるのを待つ必要も、相手に攻撃されながら新しいテクニックを学ぶ必要もありません。コントロールされた状況の中で、まずはコアとなるアクションを正しく一度実行できるのです。
           </p>
+          <figure class="guide-annotation-card">
+            <figcaption>
+              <strong data-i18n="guide_annotation_title">Guidebook 画面の構成</strong>
+              <span data-i18n="guide_annotation_desc">本文、章カード、シミュレーション入口を1つの画面にまとめ、学習の流れをそのまま見せます。</span>
+            </figcaption>
+            <img src="./assets/guidebook-annotated.png" alt="Guidebook annotated interface">
+          </figure>
         </article>
 
         <div class="guide-modules">
@@ -286,7 +312,7 @@
         <span class="chapter">06</span>
         <div>
           <p class="kicker" data-i18n="replay_kicker">Replay：「そこそこ上手くできた」を観察可能なデータに変える</p>
-          <h2 data-i18n="replay_h2">AI分析は対局の最中に直接介入するよりも、対局後に配置する方が適しています。</h2>
+          <h2 data-i18n="replay_h2">第二の答え。「どこが間違っていたか」を解決する——AI は試合後にコーチとして振り返りを助ける。</h2>
         </div>
       </div>
 
@@ -347,7 +373,7 @@
         <span class="chapter">07</span>
         <div>
           <p class="kicker" data-i18n="arch_kicker">プロジェクト構造</p>
-          <h2 data-i18n="arch_h2">システム全体は、機能を単に寄せ集めたものではなく、プレイヤーの成長サイクルを中心に構成されています。</h2>
+          <h2 data-i18n="arch_h2">これらのモジュールはバラバラではなく、プレイヤーの成長を軸に一本の線としてつながっています。</h2>
         </div>
       </div>
 
@@ -428,7 +454,7 @@
         <span class="chapter">08</span>
         <div>
           <p class="kicker" data-i18n="tech_kicker">技術的な解説</p>
-          <h2 data-i18n="tech_h2">ここでの AI の中核は、大規模言語モデル (LLM) ではなく「探索と評価」です。</h2>
+          <h2 data-i18n="tech_h2">最後に技術の話を。ここでの AI の中核は、大規模言語モデルではなく「探索と評価」です。</h2>
         </div>
       </div>
 

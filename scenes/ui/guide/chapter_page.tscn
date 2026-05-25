@@ -179,11 +179,18 @@ text = "Tips"
 layout_mode = 2
 theme_override_constants/separation = 10
 
-[node name="SimButton" type="Button" parent="ArticleScroll/ArticleMargin/Article/Actions"]
+[node name="SimButton" type="Button" parent="ArticleScroll/ArticleMargin/Article/TitlePanel/TitleMargin/TitleBox"]
+unique_name_in_owner = true
+layout_mode = 2
+custom_minimum_size = Vector2(148, 42)
+size_flags_horizontal = 0
+text = "进入固定场景模拟"
+
+[node name="PrevButton" type="Button" parent="ArticleScroll/ArticleMargin/Article/Actions"]
 unique_name_in_owner = true
 layout_mode = 2
 custom_minimum_size = Vector2(120, 42)
-text = "进入固定场景模拟"
+text = "Previous"
 
 [node name="NextButton" type="Button" parent="ArticleScroll/ArticleMargin/Article/Actions"]
 unique_name_in_owner = true
