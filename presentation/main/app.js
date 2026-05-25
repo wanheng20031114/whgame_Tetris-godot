@@ -511,7 +511,17 @@ const langNames = {
   "en": "English"
 };
 
-let currentLang = localStorage.getItem("app_lang") || "ja";
+// Determine initial language: URL ?lang= > localStorage > default "ja"
+function getInitialLang() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const urlLang = urlParams.get("lang");
+  if (urlLang && translations[urlLang]) return urlLang;
+  const storedLang = localStorage.getItem("app_lang");
+  if (storedLang && translations[storedLang]) return storedLang;
+  return "ja";
+}
+
+let currentLang = getInitialLang();
 
 function setLanguage(lang) {
   if (!translations[lang]) return;
@@ -519,6 +529,11 @@ function setLanguage(lang) {
   document.documentElement.lang = lang;
   localStorage.setItem("app_lang", lang);
   langLabel.textContent = langNames[lang];
+
+  // Update URL query parameter without reloading the page
+  const url = new URL(window.location);
+  url.searchParams.set("lang", lang);
+  history.replaceState(null, "", url);
 
   document.querySelectorAll("[data-i18n]").forEach(el => {
     const key = el.getAttribute("data-i18n");
