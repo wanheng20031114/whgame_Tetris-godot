@@ -21,7 +21,7 @@
       <a href="#foreword" data-i18n="nav_foreword">はじめに</a>
       <a href="#intro" data-i18n="nav_intro">背景</a>
       <a href="#rules" data-i18n="nav_rules">問題</a>
-      <a href="#origin" data-i18n="nav_origin">目的</a>
+      <a href="#origin" data-i18n="nav_origin">提案</a>
       <a href="#journey" data-i18n="nav_journey">システム</a>
       <a href="#replay" data-i18n="nav_replay">Replay分析</a>
       <a href="#guidebook" data-i18n="nav_guidebook">Guidebook</a>
@@ -49,24 +49,24 @@
           </div>
         </div>
         <p class="cover-lead" data-i18n="cover_lead">
-          対戦型テトリスでは、プレイヤーは高速な時間制約の中で、落下位置、回転、攻撃、防御を判断し続ける必要があります。しかし初心者は、自分の操作のどこに問題があったのかを試合後に把握しにくく、反復練習だけでは低効率な操作習慣を固定してしまう可能性があります。そこで本研究では、リプレイデータを用いて操作と判断を可視化し、必要に応じてガイドブック型の練習へ接続する学習支援システムを開発しました。
+          対戦型テトリスでは，プレイヤーは高速な時間制約の中で，落下位置，回転，攻撃，防御を判断し続ける必要がある。しかし初心者は，自分の操作のどこに問題があったのかを試合後に把握しにくく，反復練習だけでは非効率な操作習慣を固定してしまう可能性がある。そこで本研究では，リプレイデータを用いて操作と判断を可視化し，必要に応じてガイドブック型の練習へ接続する学習支援システムを開発した。
         </p>
         <div class="cover-flow" aria-label="全文脉络">
           <div>
             <strong data-i18n="cover_flow_1_title">はじめに</strong>
-            <span data-i18n="cover_flow_1_desc">まず、テトリスがなぜ競技性を持っているのかを分かりやすい言葉で説明します。</span>
+            <span data-i18n="cover_flow_1_desc">まず，テトリスがなぜ競技性を持っているのかを分かりやすい言葉で説明する。</span>
           </div>
           <div>
             <strong data-i18n="cover_flow_2_title">問題</strong>
-            <span data-i18n="cover_flow_2_desc">高速な判断と操作戦略が必要である一方、初心者は自分のミスや次に学ぶべき内容を把握しにくい。</span>
+            <span data-i18n="cover_flow_2_desc">高速な判断と操作戦略が必要である一方，初心者は自分のミスや次に学ぶべき内容を把握しにくい。</span>
           </div>
           <div>
             <strong data-i18n="cover_flow_3_title">システム</strong>
-            <span data-i18n="cover_flow_3_desc">リプレイ分析を中心に、操作の問題を可視化し、必要な練習へ導く学習支援を行います。</span>
+            <span data-i18n="cover_flow_3_desc">リプレイ分析を中心に，操作の問題を可視化し，必要な練習へ導く学習支援を行う。</span>
           </div>
           <div>
             <strong data-i18n="cover_flow_4_title">システム構造</strong>
-            <span data-i18n="cover_flow_4_desc">最後に、ゲーム、データ収集、AI分析、マルチプレイ対戦、そしてツールチェーンがどのように組み合わされているかを説明します。</span>
+            <span data-i18n="cover_flow_4_desc">最後に，ゲーム，データ収集，AI分析，マルチプレイ対戦，そしてツールチェーンがどのように組み合わされているかを説明する。</span>
           </div>
         </div>
       </div>
@@ -77,20 +77,20 @@
         <span class="chapter">01</span>
         <div>
           <p class="kicker" data-i18n="intro_kicker">背景：対戦型テトリスの競技性</p>
-          <h2 data-i18n="intro_h2">対戦型テトリスでは、短時間で複数の判断を同時に行う必要があります。</h2>
+          <h2 data-i18n="intro_h2">対戦型テトリスでは，短時間で複数の判断を同時に行う必要がある。</h2>
         </div>
       </div>
 
       <div class="article-grid intro-grid">
         <article class="prose">
           <p data-i18n="intro_p1">
-            多くの人にとって、テトリスは「落ちてくるブロックを並べ、一列揃えて消す」ゲームとして理解されています。しかし対戦型テトリスでは、ライン消去は得点だけでなく相手への攻撃にもつながります。プレイヤーは自分の盤面を整えながら、相手へ送る攻撃量と、自分が受ける攻撃への対応を同時に考える必要があります。
+            多くの人にとって，テトリスは「落ちてくるブロックを並べ，一列揃えて消す」ゲームとして認識されている。しかし対戦型テトリスでは，ライン消去は得点だけでなく相手への攻撃にもつながる。プレイヤーは自分の盤面を整えながら，相手へ送る攻撃量と，自分が受ける攻撃への対応を同時に考える必要がある。
           </p>
           <p data-i18n="intro_p2">
-            さらに、プレイヤーは NEXT と Hold を利用して数手先を予測し、T-Spin、Combo、Back-to-Back、相殺などの要素を状況に応じて選択します。つまり、対戦型テトリスは単純な反射ゲームではなく、配置判断、攻撃、防御、先読みが短時間に圧縮されたリアルタイム課題です。
+            さらに，プレイヤーは NEXT と Hold を利用して数手先を予測し，T-Spin，Combo，Back-to-Back，相殺などの要素を状況に応じて選択する。つまり，対戦型テトリスは単純な反射ゲームではなく，配置判断，攻撃，防御，先読みが短時間に圧縮されたリアルタイム課題である。
           </p>
           <p data-i18n="intro_p3">
-            そのため、初心者が上達するには、単に何度もプレイするだけではなく、自分のプレイを後から見直し、どの判断がよく、どの判断が問題だったのかを理解することが重要になります。本研究では、この「振り返り」に焦点を当てます。
+            そのため，初心者が上達するには，単に何度もプレイするだけではなく，自分のプレイを後から見直し，どの判断が良く，どの判断が問題だったのかを理解することが重要になる。本研究では，この「振り返り」に焦点を当てる。
           </p>
         </article>
 
@@ -99,14 +99,14 @@
             <img src="./assets/wall_kick.gif" alt="Wall Kick 演示">
             <figcaption>
               <strong data-i18n="technique_wall_title">Wall Kick</strong>
-              <span data-i18n="technique_wall_desc">回転時にブロックの位置を少しずらし、通常は入らない隙間へ入れる仕組みです。</span>
+              <span data-i18n="technique_wall_desc">回転時にブロックの位置をわずかにずらし，通常は入らない隙間へ挿入する仕組みである。</span>
             </figcaption>
           </figure>
           <figure>
             <img src="./assets/t-spin.gif" alt="T-Spin 演示">
             <figcaption>
               <strong data-i18n="technique_tspin_title">T-Spin</strong>
-              <span data-i18n="technique_tspin_desc">T ブロックを回転で槽に入れ、少ないライン消去から高い攻撃価値を作る代表的な技術です。</span>
+              <span data-i18n="technique_tspin_desc">Tブロックを回転させて特定の地形（くぼみ）に入れ，少ないライン消去で高い攻撃価値を生み出す代表的な技術である。</span>
             </figcaption>
           </figure>
         </aside>
@@ -115,17 +115,17 @@
       <div class="image-pair competition-pair">
         <figure>
           <img src="./assets/incoming_attack_bar_rise.png" alt="被攻击后攻击条上升">
-          <figcaption data-i18n="intro_fig1">攻撃を受けると、プレッシャーはまず「アタックゲージ（攻撃バー）」に表示され、自身のライン消去によって相殺（相殺）するチャンスがあります。</figcaption>
+          <figcaption data-i18n="intro_fig1">攻撃を受けると，プレッシャーはまず「アタックゲージ（攻撃バー）」に表示され，自身のライン消去によって相殺する機会がある。</figcaption>
         </figure>
         <figure>
           <img src="./assets/attack_to_garbage_lines.png" alt="攻击转化为垃圾行">
-          <figcaption data-i18n="intro_fig2">プレッシャーを処理できなかった場合、攻撃はフィールドの底の「お邪魔ブロック」に変わり、その後の展開を大きく変えてしまいます。</figcaption>
+          <figcaption data-i18n="intro_fig2">プレッシャーを処理できなかった場合，攻撃はフィールド底部の「お邪魔ブロック」に変換され，その後の展開を大きく変化させる。</figcaption>
         </figure>
       </div>
 
       <p class="section-footnote" data-i18n="intro_footnote">
-        これらの 1v1 の画像は基本的なメカニクスを示しています。攻撃は突然現れるのではなく、まずプレッシャーとして表示されます。自分のライン消去で相殺できなければ、そのプレッシャーは盤面に入り込み、処理しなければならない「お邪魔ブロック」になります。
-      </p>
+            これらの1v1の画像は基本的なメカニクスを示している。攻撃は突然現れるのではなく，まずプレッシャーとして表示される。自身のライン消去で相殺できなければ，そのプレッシャーは盤面に入り込み，処理すべき「お邪魔ブロック」となる。
+          </p>
     </section>
 
     <section class="section tinted" id="rules">
@@ -133,43 +133,43 @@
         <span class="chapter">02</span>
         <div>
           <p class="kicker" data-i18n="rules_kicker">問題：初心者の振り返りの難しさ</p>
-          <h2 data-i18n="rules_h2">初心者は、単なるリプレイ再生だけでは「なぜ負けたのか」「どこを改善すべきか」を理解しにくい。</h2>
+          <h2 data-i18n="rules_h2">初心者は，単なるリプレイ再生だけでは「なぜ負けたのか」「どこを改善すべきか」を理解しにくい。</h2>
         </div>
       </div>
 
       <div class="rule-layout">
         <div class="rule-left">
           <article class="prose rule-copy">
-            <p data-i18n="rules_p1">既存の学習方法として、Wiki、動画チュートリアル、コミュニティでの解説などがあります。これらは一般的な知識や上級者のプレイを学ぶには有効ですが、プレイヤー自身の対局における具体的な判断やミスを示すことは難しいという限界があります。</p>
-            <p data-i18n="rules_p2">また、通常のリプレイ機能は対局を時系列で再生できますが、各手の評価、攻撃・防御への影響、より良い選択肢までは明示しません。そのため初心者は、映像を見返しても「どの場面で判断を誤ったのか」「どのような置き方がより良かったのか」を自力で判断しにくいです。</p>
-            <p data-i18n="rules_p3">盤面の高さ、空洞、攻撃のタイミング、相殺の判断などが同時に関係するため、問題の原因が一手だけに見えないことも多くあります。したがって、リプレイを単なる録画ではなく、一手ごとの判断を可視化する分析データとして扱う支援が必要です。</p>
+            <p data-i18n="rules_p1">既存の学習方法として，Wiki，動画チュートリアル，コミュニティでの解説などが存在する。これらは一般的な知識や熟練者のプレイを学ぶには有効であるが，プレイヤー自身の対局における具体的な判断やミスを示すことは難しいという限界がある。</p>
+            <p data-i18n="rules_p2">また，従来のリプレイ機能は対局を時系列で再生できるが，各手の評価，攻撃・防御への影響，より良い選択肢までは明示しない。そのため初心者は，映像を見返しても「どの場面で判断を誤ったのか」「どのような置き方がより良かったのか」を自力で判断しにくい。</p>
+            <p data-i18n="rules_p3">盤面の高さ，空洞，攻撃のタイミング，相殺の判断などが同時に影響するため，問題の原因が一つの操作だけにあるとは限らないことも多い。したがって，リプレイを単なる録画ではなく，一手ごとの判断を可視化する分析データとして扱う支援が必要である。</p>
           </article>
 
           <div class="concept-stack">
             <div>
-              <strong data-i18n="rules_stack_1_title">一般知識はある</strong>
-              <span data-i18n="rules_stack_1_desc">Wiki や動画は概念説明には強いが、自分の対局のどの手が問題だったかまでは示しにくい。</span>
+              <strong data-i18n="rules_stack_1_title">一般知識の限界</strong>
+              <span data-i18n="rules_stack_1_desc">Wikiや動画は概念説明には適しているが，自身の対局のどの手が問題だったのかまでは示しにくい。</span>
             </div>
             <div>
-              <strong data-i18n="rules_stack_2_title">普通のリプレイの限界</strong>
-              <span data-i18n="rules_stack_2_desc">再生だけでは、各手の評価や別の選択肢までは示されにくい。</span>
+              <strong data-i18n="rules_stack_2_title">従来のリプレイ機能の限界</strong>
+              <span data-i18n="rules_stack_2_desc">再生だけでは，各手の評価や別の選択肢までは示されにくい。</span>
             </div>
             <div>
-              <strong data-i18n="rules_stack_3_title">低効率な習慣</strong>
-              <span data-i18n="rules_stack_3_desc">反復練習だけでは、安定しているが効率の低い操作を固定してしまう可能性がある。</span>
+              <strong data-i18n="rules_stack_3_title">非効率な習慣</strong>
+              <span data-i18n="rules_stack_3_desc">反復練習だけでは，安定してはいるが非効率な操作を固定してしまう可能性がある。</span>
             </div>
             <div>
               <strong data-i18n="rules_stack_4_title">必要な支援</strong>
-              <span data-i18n="rules_stack_4_desc">リプレイを、単なる録画ではなく、判断を可視化する分析データとして扱う必要がある。</span>
+              <span data-i18n="rules_stack_4_desc">リプレイを，単なる録画ではなく，判断を可視化する分析データとして扱う必要がある。</span>
             </div>
           </div>
         </div>
 
         <aside class="explain-card strong">
           <h3 data-i18n="rules_demo_wall_title">従来の学習方法の限界</h3>
-          <p data-i18n="rules_demo_wall_desc">一般的な解説は「何をすべきか」を説明できますが、「あなたのこの対局では、どの一手がなぜ悪かったのか」を自動的には示せません。</p>
+          <p data-i18n="rules_demo_wall_desc">一般的な解説は「何をすべきか」を説明できるが，「この対局において，どの一手がなぜ悪かったのか」を自動的に示すことはできない。</p>
           <h3 data-i18n="rules_demo_tspin_title">研究上の問題定義</h3>
-          <p data-i18n="rules_demo_tspin_desc">初心者が自分の対局を振り返り、ミスや改善点を発見するためには、プレイデータに基づく可視化と分析が必要です。</p>
+          <p data-i18n="rules_demo_tspin_desc">初心者が自身の対局を振り返り，ミスや改善点を発見するためには，プレイデータに基づく可視化と分析が必要である。</p>
         </aside>
       </div>
       <div class="evidence-grid evidence-single">
@@ -186,27 +186,27 @@
       <div class="section-head">
         <span class="chapter">03</span>
         <div>
-          <p class="kicker" data-i18n="origin_kicker">目的：リプレイ分析による振り返り支援</p>
-          <h2 data-i18n="origin_h2">本研究の目的は、初心者が自分のプレイを理解し、改善点を発見できるようにすることです。</h2>
+          <p class="kicker" data-i18n="origin_kicker">提案：リプレイ分析による振り返り支援</p>
+          <h2 data-i18n="origin_h2">本研究の目的は，初心者が自身のプレイを理解し，改善点を発見できるようにすることである。</h2>
         </div>
       </div>
 
       <div class="article-grid">
         <article class="prose">
           <p data-i18n="origin_p1">
-            本研究では、対戦型テトリス初心者が自分の対局を振り返り、ミスや改善点を理解できるようにすることを目的とします。そのために、プレイ中の操作記録、盤面状態、攻撃・防御の状況を保存し、試合後に一手ごとの判断を可視化するリプレイ分析システムを開発しました。
+            本研究では，対戦型テトリス初心者が自身の対局を振り返り，ミスや改善点を理解できるようにすることを目的とする。そのために，プレイ中の操作記録，盤面状態，攻撃・防御の状況を保存し，試合後に一手ごとの判断を可視化するリプレイ分析システムを開発した。
           </p>
           <p data-i18n="origin_p2">
-            そこで本研究では、リプレイを単なる再生機能ではなく、プレイヤー自身の判断を分析するためのデータとして扱います。盤面状態、操作記録、攻撃・防御の状況を結び付けることで、初心者が「どの一手が問題だったのか」を確認できるようにします。
+            そこで本研究では，リプレイを単なる再生機能ではなく，プレイヤー自身の判断を分析するためのデータとして扱う。盤面状態，操作記録，攻撃・防御の状況を結び付けることで，初心者が「どの一手が問題だったのか」を確認できるようにする。
           </p>
           <p data-i18n="origin_p3">
-            また、分析結果を理解するための前提知識として Guidebook を用意し、T-Spin や Combo などの基礎技術を小さなシミュレーションで確認できるようにします。これにより、Replay 分析で見つかった課題を次の練習へ接続します。
+            また，分析結果を理解するための前提知識としてGuidebookを用意し，T-SpinやComboなどの基礎技術を小さなシミュレーションで確認できるようにする。これにより，Replay分析で見つかった課題を次の練習へ接続する。
           </p>
         </article>
         <aside class="explain-card strong">
           <h3 data-i18n="origin_aside_h3">研究の中心</h3>
           <p data-i18n="origin_aside_p">
-            中心となるのは Replay 分析です。Guidebook は別の主役ではなく、分析結果を理解するための前提知識を補う機能として位置づけます。AI も独立した主役ではなく、一手ごとの比較と評価を行う分析方法として扱います。
+            中心となるのはReplay分析である。Guidebookは独立した要素ではなく，分析結果を理解するための前提知識を補う機能として位置づける。AIもそれ自体が目的ではなく，一手ごとの比較と評価を行う分析手段として扱う。
           </p>
         </aside>
       </div>
@@ -225,7 +225,7 @@
         <span class="chapter">04</span>
         <div>
           <p class="kicker" data-i18n="journey_kicker">システムの全体像</p>
-          <h2 data-i18n="journey_h2">Replay 分析を中心に、基礎理解、試合後分析、改善練習を一つの流れとして接続します。</h2>
+          <h2 data-i18n="journey_h2">Replay分析を中心に，基礎理解，試合後分析，改善練習を一つの流れとして接続する。</h2>
         </div>
       </div>
 
@@ -233,27 +233,27 @@
         <article>
           <span>1</span>
           <h3 data-i18n="journey_step1_h3">対局データを記録する</h3>
-          <p data-i18n="journey_step1_p">プレイ中の盤面、落下位置、消去、攻撃、時間、操作結果を保存し、試合後に分析できる形にします。</p>
+          <p data-i18n="journey_step1_p">プレイ中の盤面，落下位置，消去，攻撃，時間，操作結果を保存し，試合後に分析可能な形式にする。</p>
         </article>
         <article>
           <span>2</span>
           <h3 data-i18n="journey_step2_h3">一手ごとに可視化する</h3>
-          <p data-i18n="journey_step2_p">リプレイ画面で盤面、タイムライン、攻撃状況、AI 推奨手を並べ、どの場面が問題だったかを確認できるようにします。</p>
+          <p data-i18n="journey_step2_p">リプレイ画面で盤面，タイムライン，攻撃状況，AI推奨手を並べ，どの場面が問題だったかを確認できるようにする。</p>
         </article>
         <article>
           <span>3</span>
           <h3 data-i18n="journey_step3_h3">改善点を発見する</h3>
-          <p data-i18n="journey_step3_p">実際の選択と推奨手を比較し、地形悪化、攻撃機会の損失、相殺判断の遅れなどを見つけます。</p>
+          <p data-i18n="journey_step3_p">実際の選択と推奨手を比較し，地形悪化，攻撃機会の損失，相殺判断の遅れなどを特定する。</p>
         </article>
         <article>
           <span>4</span>
-          <h3 data-i18n="journey_step4_h3">Guidebook で補助学習する</h3>
-          <p data-i18n="journey_step4_p">分析結果を理解するために必要な T-Spin、Combo、相殺などを、小さなシミュレーションで確認できるようにします。</p>
+          <h3 data-i18n="journey_step4_h3">Guidebookで補助学習する</h3>
+          <p data-i18n="journey_step4_p">分析結果を理解するために必要なT-Spin，Combo，相殺などを，小さなシミュレーションで確認できるようにする。</p>
         </article>
         <article>
           <span>5</span>
           <h3 data-i18n="journey_step5_h3">変化を確認する</h3>
-          <p data-i18n="journey_step5_p">単局サマリーやレーダーチャートで、速度、攻撃、効率、安定性などの変化を長期的に確認します。</p>
+          <p data-i18n="journey_step5_p">単局サマリーやレーダーチャートで，速度，攻撃，効率，安定性などの変化を長期的に確認する。</p>
         </article>
       </div>
     </section>
@@ -263,30 +263,30 @@
         <span class="chapter">05</span>
         <div>
           <p class="kicker" data-i18n="replay_kicker">Replay分析：一手ごとの判断を可視化する</p>
-          <h2 data-i18n="replay_h2">AI は対局中に操作を指示するのではなく、試合後にプレイヤーの判断を分析します。</h2>
+          <h2 data-i18n="replay_h2">AIは対局中に操作を指示するのではなく，試合後にプレイヤーの判断を分析する。</h2>
         </div>
       </div>
 
       <div class="article-grid">
         <article class="prose">
           <p data-i18n="replay_p1">
-            本システムでは、AI が対局中に操作を指示するのではなく、試合後にプレイヤーの選択を分析します。これにより、プレイヤー本来の判断を妨げずに、対局後の振り返りを支援できます。
+            本システムでは，AIが対局中に操作を指示するのではなく，試合後にプレイヤーの選択を分析する。これにより，プレイヤー本来の判断を妨げずに，対局後の振り返りを支援できる。
           </p>
           <p data-i18n="replay_p2">
-            Replay では、各手の盤面状態、落下位置、ライン消去、攻撃量、地形変化を確認できます。プレイヤーは試合全体をただ眺めるのではなく、どの一手がその後の不利な状況につながったのかを段階的に追うことができます。
+            Replayでは，各手の盤面状態，落下位置，ライン消去，攻撃量，地形変化を確認できる。プレイヤーは試合全体をただ眺めるのではなく，どの一手がその後の不利な状況につながったのかを段階的に追うことが可能である。
           </p>
           <p data-i18n="replay_p3">
-            AI 評価では、プレイヤーの実際の置き方と、探索によって得られた推奨手を比較します。差が大きい手を候補として示すことで、初心者が「この場面では何を見落としていたのか」を考えやすくします。
+            AI評価では，プレイヤーの実際の置き方と，探索によって得られた推奨手を比較する。差が大きい手を候補として示すことで，初心者が「この場面では何を見落としていたのか」を考えやすくする。
           </p>
           <p data-i18n="replay_p4">
-            また、単局サマリーやレーダーチャートにより、速度、攻撃、効率、構造、安定性、視野などを確認できます。これにより、個別のミスだけでなく、長期的な成長傾向も把握できます。
+            また，単局サマリーやレーダーチャートにより，速度，攻撃，効率，構造，安定性，視野などを確認できる。これにより，個別のミスだけでなく，長期的な成長傾向も把握できる。
           </p>
         </article>
 
         <aside class="explain-card strong">
           <h3 data-i18n="replay_aside_h3">設計原則</h3>
           <p data-i18n="replay_aside_p">
-            AI はプレイヤーの操作権を奪うものではなく、試合後のコーチとして働きます。目的は「代わりにプレイすること」ではなく、「プレイヤーが自分の判断を理解できるようにすること」です。
+            AIはプレイヤーの操作権を奪うものではなく，試合後のコーチとして機能する。目的は「代わりにプレイすること」ではなく，「プレイヤーが自身の判断を理解できるようにすること」である。
           </p>
         </aside>
       </div>
@@ -294,26 +294,26 @@
       <div class="replay-showcase">
         <figure class="replay-shot">
           <img src="./assets/replay_interface_overview.png" alt="Replay 分析界面">
-          <figcaption data-i18n="replay_fig1_cap">Replay のインターフェースは、盤面、タイムライン、AIの推奨、解説パネルを一つにまとめ、プレイヤーが自分の選択を段階的に確認できるよう助けます。</figcaption>
+          <figcaption data-i18n="replay_fig1_cap">Replayのインターフェースは，盤面，タイムライン，AIの推奨，解説パネルを統合し，プレイヤーが自身の選択を段階的に確認できるよう支援する。</figcaption>
         </figure>
         <div class="replay-metrics">
           <figure class="metric-card">
             <div class="metric-image tall">
               <img src="./assets/replay_match_summary.png" alt="Replay 单局概要数据">
             </div>
-            <figcaption data-i18n="replay_fig2_cap">1ゲームのサマリーデータにより、そのゲームの全体的なパフォーマンスを知ることができます。</figcaption>
+            <figcaption data-i18n="replay_fig2_cap">1ゲームのサマリーデータにより，そのゲームの全体的なパフォーマンスを把握できる。</figcaption>
           </figure>
           <figure class="metric-card">
             <div class="metric-image square">
               <img src="./assets/player_radar_chart.png" alt="用户总游戏雷达图">
             </div>
-            <figcaption data-i18n="replay_fig3_cap">レーダーチャートは、様々な能力の指標を比較しやすい一つの形に圧縮します。</figcaption>
+            <figcaption data-i18n="replay_fig3_cap">レーダーチャートは，様々な能力の指標を比較しやすい一つの形状に圧縮する。</figcaption>
           </figure>
           <div class="metric-note">
             <h3 data-i18n="replay_note_h3">1ゲームから長期的な変化へ</h3>
             <p data-i18n="replay_note_p">
-              1ゲームのサマリーは「このゲームで何が起きたか」に答え、レーダーチャートは「能力構造にどんな特徴があるか」に答えます。プレイヤーが繰り返しリプレイ分析を行うことで、毎回の経験を長期的な成長へと繋げることができます。
-            </p>
+            1ゲームのサマリーは「このゲームで何が起きたか」に答え，レーダーチャートは「能力構造にどのような特徴があるか」に答える。プレイヤーが繰り返しリプレイ分析を行うことで，毎回の経験を長期的な成長へと繋げることが可能となる。
+          </p>
           </div>
         </div>
       </div>
@@ -325,25 +325,25 @@
         <span class="chapter">06</span>
         <div>
           <p class="kicker" data-i18n="guide_kicker">Guidebook：分析結果を理解するための基礎学習</p>
-          <h2 data-i18n="guide_h2">Guidebook は Replay 分析を理解するための補助教材として位置づけます。</h2>
+          <h2 data-i18n="guide_h2">Guidebookは，Replay分析を理解するための補助教材として位置づける。</h2>
         </div>
       </div>
 
       <div class="article-grid">
         <article class="prose">
           <p data-i18n="guide_p1">
-            初心者が Replay 分析の結果を理解するためには、T-Spin、Combo、相殺、攻撃価値、NEXT/Hold などの基礎知識が必要です。これらを知らないままでは、AI が示した推奨手や評価の意味を理解しにくくなります。
+            初心者がReplay分析の結果を理解するためには，T-Spin，Combo，相殺，攻撃価値，NEXT/Holdなどの基礎知識が必要である。これらを知らないままでは，AIが示した推奨手や評価の意味を理解しにくくなる。
           </p>
           <p data-i18n="guide_p2">
-            そこで Guidebook では、基本ルールや代表的なテクニックを小さな章に分け、アニメーションと固定局面のシミュレーションで確認できるようにします。目的は知識を増やすこと自体ではなく、Replay で見つかった課題を理解し、次の練習へつなげることです。
+            そこでGuidebookでは，基本ルールや代表的なテクニックを小さな章に分割し，アニメーションと固定局面のシミュレーションで確認できるようにする。目的は知識を増やすこと自体ではなく，Replayで見つかった課題を理解し，次の練習へつなげることである。
           </p>
           <p data-i18n="guide_p3">
-            たとえば Replay で T-Spin の機会を逃していた場合、Guidebook の T-Spin 章に戻り、構造と操作を固定局面で確認できます。このように Guidebook は、Replay 分析を中心とした学習サイクルを支える補助機能です。
+            たとえばReplayでT-Spinの機会を逃していた場合，GuidebookのT-Spin章に戻り，構造と操作を固定局面で確認できる。このようにGuidebookは，Replay分析を中心とした学習サイクルを支える補助機能として機能する。
           </p>
           <figure class="guide-annotation-card">
             <figcaption>
-              <strong data-i18n="guide_annotation_title">Guidebook 画面の構成</strong>
-              <span data-i18n="guide_annotation_desc">本文、章カード、シミュレーション入口を1つの画面にまとめ、学習の流れをそのまま見せます。</span>
+              <strong data-i18n="guide_annotation_title">Guidebook画面の構成</strong>
+              <span data-i18n="guide_annotation_desc">本文，章カード，シミュレーション入口を1つの画面に統合し，学習の流れをそのまま提示する。</span>
             </figcaption>
             <img src="./assets/guidebook-annotated.png" alt="Guidebook annotated interface">
           </figure>
@@ -352,19 +352,19 @@
         <div class="guide-modules">
           <div>
             <strong data-i18n="guide_module_1_title">基礎知識</strong>
-            <span data-i18n="guide_module_1_desc">攻撃力、お邪魔ブロック、相殺、B2B、Combo などのルールを明確にします。</span>
+            <span data-i18n="guide_module_1_desc">攻撃力，お邪魔ブロック，相殺，B2B，Comboなどのルールを明確にする。</span>
           </div>
           <div>
             <strong data-i18n="guide_module_2_title">操作セクション</strong>
-            <span data-i18n="guide_module_2_desc">Wall Kick、Combo、T-Spin Double などを学習可能な小さな章に分割します。</span>
+            <span data-i18n="guide_module_2_desc">Wall Kick，Combo，T-Spin Doubleなどを学習可能な小さな章に分割する。</span>
           </div>
           <div>
             <strong data-i18n="guide_module_3_title">シミュレーション演習</strong>
-            <span data-i18n="guide_module_3_desc">プレイヤーは固定された局面に移行し、実際の操作で目標アクションを1度完了させます。</span>
+            <span data-i18n="guide_module_3_desc">プレイヤーは固定された局面に移行し，実際の操作で目標アクションを1度完了させる。</span>
           </div>
           <div>
             <strong data-i18n="guide_module_4_title">フィードバック</strong>
-            <span data-i18n="guide_module_4_desc">システムが目標達成を判定し、アクションが正しく成立したかをプレイヤーに知らせます。</span>
+            <span data-i18n="guide_module_4_desc">システムが目標達成を判定し，アクションが正しく成立したかをプレイヤーに通知する。</span>
           </div>
         </div>
       </div>
@@ -375,7 +375,7 @@
         <span class="chapter">07</span>
         <div>
           <p class="kicker" data-i18n="arch_kicker">実装：プレイデータの記録・評価・可視化</p>
-          <h2 data-i18n="arch_h2">Replay 分析を実現するために、各手の状態を記録し、評価し、画面上に可視化します。</h2>
+          <h2 data-i18n="arch_h2">Replay分析を実現するために，各手の状態を記録し，評価し，画面上に可視化する。</h2>
         </div>
       </div>
 
@@ -390,16 +390,16 @@
           </div>
         </div>
 
-        <div class="arch-connector" data-i18n="arch_connector">対局中に記録したデータを、試合後に Replay 画面で再構成し、AI 評価と可視化に利用します。</div>
+        <div class="arch-connector" data-i18n="arch_connector">対局中に記録したデータを，試合後にReplay画面で再構成し，AI評価と可視化に利用する。</div>
 
         <div class="arch-grid three">
           <div class="arch-layer">
             <div class="arch-title" data-i18n="arch_layer_1_title">ゲーム実行レイヤー</div>
             <ul>
-              <li data-i18n="arch_layer_1_i1">10 × 20 の盤面</li>
-              <li data-i18n="arch_layer_1_i2">SRS 回転と Wall Kick</li>
+              <li data-i18n="arch_layer_1_i1">10 × 20の盤面</li>
+              <li data-i18n="arch_layer_1_i2">SRS回転とWall Kick</li>
               <li>Hold / Next 5</li>
-              <li data-i18n="arch_layer_1_i4">Combo / B2B / T-Spin 判定</li>
+              <li data-i18n="arch_layer_1_i4">Combo / B2B / T-Spin判定</li>
             </ul>
           </div>
           <div class="arch-layer">
@@ -408,13 +408,13 @@
               <li data-i18n="arch_layer_2_i1">毎手の落下位置</li>
               <li data-i18n="arch_layer_2_i2">盤面スナップショット</li>
               <li data-i18n="arch_layer_2_i3">ライン消去と攻撃</li>
-              <li data-i18n="arch_layer_2_i4">時間、スピードと操作結果</li>
+              <li data-i18n="arch_layer_2_i4">時間，スピードと操作結果</li>
             </ul>
           </div>
           <div class="arch-layer">
             <div class="arch-title" data-i18n="arch_layer_3_title">分析・可視化レイヤー</div>
             <ul>
-              <li data-i18n="arch_layer_3_i1">AI 推奨手との比較</li>
+              <li data-i18n="arch_layer_3_i1">AI推奨手との比較</li>
               <li data-i18n="arch_layer_3_i2">タイムライン表示</li>
               <li data-i18n="arch_layer_3_i3">単局サマリー</li>
               <li data-i18n="arch_layer_3_i4">レーダーチャート</li>
@@ -430,12 +430,12 @@
           <b>→</b>
           <div>
             <strong data-i18n="arch_flow_2_title">分析アルゴリズム</strong>
-            <span data-i18n="arch_flow_2_desc">候補ルートを探索し、評価関数でスコアリング</span>
+            <span data-i18n="arch_flow_2_desc">候補ルートを探索し，評価関数でスコアリング</span>
           </div>
           <b>→</b>
           <div>
-            <strong data-i18n="arch_flow_3_title">Replay の視覚化</strong>
-            <span data-i18n="arch_flow_3_desc">タイムライン、推奨落下位置、データパネル、レーダーチャート</span>
+            <strong data-i18n="arch_flow_3_title">Replayの視覚化</strong>
+            <span data-i18n="arch_flow_3_desc">タイムライン，推奨落下位置，データパネル，レーダーチャート</span>
           </div>
         </div>
 
@@ -444,7 +444,7 @@
           <div class="arch-grid four">
             <div><span data-i18n="arch_support_1_title">三言語ローカライズ</span><br><span data-i18n="arch_support_1_desc">中国語 / 日本語 / 英語</span></div>
             <div><span data-i18n="arch_support_2_title">入力対応</span><br><span data-i18n="arch_support_2_desc">キーボードとコントローラー</span></div>
-            <div><span data-i18n="arch_support_3_title">素材とUI</span><br><span data-i18n="arch_support_3_desc">ロビー、盤面、リプレイ画面</span></div>
+            <div><span data-i18n="arch_support_3_title">素材とUI</span><br><span data-i18n="arch_support_3_desc">ロビー，盤面，リプレイ画面</span></div>
             <div><span data-i18n="arch_support_4_title">オンライン対戦</span><br><span data-i18n="arch_support_4_desc">オンライン対戦データも収集している</span></div>
           </div>
         </div>
@@ -456,31 +456,31 @@
         <span class="chapter">08</span>
         <div>
           <p class="kicker" data-i18n="tech_kicker">今後の課題：評価実験と分析精度の改善</p>
-          <h2 data-i18n="tech_h2">今後は、本システムが初心者の振り返りを本当に支援できるかを検証する必要があります。</h2>
+          <h2 data-i18n="tech_h2">今後は，本システムが初心者の振り返りを有効に支援できるかを検証する必要がある。</h2>
         </div>
       </div>
 
       <div class="article-grid">
         <article class="prose">
           <p data-i18n="tech_p1">
-            現段階では、リプレイ分析の仕組みと可視化インターフェースを実装しています。次の課題は、初心者がこのシステムを使うことで、自分のミスや改善点をより理解しやすくなるかを評価することです。
+            現段階では，リプレイ分析の仕組みと可視化インターフェースを実装している。次の課題は，初心者がこのシステムを使用することで，自身のミスや改善点をより理解しやすくなるかを評価することである。
           </p>
           <p data-i18n="tech_p2">
-            評価方法としては、システム使用前後で、プレイヤーが自分のミスを説明できるか、推奨手の意味を理解できるか、同じ種類のミスを減らせるかを確認する必要があります。アンケートや簡単なプレイ課題を組み合わせることで、学習支援としての有効性を検証できます。
+            評価方法としては，システム使用前後で，プレイヤーが自身のミスを説明できるか，推奨手の意味を理解できるか，同じ種類のミスを減らせるかを確認する必要がある。アンケートや簡単なプレイ課題を組み合わせることで，学習支援としての有効性を検証できる。
           </p>
           <p data-i18n="tech_p3">
-            また、AI 評価の精度も改善の余地があります。現状の評価関数は、盤面の高さ、空洞、攻撃機会などをもとにルートを評価しますが、初心者にとって理解しやすい説明へ変換するには、評価理由をより明確に示す必要があります。
+            また，AI評価の精度も改善の余地がある。現状の評価関数は，盤面の高さ，空洞，攻撃機会などをもとにルートを評価するが，初心者にとって理解しやすい説明へ変換するには，評価理由をより明確に示す必要がある。
           </p>
           <p data-i18n="tech_p4">
-            さらに、オンライン対戦機能は現時点では主題ではなく、将来的に多様なプレイデータを収集し、分析対象を広げるための拡張機能として位置づけます。本研究ではまず、リプレイ分析による初心者の振り返り支援に焦点を絞ります。
+            さらに，オンライン対戦機能は現時点では主題ではなく，将来的に多様なプレイデータを収集し，分析対象を広げるための拡張機能として位置づける。本研究ではまず，リプレイ分析による初心者の振り返り支援に焦点を絞る。
           </p>
         </article>
 
         <div class="tech-cards">
           <div><strong data-i18n="tech_card_1_title">評価実験</strong><span data-i18n="tech_card_1_desc">初心者がミスや改善点を説明しやすくなるかを確認する。</span></div>
           <div><strong data-i18n="tech_card_2_title">分析精度</strong><span data-i18n="tech_card_2_desc">推奨手と評価関数が初心者の改善に役立つかを検証する。</span></div>
-          <div><strong data-i18n="tech_card_3_title">説明性</strong><span data-i18n="tech_card_3_desc">なぜその手が良いのかを、盤面指標と自然な説明で示す。</span></div>
-          <div><strong data-i18n="tech_card_4_title">Guidebook 連携</strong><span data-i18n="tech_card_4_desc">分析結果から関連する基礎章へ自然に接続する。</span></div>
+          <div><strong data-i18n="tech_card_3_title">説明性</strong><span data-i18n="tech_card_3_desc">なぜその手が良いのかを，盤面指標と自然な説明で示す。</span></div>
+          <div><strong data-i18n="tech_card_4_title">Guidebook連携</strong><span data-i18n="tech_card_4_desc">分析結果から関連する基礎章へ自然に接続する。</span></div>
           <div><strong data-i18n="tech_card_5_title">オンラインデータ</strong><span data-i18n="tech_card_5_desc">収集済みのオンライン対戦データを評価・分析に活用する。</span></div>
         </div>
       </div>
@@ -488,10 +488,10 @@
 
     <section class="closing">
       <div class="doc-label" data-i18n="closing_label">おわりに</div>
-      <h2 data-i18n="closing_h2">本研究の中心は、初心者が自分の対局を理解し、改善点を発見するための Replay 分析支援です。</h2>
+      <h2 data-i18n="closing_h2">本研究の中心は，初心者が自身の対局を理解し，改善点を発見するためのReplay分析支援である。</h2>
       <p data-i18n="closing_p">
-        従来は、初心者が普通のリプレイを見返しても、具体的にどの判断が問題だったのかを理解しにくいという課題がありました。そこで本研究では、盤面・操作・攻撃状況を記録し、試合後に一手ごとの判断を可視化する Replay 分析システムを開発しました。Guidebook や AI 評価は、この中心目的を支えるための補助要素として位置づけます。
-      </p>
+            従来は，初心者が従来のリプレイ機能を見返しても，具体的にどの判断が問題だったのかを理解しにくいという課題があった。そこで本研究では，盤面・操作・攻撃状況を記録し，試合後に一手ごとの判断を可視化するReplay分析システムを開発した。GuidebookやAI評価は，この中心目的を支えるための補助要素として位置づける。
+          </p>
     </section>
   </main>
 
