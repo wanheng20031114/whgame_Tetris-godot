@@ -171,9 +171,9 @@ main {
 }
 
 h1 {
-  max-width: 1180px;
+  max-width: 1240px;
   color: #0f1b33;
-  font-size: clamp(42px, 4.6vw, 72px);
+  font-size: clamp(42px, 4.1vw, 66px);
   line-height: 1.08;
   font-weight: 950;
 }
@@ -197,6 +197,19 @@ h1 {
   font-weight: 800;
   letter-spacing: 0.02em;
   border: 1px solid rgba(31, 95, 229, 0.18);
+}
+
+.version-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 16px;
+  border-radius: 999px;
+  font-size: 14px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  background: linear-gradient(135deg, #e8f5e9, #e3f2fd);
+  color: #2e5a3e;
+  border: 1px solid rgba(46, 125, 50, 0.2);
 }
 
 .cover-actions {
@@ -368,6 +381,11 @@ h3 {
   align-items: start;
 }
 
+.intro-grid {
+  grid-template-columns: minmax(0, 0.92fr) minmax(500px, 0.68fr);
+  gap: 30px;
+}
+
 .prose {
   display: grid;
   gap: 18px;
@@ -381,6 +399,7 @@ h3 {
 .timeline article,
 .image-pair figure,
 .mechanic-demos figure,
+.evidence-grid article,
 .replay-shot,
 .metric-card,
 .metric-note,
@@ -405,6 +424,46 @@ h3 {
 
 .explain-card p {
   font-size: 17px;
+}
+
+.evidence-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  margin-top: 28px;
+}
+
+.evidence-single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.evidence-grid article {
+  display: grid;
+  gap: 10px;
+  padding: 22px;
+  align-content: start;
+}
+
+.source-tag {
+  width: fit-content;
+  padding: 5px 10px;
+  border-radius: 6px;
+  background: #dbeafe;
+  color: var(--blue);
+  font-size: 13px;
+  font-weight: 950;
+}
+
+.evidence-grid p {
+  color: var(--muted);
+  font-size: 16px;
+  line-height: 1.72;
+  font-weight: 650;
+}
+
+.evidence-grid a {
+  color: var(--blue);
+  font-weight: 900;
 }
 
 .image-pair {
@@ -542,6 +601,16 @@ figcaption {
   font-size: 14px;
   line-height: 1.58;
   font-weight: 700;
+}
+
+.intro-technique-demos {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.intro-technique-demos img {
+  height: 300px;
+  aspect-ratio: auto;
 }
 
 .concept-stack,
@@ -849,6 +918,7 @@ figcaption {
   .image-pair,
   .mechanic-demos,
   .concept-stack,
+  .evidence-grid,
   .cover-grid,
   .cover-flow,
   .arch-grid.four,

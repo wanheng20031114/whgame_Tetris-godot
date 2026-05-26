@@ -8,7 +8,11 @@
       "Bash(git push *)",
       "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\wh\\\\Documents\\\\whgame_Tetris-godot\" -Force)",
       "Bash(Select-Object Mode, Name)",
-      "Bash(Select-Object -First 80)"
+      "Bash(Select-Object -First 80)",
+      "Bash(Get-ChildItem *)",
+      "PowerShell(Rename-Item *)",
+      "Bash(git mv *)",
+      "PowerShell(cmd /c \"ren presentation\\\\main main20260525\" 2>&1; cmd /c \"ren presentation\\\\main2.0 main20260527\" 2>&1)"
     ]
   }
 }
