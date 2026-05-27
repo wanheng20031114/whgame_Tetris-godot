@@ -36,9 +36,6 @@
 1. 对战俄罗斯方块
    - 介绍攻击如何转化为垃圾行。
    - 介绍被攻击后攻击条如何上升，以及玩家如何通过消行抵消。
-   - 使用配图：
-     - `presentation/attack_to_garbage_lines.png`
-     - `presentation/incoming_attack_bar_rise.png`
 2. 消除造成的攻击力
    - 放置当前攻击力表。
    - 包含 Single / Double / Triple / Tetris / T-Spin / B2B / Combo。

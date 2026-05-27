@@ -7,8 +7,6 @@ const OVERVIEW_PAGE_SCENE := preload("res://scenes/ui/guide/overview_page.tscn")
 const BASICS_PAGE_SCENE := preload("res://scenes/ui/guide/basics_page.tscn")
 const CHAPTER_PAGE_SCENE := preload("res://scenes/ui/guide/chapter_page.tscn")
 const SIMULATION_PAGE_SCENE := preload("res://scenes/ui/guide/simulation_page.tscn")
-const ATTACK_TO_GARBAGE_IMAGE := "res://presentation/attack_to_garbage_lines.png"
-const INCOMING_ATTACK_BAR_IMAGE := "res://presentation/incoming_attack_bar_rise.png"
 
 const EMPTY := 0
 const GARBAGE := 8
@@ -78,15 +76,34 @@ func _notification(what: int) -> void:
 func _input(event: InputEvent) -> void:
 	if not in_simulation:
 		return
-	# 只有棋盘聚焦时才接受输入
-	if board_view and not board_view.focused:
-		return
 	if event.is_action_pressed("ui_cancel"):
 		if board_view:
 			board_view.focused = false
 			if board_view is Control:
 				(board_view as Control).release_focus()
 				get_viewport().set_input_as_handled()
+		return
+	# 只有棋盘聚焦时才接受输入
+	if board_view and not board_view.focused:
+		return
+
+	if event.is_action_pressed("move_left") or event.is_action_pressed("ui_left"):
+		_sim_move(-1, 0)
+	elif event.is_action_pressed("move_right") or event.is_action_pressed("ui_right"):
+		_sim_move(1, 0)
+	elif event.is_action_pressed("soft_drop") or event.is_action_pressed("ui_down"):
+		_sim_move(0, 1)
+	elif event.is_action_pressed("hard_drop") or event.is_action_pressed("ui_accept"):
+		_sim_hard_drop()
+	elif event.is_action_pressed("rotate_cw"):
+		_sim_rotate(1)
+	elif event.is_action_pressed("rotate_ccw"):
+		_sim_rotate(-1)
+	elif event.is_action_pressed("rotate_180"):
+		_sim_rotate(2)
+	else:
+		return
+	get_viewport().set_input_as_handled()
 
 
 func _build_chapters() -> void:
@@ -706,6 +723,15 @@ func _reset_simulation() -> void:
 
 	_update_objective()
 	_refresh_sim_view()
+	_focus_sim_board()
+
+
+func _focus_sim_board() -> void:
+	if board_view == null:
+		return
+	board_view.focused = true
+	if board_view is Control:
+		(board_view as Control).call_deferred("grab_focus")
 
 
 func _update_objective() -> void:
@@ -982,41 +1008,12 @@ func _versus_tetris_section(show_title: bool = true) -> Control:
 	box.add_child(_paragraph("对战的目标不是单纯消行，而是在保证自己不被顶出场地的同时，把攻击转化为对手需要处理的垃圾行。你打出的攻击越高，对手的攻击条压力越大；对手打来的攻击也会先进入你的攻击条，随后变成垃圾行进入棋盘。"))
 	box.add_child(_paragraph("因此，对战中的每一步都要同时考虑两件事：这一手能不能制造攻击，以及这一手能不能处理即将到来的垃圾。很多时候，先用消行抵消攻击，比继续堆高准备大招更安全。"))
 
-	var image_grid := GridContainer.new()
-	image_grid.columns = 2
-	image_grid.add_theme_constant_override("h_separation", 14)
-	image_grid.add_theme_constant_override("v_separation", 14)
-	box.add_child(image_grid)
-	image_grid.add_child(_image_explain_card("被攻击后攻击条上升", INCOMING_ATTACK_BAR_IMAGE, "受到攻击时，垃圾不会立刻全部进入棋盘，而是先显示在攻击条中。玩家可以用自己的消行去抵消。"))
-	image_grid.add_child(_image_explain_card("攻击转化为垃圾行", ATTACK_TO_GARBAGE_IMAGE, "消除产生的攻击会被换算成对手需要接收的垃圾行。攻击越高，对手越难安全处理。"))
-
 	box.add_child(_list_section("阅读攻击条时先看三件事", [
 		"攻击条越高，下一次不消行锁定时越危险。",
 		"如果当前地形已经很高，优先考虑清线和抵消垃圾。",
 		"如果攻击条压力较低，可以继续准备 Tetris、T-Spin 或 Combo。"
 	]))
 	return panel
-
-
-func _image_explain_card(title: String, texture_path: String, body: String) -> Control:
-	var card := _panel()
-	card.custom_minimum_size = Vector2(360, 320)
-	var margin := _margin(card, 14, 14, 14, 14)
-	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 10)
-	margin.add_child(box)
-	box.add_child(_label(title, 18, Color("0f1f45")))
-
-	var texture := load(texture_path) as Texture2D
-	var image := TextureRect.new()
-	image.custom_minimum_size = Vector2(320, 190)
-	image.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	image.texture = texture
-	image.expand_mode = TextureRect.EXPAND_FIT_WIDTH
-	image.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	box.add_child(image)
-	box.add_child(_paragraph(body))
-	return card
 
 
 func _general_technique_section(show_title: bool = true) -> Control:
