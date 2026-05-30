@@ -43,6 +43,8 @@ const SFX_LINE_CLEAR_STREAM: AudioStream = preload("res://audio/line_clear.ogg")
 const SFX_TETRIS_STREAM: AudioStream = preload("res://audio/tetris.ogg")
 const SFX_SPIN_STREAM: AudioStream = preload("res://audio/spin.ogg")
 const SFX_DEATH_STREAM: AudioStream = preload("res://audio/death.ogg")
+const ATTACK_DAMAGE_POPUP := preload("res://scripts/ui/attack_damage_popup.gd")
+const B2B_STREAK_BADGE := preload("res://scripts/ui/b2b_streak_badge.gd")
 const GARBAGE_BAR_GAP: float = 6.0
 const ATTACK_DELAY_SECONDS: float = 12.0
 const WARNING_STAGE_SECONDS: float = 6.0
@@ -542,6 +544,7 @@ func _on_lines_cleared(amount: int, is_spin: bool, is_t_spin: bool, dmg: int) ->
 	_last_damage_this_lock = dmg
 	_last_is_spin = is_spin
 	_last_is_t_spin = is_t_spin
+	_update_b2b_badge()
 
 	if is_spin or is_t_spin:
 		if sfx_spin:
@@ -737,6 +740,26 @@ func _on_rows_cleared(rows_data: Array) -> void:
 	var effect := LineClearEffect.new()
 	board.add_child(effect)
 	effect.setup(rows_data, board.cell_size, board.buffer_rows)
+	var popup_parent: Node = get_node_or_null("HUD")
+	var popup_node: Node = popup_parent if popup_parent else self
+	ATTACK_DAMAGE_POPUP.spawn(popup_node, board, _last_damage_this_lock, rows_data, _attack_popup_style())
+
+
+func _attack_popup_style() -> String:
+	if _last_is_t_spin:
+		return ATTACK_DAMAGE_POPUP.STYLE_TSPIN
+	if _last_lines_cleared_this_lock >= 4:
+		return ATTACK_DAMAGE_POPUP.STYLE_TETRIS
+	return ATTACK_DAMAGE_POPUP.STYLE_NORMAL
+
+
+func _update_b2b_badge() -> void:
+	var popup_parent: Node = get_node_or_null("HUD")
+	var badge_parent: Node = popup_parent if popup_parent else self
+	if scoring.b2b > 0:
+		B2B_STREAK_BADGE.show_badge(badge_parent, board, scoring.b2b + 1)
+	else:
+		B2B_STREAK_BADGE.hide_existing(badge_parent)
 
 
 func _count_key_presses() -> void:

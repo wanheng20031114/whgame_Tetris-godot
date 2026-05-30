@@ -28,7 +28,7 @@ const SPIN_SCORES: Dictionary = {
 }
 
 ## Combo 加成：连续消行时额外发送的垃圾行数（也乘以 50 分）
-const COMBO_BONUS: Array = [0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 4, 5]
+const COMBO_BONUS: Array = [0, 1, 1, 2, 2, 3, 3, 4, 4, 4, 5]
 
 ## 重力速度表（等级 -> 每秒下落格数）
 ## 单人模式加速版：增量更大，更快达到最大速度 20.0（20G）
@@ -61,7 +61,7 @@ signal lines_changed(new_lines: int)
 ## lines_cleared: 本次消除的行数（0-4）
 ## is_spin: 是否为 Spin 消除
 ## is_t_spin: 是否为 T-Spin。只有 T-Spin 使用 Spin 奖励。
-func process_line_clear(lines_cleared: int, _is_spin: bool, is_t_spin: bool) -> void:
+func process_line_clear(lines_cleared: int, is_spin: bool, is_t_spin: bool) -> void:
 	if lines_cleared <= 0 and not is_t_spin:
 		return
 
@@ -73,7 +73,7 @@ func process_line_clear(lines_cleared: int, _is_spin: bool, is_t_spin: bool) -> 
 		base = LINE_SCORES.get(lines_cleared, 0)
 
 	# 2. 判断是否为"困难消除"（Tetris 或 T-Spin）
-	var is_difficult: bool = is_t_spin or lines_cleared >= 4
+	var is_difficult: bool = (is_spin and lines_cleared > 0) or is_t_spin or lines_cleared >= 4
 
 	# 3. B2B 加成
 	if is_difficult:

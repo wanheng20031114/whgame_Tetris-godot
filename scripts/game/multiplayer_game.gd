@@ -35,6 +35,8 @@ const SFX_LINE_CLEAR_STREAM: AudioStream = preload("res://audio/line_clear.ogg")
 const SFX_TETRIS_STREAM: AudioStream = preload("res://audio/tetris.ogg")
 const SFX_SPIN_STREAM: AudioStream = preload("res://audio/spin.ogg")
 const SFX_DEATH_STREAM: AudioStream = preload("res://audio/death.ogg")
+const ATTACK_DAMAGE_POPUP := preload("res://scripts/ui/attack_damage_popup.gd")
+const B2B_STREAK_BADGE := preload("res://scripts/ui/b2b_streak_badge.gd")
 
 # ------------------------------------------------------------------------------
 # 状态变量
@@ -413,6 +415,7 @@ func _on_local_lines_cleared(amount: int, is_spin: bool, is_t_spin: bool, damage
 	_last_damage_this_lock = damage
 	_last_is_spin = is_spin
 	_last_is_t_spin = is_t_spin
+	_update_b2b_badge()
 
 	# 与单人保持一致的音效规则。
 	if is_spin or is_t_spin:
@@ -586,6 +589,24 @@ func _on_rows_cleared(rows_data: Array) -> void:
 	var effect := LineClearEffect.new()
 	board.add_child(effect)
 	effect.setup(rows_data, board.cell_size, board.buffer_rows)
+	var popup_parent: Node = _fx_layer if _fx_layer else self
+	ATTACK_DAMAGE_POPUP.spawn(popup_parent, board, _last_damage_this_lock, rows_data, _attack_popup_style())
+
+
+func _attack_popup_style() -> String:
+	if _last_is_t_spin:
+		return ATTACK_DAMAGE_POPUP.STYLE_TSPIN
+	if _last_lines_cleared_this_lock >= 4:
+		return ATTACK_DAMAGE_POPUP.STYLE_TETRIS
+	return ATTACK_DAMAGE_POPUP.STYLE_NORMAL
+
+
+func _update_b2b_badge() -> void:
+	var badge_parent: Node = _fx_layer if _fx_layer else self
+	if scoring.b2b > 0:
+		B2B_STREAK_BADGE.show_badge(badge_parent, board, scoring.b2b + 1)
+	else:
+		B2B_STREAK_BADGE.hide_existing(badge_parent)
 
 
 func _start_data_collection() -> void:

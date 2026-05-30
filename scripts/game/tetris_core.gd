@@ -339,7 +339,7 @@ func _check_immobile() -> bool:
 		blocked += 1
 	return blocked >= 3
 
-func _calculate_damage(cleared_count: int, _is_spin: bool, is_t_spin: bool) -> int:
+func _calculate_damage(cleared_count: int, is_spin: bool, is_t_spin: bool) -> int:
 	var dmg: int = 0
 	if is_t_spin:
 		if cleared_count == 1: dmg = 2
@@ -351,11 +351,11 @@ func _calculate_damage(cleared_count: int, _is_spin: bool, is_t_spin: bool) -> i
 		elif cleared_count >= 4: dmg = 4
 	
 	# B2B 加成
-	if scoring.b2b > 0 and (is_t_spin or cleared_count >= 4):
+	if scoring.b2b > 0 and ((is_spin and cleared_count > 0) or is_t_spin or cleared_count >= 4):
 		dmg += 1
 		
 	# Combo 加成
-	var combo_table = [0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 4, 5]
+	var combo_table = [0, 1, 1, 2, 2, 3, 3, 4, 4, 4, 5]
 	var c_idx = mini(scoring.combo, combo_table.size() - 1)
 	if c_idx > 0:
 		dmg += combo_table[c_idx]

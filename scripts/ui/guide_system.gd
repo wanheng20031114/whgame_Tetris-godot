@@ -19,14 +19,13 @@ const ATTACK_TABLE: Array = [
 	["Double", "2", "1"],
 	["Triple", "3", "2"],
 	["Tetris", "4", "4"],
-	["T-Spin Mini", "0", "0"],
 	["T-Spin Single", "1", "2"],
 	["T-Spin Double", "2", "4"],
 	["T-Spin Triple", "3", "6"],
 ]
 
 ## Combo 攻击力加成表
-const COMBO_ATTACK_TABLE: Array = [0, 0, 1, 1, 2, 2, 3, 3, 4, 4, 4, 5]
+const COMBO_ATTACK_TABLE: Array = [0, 1, 1, 2, 2, 3, 3, 4, 4, 4, 5]
 
 var chapters: Array = []
 var basics_chapters: Array = []
@@ -111,34 +110,34 @@ func _build_chapters() -> void:
 		{
 			"id": "versus",
 			"number": "01",
-			"title": "对战俄罗斯方块",
-			"tag": "规则",
-			"time": "5 分钟",
-			"summary": "先理解攻击、垃圾行、攻击条与抵消，这是对战判断的基础。"
+			"title": tr("TXT_GUIDE_BASIC_VERSUS_TITLE"),
+			"tag": tr("TXT_GUIDE_BASIC_VERSUS_TAG"),
+			"time": tr("TXT_GUIDE_BASIC_VERSUS_TIME"),
+			"summary": tr("TXT_GUIDE_BASIC_VERSUS_SUMMARY")
 		},
 		{
 			"id": "attack",
 			"number": "02",
-			"title": "消除造成的攻击力",
-			"tag": "数值",
-			"time": "5 分钟",
-			"summary": "用表格确认 Tetris、T-Spin、B2B、Combo 会带来多少攻击。"
+			"title": tr("TXT_GUIDE_BASIC_ATTACK_TITLE"),
+			"tag": tr("TXT_GUIDE_BASIC_ATTACK_TAG"),
+			"time": tr("TXT_GUIDE_BASIC_ATTACK_TIME"),
+			"summary": tr("TXT_GUIDE_BASIC_ATTACK_SUMMARY")
 		},
 		{
 			"id": "technique",
 			"number": "03",
-			"title": "游戏技巧",
-			"tag": "习惯",
-			"time": "8 分钟",
-			"summary": "整理新手最先该练的通用思路：堆叠、预览、垃圾与操作效率。"
+			"title": tr("TXT_GUIDE_BASIC_TECH_TITLE"),
+			"tag": tr("TXT_GUIDE_BASIC_TECH_TAG"),
+			"time": tr("TXT_GUIDE_BASIC_TECH_TIME"),
+			"summary": tr("TXT_GUIDE_BASIC_TECH_SUMMARY")
 		},
 		{
 			"id": "replay",
 			"number": "04",
-			"title": "Replay 复盘与成长",
-			"tag": "占位",
-			"time": "后续",
-			"summary": "后续连接 Replay 系统，说明如何阅读 AI 分析并复盘自己的局。"
+			"title": tr("TXT_GUIDE_BASIC_REPLAY_TITLE"),
+			"tag": tr("TXT_GUIDE_BASIC_REPLAY_TAG"),
+			"time": tr("TXT_GUIDE_BASIC_REPLAY_TIME"),
+			"summary": tr("TXT_GUIDE_BASIC_REPLAY_SUMMARY")
 		}
 	]
 
@@ -302,7 +301,7 @@ func _show_overview() -> void:
 	(page.get_node("PageMargin/Page/HeroPanel/HeroMargin/HeroBox/HeroBody") as Label).text = tr("TXT_GUIDE_HERO_BODY")
 
 	var path := page.get_node("%PathBox") as HBoxContainer
-	for item in [tr("TXT_GUIDE_BASICS"), "对战机制", "攻击力", "游戏技巧", "Wall Kick", "Combo", "T-Spin Double"]:
+	for item in [tr("TXT_GUIDE_BASICS"), tr("TXT_GUIDE_PATH_VERSUS"), tr("TXT_GUIDE_PATH_ATTACK"), tr("TXT_GUIDE_PATH_TECHNIQUE"), "Wall Kick", "Combo", "T-Spin Double"]:
 		path.add_child(_chip(item, Color("ecfdf5"), Color("047857")))
 
 	var basics_grid := page.get_node("%BasicsGrid") as GridContainer
@@ -703,7 +702,7 @@ func _reset_simulation() -> void:
 	scenario_runner.setup(sim_id, 0)
 	sim_grid = scenario_runner.grid
 	sim_sequence_index = 0
-	sim_combo = 0
+	sim_combo = -1
 	sim_attempts = 0
 	sim_success = false
 	sim_locked = false
@@ -741,7 +740,7 @@ func _update_objective() -> void:
 		"tspin":
 			objective_label.text = tr("TXT_GUIDE_SIM_TSPIN")
 		"combo":
-			objective_label.text = tr("TXT_GUIDE_SIM_COMBO") % sim_combo
+			objective_label.text = tr("TXT_GUIDE_SIM_COMBO") % maxi(sim_combo, 0)
 		"wallkick":
 			objective_label.text = tr("TXT_GUIDE_SIM_WALLKICK")
 		_:
@@ -827,7 +826,7 @@ func _lock_sim_piece() -> void:
 		"combo":
 			if cleared > 0:
 				sim_combo += 1
-				if sim_combo >= 5:
+				if sim_combo >= 4:
 					sim_success = true
 					sim_locked = true
 					_set_feedback(tr("TXT_GUIDE_SUC_COMBO") % elapsed, true)
@@ -1004,14 +1003,14 @@ func _versus_tetris_section(show_title: bool = true) -> Control:
 	margin.add_child(box)
 
 	if show_title:
-		box.add_child(_label("01 对战俄罗斯方块", 22, Color("0f1f45")))
-	box.add_child(_paragraph("对战的目标不是单纯消行，而是在保证自己不被顶出场地的同时，把攻击转化为对手需要处理的垃圾行。你打出的攻击越高，对手的攻击条压力越大；对手打来的攻击也会先进入你的攻击条，随后变成垃圾行进入棋盘。"))
-	box.add_child(_paragraph("因此，对战中的每一步都要同时考虑两件事：这一手能不能制造攻击，以及这一手能不能处理即将到来的垃圾。很多时候，先用消行抵消攻击，比继续堆高准备大招更安全。"))
+		box.add_child(_label(tr("TXT_GUIDE_VERSUS_TITLE"), 22, Color("0f1f45")))
+	box.add_child(_paragraph(tr("TXT_GUIDE_VERSUS_BODY_1")))
+	box.add_child(_paragraph(tr("TXT_GUIDE_VERSUS_BODY_2")))
 
-	box.add_child(_list_section("阅读攻击条时先看三件事", [
-		"攻击条越高，下一次不消行锁定时越危险。",
-		"如果当前地形已经很高，优先考虑清线和抵消垃圾。",
-		"如果攻击条压力较低，可以继续准备 Tetris、T-Spin 或 Combo。"
+	box.add_child(_list_section(tr("TXT_GUIDE_VERSUS_LIST_TITLE"), [
+		tr("TXT_GUIDE_VERSUS_LIST_1"),
+		tr("TXT_GUIDE_VERSUS_LIST_2"),
+		tr("TXT_GUIDE_VERSUS_LIST_3")
 	]))
 	return panel
 
@@ -1024,35 +1023,35 @@ func _general_technique_section(show_title: bool = true) -> Control:
 	margin.add_child(box)
 
 	if show_title:
-		box.add_child(_label("03 游戏技巧", 22, Color("0f1f45")))
-	box.add_child(_paragraph("这些不是固定开局，也不是必须背下来的答案，而是适合现代俄罗斯方块的通用判断方式。新手先掌握这些习惯，再进入具体的 Tetris、Combo 和 T-Spin 教学，会更容易理解为什么要这样摆。"))
-	box.add_child(_list_section("多堆高价值消除", [
-		"不要只看到能消 1 行就立刻清掉。很多时候，保留结构等待 Tetris 或 T-Spin，会带来更高攻击。",
-		"如果地形危险，先清线保命；如果地形稳定，就可以主动准备高价值消除。"
+		box.add_child(_label(tr("TXT_GUIDE_TECH_TITLE"), 22, Color("0f1f45")))
+	box.add_child(_paragraph(tr("TXT_GUIDE_TECH_BODY")))
+	box.add_child(_list_section(tr("TXT_GUIDE_TECH_HIGH_VALUE_TITLE"), [
+		tr("TXT_GUIDE_TECH_HIGH_VALUE_1"),
+		tr("TXT_GUIDE_TECH_HIGH_VALUE_2")
 	]))
-	box.add_child(_list_section("留心垃圾与攻击条", [
-		"对战中存活是第一目标。攻击条明显升高时，先想办法抵消或降低地形。",
-		"不要在垃圾即将进入时继续盲目堆高。能安全清线，往往比强行做大攻击更好。"
+	box.add_child(_list_section(tr("TXT_GUIDE_TECH_GARBAGE_TITLE"), [
+		tr("TXT_GUIDE_TECH_GARBAGE_1"),
+		tr("TXT_GUIDE_TECH_GARBAGE_2")
 	]))
-	box.add_child(_list_section("阅读 Next 预览", [
-		"本项目会显示 5 个 Next。新手至少先看当前块和下一个块，再逐渐练习用余光看更多。",
-		"看到后续有 I、T、S/Z 时，可以提前决定井、T 槽或表面形状，减少临时补救。"
+	box.add_child(_list_section(tr("TXT_GUIDE_TECH_NEXT_TITLE"), [
+		tr("TXT_GUIDE_TECH_NEXT_1"),
+		tr("TXT_GUIDE_TECH_NEXT_2")
 	]))
-	box.add_child(_list_section("保持可继续操作的堆叠", [
-		"平整的地形更容易处理垃圾，但过于平坦也会让 S/Z 这类方块难摆。",
-		"好的堆叠不是完全平，而是保留能接住下一批方块的形状。"
+	box.add_child(_list_section(tr("TXT_GUIDE_TECH_STACK_TITLE"), [
+		tr("TXT_GUIDE_TECH_STACK_1"),
+		tr("TXT_GUIDE_TECH_STACK_2")
 	]))
-	box.add_child(_list_section("减少不必要的软降", [
-		"硬降更快，软降会增加操作时间和按键数。",
-		"T-Spin 等技巧确实需要软降，但普通堆叠时应尽量减少长距离软降。"
+	box.add_child(_list_section(tr("TXT_GUIDE_TECH_SOFT_DROP_TITLE"), [
+		tr("TXT_GUIDE_TECH_SOFT_DROP_1"),
+		tr("TXT_GUIDE_TECH_SOFT_DROP_2")
 	]))
 	return panel
 
 
 func _basics_placeholder_section() -> Control:
 	return _text_section(
-		"04 Replay 复盘与成长",
-		"这一章后续连接 Replay 系统：解释如何查看自己的消行、攻击、Combo、T-Spin、地形风险与 AI 建议。当前先保留位置，等 Replay 的 Guide 文案定稿后再展开。"
+		tr("TXT_GUIDE_REPLAY_PLACEHOLDER_TITLE"),
+		tr("TXT_GUIDE_REPLAY_PLACEHOLDER_BODY")
 	)
 
 

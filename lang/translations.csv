@@ -271,11 +271,11 @@ TXT_GUIDE_CH2_CONCEPT,"Combo 指连续多次清线。每次方块锁定后只要
 TXT_GUIDE_CH2_WHY_1,地形已经很高，需要边降高度边反击,The stack is high and you need to lower it while attacking,地形が高く、下げながら攻撃したい時
 TXT_GUIDE_CH2_WHY_2,手里连续有适合补线的小块,You have pieces that can keep filling the gap,溝を埋め続けられるブロックが続く時
 TXT_GUIDE_CH2_WHY_3,想用低风险方式持续给对手压力,You want steady pressure with low risk,低リスクで圧力をかけ続けたい時
-TXT_GUIDE_CH2_VALUE,从 Combo 3 开始会有额外攻击力。连击越长，额外行数越高，并且会叠加在本次清线本身的攻击力上。,Bonus damage starts at Combo 3. Longer Combos add more damage on top of the current clear.,Combo 3 から追加攻撃力が入ります。Combo が長いほど、本来の消去攻撃力に追加分が乗ります。
+TXT_GUIDE_CH2_VALUE,从 Combo 1（第二次连续消行）开始会有额外攻击力。连击越长，额外行数越高，并且会叠加在本次清线本身的攻击力上。,Bonus damage starts at Combo 1, which is the second consecutive clear. Longer Combos add more damage on top of the current clear.,Combo 1（2回目の連続消去）から追加攻撃力が入ります。Combo が長いほど、本来の消去攻撃力に追加分が乗ります。
 TXT_GUIDE_CH2_STEP_1,先留出能连续补线的竖槽,Leave a vertical gap that can be filled repeatedly,連続して埋められる縦の溝を残す
 TXT_GUIDE_CH2_STEP_2,把小块放进槽内，每一步都至少清一行,Place pieces into the gap so every move clears at least one line,毎手 1 ライン以上消えるように溝へ置く
 TXT_GUIDE_CH2_STEP_3,不要为了大消破坏下一步的入口,Do not break the next entry just to chase a bigger clear,大きく消すために次の入口を壊さない
-TXT_GUIDE_CH2_STEP_4,观察计数，目标是不中断地推到 Combo 3 以上,Watch the counter and push past Combo 3 without breaking,カウントを見ながら Combo 3 以上までつなげる
+TXT_GUIDE_CH2_STEP_4,观察计数，目标是从 Combo 1 开始不中断地继续延长,Watch the counter and keep extending from Combo 1 onward,カウントを見ながら Combo 1 から途切れずに伸ばす
 TXT_GUIDE_CH2_ERR_1,优先保留下一个方块能清线的位置,Keep a place where the next piece can clear,次のブロックで消せる場所を優先して残す
 TXT_GUIDE_CH2_ERR_2,地形越简单，Combo 越容易延续,Simple terrain makes Combo easier to continue,地形が単純なほど Combo は続けやすい
 TXT_GUIDE_CH2_ERR_3,断连通常不是因为这一步错，而是上一步没有给下一步留空间,A broken Combo often starts from the previous move not leaving space,Combo 切れは今の手ではなく、前の手で次の空間を残せていないことが多い
@@ -327,7 +327,7 @@ TXT_GUIDE_OP_MOVE_RIGHT_WELL,右移到井旁,Move right near well,井戸の横�
 TXT_GUIDE_OP_MOVE_WELL_EDGE,贴住井口,Align with well edge,井戸の端に合わせる
 TXT_GUIDE_OP_DROP_WELL,下落插入井,Drop into well,井戸の中に落とす
 TXT_GUIDE_OBJ_TSPIN,目标：将 T 方块旋入 T 槽，同时消除 2 行，完成 T-Spin Double。,Objective: Spin T into slot to clear 2 lines (TSD).,目標: T ブロックを Tスロットへ回転で入れ、2ライン消して T-Spin Double を完成させる。
-TXT_GUIDE_OBJ_COMBO,目标：用 O 方块连续落入右侧空位消行，完成 Combo 5。,Objective: Drop O piece to clear lines consecutively (Combo 5).,目標: O ブロックで連続消去し、Combo 5 を完成させる。
+TXT_GUIDE_OBJ_COMBO,目标：用 O 方块连续落入右侧空位，完成 5 次连续消行。,Objective: Drop O pieces into the right gap and clear 5 times in a row.,目標: O ブロックを右側の空きへ落とし、5回連続でラインを消す。
 TXT_GUIDE_OBJ_WALLKICK,目标：将 L 方块旋转，观察踢墙导致的中心点偏移。,Objective: Rotate L piece and observe wall kick offset.,目標: L ブロックを回転させ、Wall Kick による中心点のズレを見る。
 TXT_GUIDE_OBJ_TETRIS,目标：将 I 方块旋成竖直，放入右侧井，完成 Tetris 四消。,Objective: Rotate I piece and drop into well for Tetris.,目標: I ブロックを縦にして井戸へ入れ、Tetris を完成させる。
 TXT_GUIDE_SIM_TSPIN,T-Spin Double 模拟,T-Spin Double Sim,T-Spin Double シミュ
@@ -339,8 +339,8 @@ TXT_GUIDE_ERR_LOCK,还没有贴住地形。继续软降，或者用硬降。,Not
 TXT_GUIDE_SUC_TSPIN,成功！T-Spin Double —— 旋入 T 槽消除 2 行，攻击力 4 行。用时 %.1f 秒。,Success! T-Spin Double! Cleared 2 lines. Time: %.1f s.,成功！T-Spin Double！2ライン消去。時間: %.1f 秒。
 TXT_GUIDE_ERR_TSPIN_1,完成了 T-Spin Single（消 1 行），但目标是 T-Spin Double（消 2 行）。检查 T 槽结构，按重置再试。,Did a T-Spin Single. Target is Double. Reset and retry.,T-Spin Single です。目標は T-Spin Double です。リセットして再試行してください。
 TXT_GUIDE_ERR_TSPIN_0,没有达成 T-Spin。最后一步必须是旋转卡入，而且要消 2 行。按重置再试。,Failed T-Spin. Last move must be rotation clearing 2 lines.,T-Spin失敗。最後は回転で2ライン消去する必要があります。
-TXT_GUIDE_SUC_COMBO,成功！Combo 5 —— 连续 5 次消行，用时 %.1f 秒。,Success! Combo 5! Time: %.1f s.,成功！Combo 5！時間: %.1f 秒。
-TXT_GUIDE_SUC_COMBO_N,Combo %d！额外攻击力 +%d 行。继续保持连击。,Combo %d! Bonus +%d lines. Keep it up.,Combo %d！ボーナス +%d ライン。続けて！
+TXT_GUIDE_SUC_COMBO,成功！连续 5 次消行，用时 %.1f 秒。,Success! 5 consecutive clears! Time: %.1f s.,成功！5回連続消去！時間: %.1f 秒。
+TXT_GUIDE_SUC_COMBO_N,Combo %d！额外攻击力 %d 行。继续保持连击。,Combo %d! Bonus damage %d lines. Keep it up.,Combo %d！追加攻撃力 %d ライン。続けて！
 TXT_GUIDE_ERR_COMBO,连击中断——这次落块没有消行。Combo 要求每次都消行。,Combo broken. You must clear lines every piece.,Combo が途切れました。毎回ラインを消す必要があります。
 TXT_GUIDE_SUC_LSPIN,成功！L-Spin —— 最后一次旋转靠踢墙进入空洞，并完成 2 行消除。,Success! L-Spin completed.,成功！L-Spin 完了。
 TXT_GUIDE_ERR_LSPIN,还没有完成 L-Spin。需要最后一步靠踢墙旋入右下角，并完成 2 行消除。,L-Spin not completed. Spin into bottom right corner.,L-Spin未完了。右下に回転して入れてください。
@@ -352,8 +352,53 @@ TXT_GUIDE_ATK_H1,消除类型,Clear Type,消去タイプ
 TXT_GUIDE_ATK_H2,消除行数,Lines Cleared,消去ライン
 TXT_GUIDE_ATK_H3,攻击力,Damage,攻撃力
 TXT_GUIDE_B2B_TITLE,B2B（Back-to-Back）,B2B (Back-to-Back),B2B (Back-to-Back)
-TXT_GUIDE_B2B_DESC,连续打出「困难消除」（Tetris 或 T-Spin）不中断，额外 +1 行攻击力。中间穿插普通消除会中断 B2B。,Consecutive difficult clears (Tetris/T-Spin) give +1 damage.,Tetris または T-Spin を連続で行うと +1 のボーナス。普通の消去を挟むと B2B は切れます。
+TXT_GUIDE_B2B_DESC,连续打出「困难消除」（Tetris 或任意 Spin 消除）不中断，额外 +1 行攻击力。中间穿插普通消除会中断 B2B。,Consecutive difficult clears (Tetris or any Spin clear) give +1 damage.,Tetris または任意の Spin 消去を連続で行うと +1 のボーナス。普通の消去を挟むと B2B は切れます。
 TXT_GUIDE_COMBO_TITLE,Combo 额外攻击力,Combo Bonus Damage,Combo 追加攻撃力
-TXT_GUIDE_COMBO_DESC1,连击次数 → 额外行数：1→0  2→0  3→+1  4→+1  5→+2  6→+2  7→+3  8→+3  9→+4  10+→+4~5,Combo -> Bonus: 1->0 2->0 3->+1 4->+1 5->+2 6->+2 7->+3 8->+3 9->+4 10+->+4~5,Combo -> 追加: 1->0 2->0 3->+1 4->+1 5->+2 6->+2 7->+3 8->+3 9->+4 10+->+4~5
+TXT_GUIDE_COMBO_DESC1,连击次数 → 额外行数：0→0  1→+1  2→+1  3→+2  4→+2  5→+3  6→+3  7→+4  8→+4  9→+4  10+→+5,Combo -> Bonus: 0->0 1->+1 2->+1 3->+2 4->+2 5->+3 6->+3 7->+4 8->+4 9->+4 10+->+5,Combo -> 追加: 0->0 1->+1 2->+1 3->+2 4->+2 5->+3 6->+3 7->+4 8->+4 9->+4 10+->+5
 TXT_GUIDE_COMBO_DESC2,额外攻击力叠加在消除本身的攻击力之上。,Bonus damage is added to the base damage of the clear.,追加攻撃力は基本攻撃力に加算されます。
 TXT_GUIDE_OP_ROT_CW_90,顺时针旋转 90°,Rotate CW 90°,右回転 90°
+TXT_GUIDE_BASIC_VERSUS_TITLE,"对战俄罗斯方块","Versus Tetris","対戦型Tetris"
+TXT_GUIDE_BASIC_VERSUS_TAG,"规则","Rules","ルール"
+TXT_GUIDE_BASIC_VERSUS_TIME,"5 分钟","5 mins","5分"
+TXT_GUIDE_BASIC_VERSUS_SUMMARY,"先理解攻击、垃圾行、攻击条与抵消，这是对战判断的基础。","Learn attack, garbage lines, attack bar, and canceling first.","まず攻撃、Garbage Line、Attack Bar、相殺を理解します。これは対戦判断の基礎です。"
+TXT_GUIDE_BASIC_ATTACK_TITLE,"消除造成的攻击力","Attack From Clears","消去による攻撃力"
+TXT_GUIDE_BASIC_ATTACK_TAG,"数值","Values","数値"
+TXT_GUIDE_BASIC_ATTACK_TIME,"5 分钟","5 mins","5分"
+TXT_GUIDE_BASIC_ATTACK_SUMMARY,"用表格确认 Tetris、T-Spin、B2B、Combo 会带来多少攻击。","Check how much attack Tetris, T-Spin, B2B, and Combo create.","Tetris、T-Spin、B2B、Combo がどれだけ攻撃力を生むかを表で確認します。"
+TXT_GUIDE_BASIC_TECH_TITLE,"游戏技巧","Play Techniques","プレイ技術"
+TXT_GUIDE_BASIC_TECH_TAG,"习惯","Habits","習慣"
+TXT_GUIDE_BASIC_TECH_TIME,"8 分钟","8 mins","8分"
+TXT_GUIDE_BASIC_TECH_SUMMARY,"整理新手最先该练的通用思路：堆叠、预览、垃圾与操作效率。","Learn the first habits to practice: stacking, preview, garbage, and input efficiency.","初心者が先に練習すべき考え方として、Stacking、Next Preview、Garbage、操作効率を整理します。"
+TXT_GUIDE_BASIC_REPLAY_TITLE,"Replay 复盘与成长","Replay Review and Growth","Replay 振り返りと成長"
+TXT_GUIDE_BASIC_REPLAY_TAG,"占位","Draft","準備中"
+TXT_GUIDE_BASIC_REPLAY_TIME,"后续","Later","後続"
+TXT_GUIDE_BASIC_REPLAY_SUMMARY,"后续连接 Replay 系统，说明如何阅读 AI 分析并复盘自己的局。","Later this will connect to Replay and explain how to read AI analysis.","後続では Replay システムと接続し、AI分析を読みながら自分の対局を振り返る方法を扱います。"
+TXT_GUIDE_PATH_VERSUS,"对战机制","Versus Rules","対戦メカニクス"
+TXT_GUIDE_PATH_ATTACK,"攻击力","Attack Power","攻撃力"
+TXT_GUIDE_PATH_TECHNIQUE,"游戏技巧","Techniques","プレイ技術"
+TXT_GUIDE_VERSUS_TITLE,"01 对战俄罗斯方块","01 Versus Tetris","01 対戦型Tetris"
+TXT_GUIDE_VERSUS_BODY_1,"对战的目标不是单纯消行，而是在保证自己不被顶出场地的同时，把攻击转化为对手需要处理的垃圾行。你打出的攻击越高，对手的攻击条压力越大；对手打来的攻击也会先进入你的攻击条，随后变成垃圾行进入棋盘。","Versus Tetris is not only about clearing lines. You stay alive while turning clears into garbage lines the opponent must handle. Higher attack creates more pressure on the opponent attack bar; incoming attack first appears on your own attack bar and later enters the board as garbage.","対戦型Tetris の目的は、単にラインを消すことではありません。自分がTop Outしないようにしながら、消去を相手が処理すべき Garbage Line に変換します。攻撃力が高いほど相手の Attack Bar への圧力は大きくなり、相手からの攻撃もまず自分の Attack Bar に表示された後、Garbage Line として盤面に入ります。"
+TXT_GUIDE_VERSUS_BODY_2,"因此，对战中的每一步都要同时考虑两件事：这一手能不能制造攻击，以及这一手能不能处理即将到来的垃圾。很多时候，先用消行抵消攻击，比继续堆高准备大招更安全。","Each move must answer two questions: can this move create attack, and can it handle incoming garbage? Often, canceling with a clear is safer than continuing to stack for a large attack.","そのため、対戦中の一手では、攻撃を作れるか、近く入ってくる Garbage を処理できるかの二点を同時に考える必要があります。多くの場合、大きな攻撃を準備し続けるより、消去で相殺する方が安全です。"
+TXT_GUIDE_VERSUS_LIST_TITLE,"阅读攻击条时先看三件事","Read the attack bar through three checks","Attack Bar を読む時の三つの確認"
+TXT_GUIDE_VERSUS_LIST_1,"攻击条越高，下一次不消行锁定时越危险。","A higher attack bar means the next lock without a clear is more dangerous.","Attack Bar が高いほど、次にラインを消さずに固定した時の危険度が上がります。"
+TXT_GUIDE_VERSUS_LIST_2,"如果当前地形已经很高，优先考虑清线和抵消垃圾。","If your stack is already high, prioritize clearing and canceling garbage.","現在の地形が高い場合は、ライン消去と Garbage の相殺を優先します。"
+TXT_GUIDE_VERSUS_LIST_3,"如果攻击条压力较低，可以继续准备 Tetris、T-Spin 或 Combo。","If pressure is low, you can keep preparing Tetris, T-Spin, or Combo.","Attack Bar の圧力が低い場合は、Tetris、T-Spin、Combo の準備を続けられます。"
+TXT_GUIDE_TECH_TITLE,"03 游戏技巧","03 Play Techniques","03 プレイ技術"
+TXT_GUIDE_TECH_BODY,"这些不是固定开局，也不是必须背下来的答案，而是适合现代俄罗斯方块的通用判断方式。新手先掌握这些习惯，再进入具体的 Tetris、Combo 和 T-Spin 教学，会更容易理解为什么要这样摆。","These are not fixed openings or answers to memorize. They are general decision habits for modern Tetris. Learn them first, then Tetris, Combo, and T-Spin practice will make more sense.","これは固定開幕でも暗記すべき答えでもなく、現代的な Tetris に合う汎用的な判断方法です。初心者は先にこれらの習慣を身につけることで、Tetris、Combo、T-Spin の練習でなぜその置き方をするのか理解しやすくなります。"
+TXT_GUIDE_TECH_HIGH_VALUE_TITLE,"多堆高价值消除","Prepare high-value clears","価値の高い消去を準備する"
+TXT_GUIDE_TECH_HIGH_VALUE_1,"不要只看到能消 1 行就立刻清掉。很多时候，保留结构等待 Tetris 或 T-Spin，会带来更高攻击。","Do not clear one line immediately just because you can. Often, keeping the structure for Tetris or T-Spin creates more attack.","1ライン消せるからといってすぐ消す必要はありません。Tetris や T-Spin を待てる構造を残す方が、高い攻撃力につながることがあります。"
+TXT_GUIDE_TECH_HIGH_VALUE_2,"如果地形危险，先清线保命；如果地形稳定，就可以主动准备高价值消除。","If the stack is dangerous, clear to survive. If it is stable, prepare a high-value clear.","地形が危険なら生存のために消去し、安定しているなら価値の高い消去を準備します。"
+TXT_GUIDE_TECH_GARBAGE_TITLE,"留心垃圾与攻击条","Watch garbage and the attack bar","Garbage と Attack Bar を見る"
+TXT_GUIDE_TECH_GARBAGE_1,"对战中存活是第一目标。攻击条明显升高时，先想办法抵消或降低地形。","Survival comes first. When the attack bar rises, cancel it or lower the stack.","対戦では生存が第一です。Attack Bar が大きく上がった時は、まず相殺するか地形を下げます。"
+TXT_GUIDE_TECH_GARBAGE_2,"不要在垃圾即将进入时继续盲目堆高。能安全清线，往往比强行做大攻击更好。","Do not blindly stack when garbage is about to enter. A safe clear is often better than forcing a large attack.","Garbage が入る直前に無理に積み上げないようにします。安全に消せるなら、強引に大きな攻撃を狙うより良い場合が多いです。"
+TXT_GUIDE_TECH_NEXT_TITLE,"阅读 Next 预览","Read the Next queue","Next Preview を読む"
+TXT_GUIDE_TECH_NEXT_1,"本项目会显示 5 个 Next。新手至少先看当前块和下一个块，再逐渐练习用余光看更多。","This project shows 5 Next pieces. Beginners should read the current piece and the next piece first, then gradually use peripheral vision for more.","本プロジェクトでは 5 個の Next を表示します。初心者はまず現在のブロックと次のブロックを見て、少しずつ周辺視野で多くの Next を読む練習をします。"
+TXT_GUIDE_TECH_NEXT_2,"看到后续有 I、T、S/Z 时，可以提前决定井、T 槽或表面形状，减少临时补救。","When I, T, or S/Z are coming, decide the well, T-slot, or surface shape early to reduce emergency fixes.","後続に I、T、S/Z が見えたら、井戸、Tスロット、表面形状を早めに決めることで、直前の補修を減らせます。"
+TXT_GUIDE_TECH_STACK_TITLE,"保持可继续操作的堆叠","Keep the stack playable","操作を続けやすいStackを保つ"
+TXT_GUIDE_TECH_STACK_1,"平整的地形更容易处理垃圾，但过于平坦也会让 S/Z 这类方块难摆。","A flat stack handles garbage more easily, but a stack that is too flat can make S/Z hard to place.","平らな地形は Garbage を処理しやすい一方で、平らすぎると S/Z が置きにくくなります。"
+TXT_GUIDE_TECH_STACK_2,"好的堆叠不是完全平，而是保留能接住下一批方块的形状。","A good stack is not perfectly flat. It keeps shapes that can accept upcoming pieces.","良いStackは完全に平らな形ではなく、次のブロックを受けられる形を残しています。"
+TXT_GUIDE_TECH_SOFT_DROP_TITLE,"减少不必要的软降","Reduce unnecessary soft drops","不要なSoft Dropを減らす"
+TXT_GUIDE_TECH_SOFT_DROP_1,"硬降更快，软降会增加操作时间和按键数。","Hard drop is faster. Soft drop increases time and inputs.","Hard Drop の方が速く、Soft Drop は操作時間と入力数を増やします。"
+TXT_GUIDE_TECH_SOFT_DROP_2,"T-Spin 等技巧确实需要软降，但普通堆叠时应尽量减少长距离软降。","T-Spin and similar techniques sometimes need soft drop, but normal stacking should avoid long soft drops when possible.","T-Spin などでは Soft Drop が必要になることがありますが、通常のStackingでは長距離の Soft Drop をできるだけ減らします。"
+TXT_GUIDE_REPLAY_PLACEHOLDER_TITLE,"04 Replay 复盘与成长","04 Replay Review and Growth","04 Replay 振り返りと成長"
+TXT_GUIDE_REPLAY_PLACEHOLDER_BODY,"这一章后续连接 Replay 系统：解释如何查看自己的消行、攻击、Combo、T-Spin、地形风险与 AI 建议。当前先保留位置，等 Replay 的 Guide 文案定稿后再展开。","This chapter will later connect to the Replay system and explain how to read clears, attack, Combo, T-Spin, terrain risk, and AI suggestions. It is kept as a placeholder until the Replay guide text is finalized.","この章は後続で Replay システムと接続し、自分の消去、攻撃、Combo、T-Spin、地形リスク、AI提案の読み方を説明します。現時点では位置を確保し、Replay 用の Guide 文面が固まってから展開します。"
