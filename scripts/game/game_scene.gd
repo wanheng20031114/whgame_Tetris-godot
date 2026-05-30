@@ -18,6 +18,7 @@ extends TetrisCore
 @onready var sfx_tetris: AudioStreamPlayer = $SfxSuccess
 @onready var sfx_spin: AudioStreamPlayer = $SfxSpin
 @onready var sfx_death: AudioStreamPlayer = $SfxDeath
+@onready var sfx_move: AudioStreamPlayer = get_node_or_null("SfxMove") as AudioStreamPlayer
 
 var garbage_bar: GarbageBar
 var single_player_attack_timer: float = 0.0
@@ -31,8 +32,11 @@ var _game_over_focus_ready_msec: int = 0
 
 var spin_text_tween: Tween
 var combo_text_tween: Tween
+var _last_move_sfx_msec: int = 0
 
 const GARBAGE_BAR_GAP: float = 6.0
+const MOVE_SFX_MIN_INTERVAL_MSEC: int = 45
+const SFX_MOVE_STREAM: AudioStream = preload("res://audio/move_scrape.wav")
 const ATTACK_DAMAGE_POPUP := preload("res://scripts/ui/attack_damage_popup.gd")
 const B2B_STREAK_BADGE := preload("res://scripts/ui/b2b_streak_badge.gd")
 
@@ -57,6 +61,7 @@ func _ready() -> void:
 	_setup_input_actions()
 
 	_initialize_ui()
+	_assign_move_sfx_stream()
 	_update_texts()
 
 	score_changed.connect(_on_score_changed)
@@ -145,6 +150,32 @@ func _update_single_player_garbage(delta: float) -> void:
 
 	if garbage_bar:
 		garbage_bar.update_bar(grey_count, yellow_count, ready_garbage)
+
+
+func _assign_move_sfx_stream() -> void:
+	if sfx_move == null:
+		sfx_move = AudioStreamPlayer.new()
+		sfx_move.name = "SfxMove"
+		add_child(sfx_move)
+	sfx_move.stream = SFX_MOVE_STREAM
+	sfx_move.volume_db = 1.5
+	sfx_move.pitch_scale = 1.0
+	sfx_move.max_polyphony = 4
+
+
+func _on_successful_horizontal_move(_dx: int) -> void:
+	if sfx_move == null:
+		return
+	var now := Time.get_ticks_msec()
+	if now - _last_move_sfx_msec < MOVE_SFX_MIN_INTERVAL_MSEC:
+		return
+	_last_move_sfx_msec = now
+	sfx_move.play()
+
+
+func _play_piece_lock_sound() -> void:
+	if sfx_planting:
+		sfx_planting.play()
 
 
 func _on_score_changed(s: int, l: int, ln: int) -> void:
@@ -245,7 +276,7 @@ func _lock_piece() -> void:
 
 	# === 核心逻辑内联结束 ===
 
-	sfx_planting.play()
+	_play_piece_lock_sound_once()
 
 	var did_clear_lines: bool = scoring.lines > lines_before_lock
 	if will_receive_garbage and not did_clear_lines:

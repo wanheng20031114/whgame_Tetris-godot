@@ -13,6 +13,7 @@ signal lines_cleared(amount: int, is_spin: bool, is_t_spin: bool, damage: int)
 signal rows_cleared(rows_data: Array) # 传递被消行的详细数据，用于粒子效果
 signal game_over_triggered()
 signal board_updated()
+signal piece_moved(dx: int, dy: int)
 
 # ==============================================================================
 # @export 配置
@@ -69,6 +70,7 @@ var gravity_timer: float = 0.0
 var last_was_rotation: bool = false
 var last_kick_index: int = 0
 var next_displays: Array = []
+var lock_sound_played_for_current_lock: bool = false
 
 # ==============================================================================
 # 生命周期
@@ -218,9 +220,23 @@ func _try_move(dx: int, dy: int) -> bool:
 			last_was_rotation = false
 			last_kick_index = 0
 		if dx != 0:
+			piece_moved.emit(dx, dy)
+			_on_successful_horizontal_move(dx)
 			_on_piece_manipulated()
 		return true
 	return false
+
+func _on_successful_horizontal_move(_dx: int) -> void:
+	pass
+
+func _play_piece_lock_sound() -> void:
+	pass
+
+func _play_piece_lock_sound_once() -> void:
+	if lock_sound_played_for_current_lock:
+		return
+	lock_sound_played_for_current_lock = true
+	_play_piece_lock_sound()
 
 func _try_rotate(direction: int) -> bool:
 	var new_rot: int
@@ -266,6 +282,7 @@ func _hard_drop() -> void:
 	scoring.add_hard_drop_score(cells)
 	score_changed.emit(scoring.score, scoring.level, scoring.lines)
 	_sync_piece_position()
+	_play_piece_lock_sound_once()
 	_lock_piece()
 
 func _update_lock_delay() -> void:
@@ -388,6 +405,7 @@ func _try_hold() -> void:
 		_sync_piece_position()
 
 func _spawn_next_piece() -> void:
+	lock_sound_played_for_current_lock = false
 	cur_type = bag.next()
 	cur_rot = PieceData.RotationState.SPAWN
 	cur_col = spawn_col

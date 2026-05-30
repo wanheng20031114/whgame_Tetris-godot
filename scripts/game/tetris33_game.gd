@@ -36,6 +36,7 @@ extends TetrisCore
 @onready var sfx_tetris: AudioStreamPlayer = $SfxSuccess
 @onready var sfx_spin: AudioStreamPlayer = $SfxSpin
 @onready var sfx_death: AudioStreamPlayer = $SfxDeath
+@onready var sfx_move: AudioStreamPlayer = get_node_or_null("SfxMove") as AudioStreamPlayer
 
 const BGM_STREAM: AudioStream = preload("res://audio/bgm.ogg")
 const SFX_PLANTING_STREAM: AudioStream = preload("res://audio/planting.ogg")
@@ -43,6 +44,8 @@ const SFX_LINE_CLEAR_STREAM: AudioStream = preload("res://audio/line_clear.ogg")
 const SFX_TETRIS_STREAM: AudioStream = preload("res://audio/tetris.ogg")
 const SFX_SPIN_STREAM: AudioStream = preload("res://audio/spin.ogg")
 const SFX_DEATH_STREAM: AudioStream = preload("res://audio/death.ogg")
+const SFX_MOVE_STREAM: AudioStream = preload("res://audio/move_scrape.wav")
+const MOVE_SFX_MIN_INTERVAL_MSEC: int = 45
 const ATTACK_DAMAGE_POPUP := preload("res://scripts/ui/attack_damage_popup.gd")
 const B2B_STREAK_BADGE := preload("res://scripts/ui/b2b_streak_badge.gd")
 const GARBAGE_BAR_GAP: float = 6.0
@@ -88,6 +91,7 @@ var _cached_board_after_drop: Array = []
 
 var _action_text_tween: Tween
 var _combo_text_tween: Tween
+var _last_move_sfx_msec: int = 0
 
 
 func _ready() -> void:
@@ -155,6 +159,29 @@ func _assign_audio_streams() -> void:
 		sfx_spin.stream = SFX_SPIN_STREAM
 	if sfx_death:
 		sfx_death.stream = SFX_DEATH_STREAM
+	if sfx_move == null:
+		sfx_move = AudioStreamPlayer.new()
+		sfx_move.name = "SfxMove"
+		add_child(sfx_move)
+	sfx_move.stream = SFX_MOVE_STREAM
+	sfx_move.volume_db = 1.5
+	sfx_move.pitch_scale = 1.0
+	sfx_move.max_polyphony = 4
+
+
+func _on_successful_horizontal_move(_dx: int) -> void:
+	if sfx_move == null:
+		return
+	var now := Time.get_ticks_msec()
+	if now - _last_move_sfx_msec < MOVE_SFX_MIN_INTERVAL_MSEC:
+		return
+	_last_move_sfx_msec = now
+	sfx_move.play()
+
+
+func _play_piece_lock_sound() -> void:
+	if sfx_planting:
+		sfx_planting.play()
 
 
 func _trf(key: String, args: Array = []) -> String:
@@ -629,11 +656,10 @@ func _lock_piece() -> void:
 		if player_garbage_bar:
 			player_garbage_bar.update_bar(0, 0, 0)
 
+	_play_piece_lock_sound_once()
+
 	hold_used = false
 	_spawn_next_piece()
-
-	if sfx_planting:
-		sfx_planting.play()
 
 	_record_piece_snapshot(
 		locked_piece_type,
