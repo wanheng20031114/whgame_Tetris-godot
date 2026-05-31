@@ -164,6 +164,9 @@ TXT_REPLAY_RADAR_EFFICIENCY_TOOLTIP,效率：由 APP 和 KPP 加权计算，兼�
 TXT_REPLAY_RADAR_STRUCTURE_TOOLTIP,结构：由地形平整度与空洞质量计算，越高代表堆叠更健康。,Structure: Based on field flatness and hole quality. Higher means a healthier stack.,構造：地形の平らさと穴の質から計算します。高いほど積みが良好です。
 TXT_REPLAY_RADAR_STABILITY_TOOLTIP,稳定：由封闭空洞与空区碎片化计算，越高代表地形风险越低。,Stability: Based on trapped holes and empty-region fragmentation. Higher means lower field risk.,安定：埋まった穴と空白領域の分断から計算します。高いほど地形リスクが低いです。
 TXT_REPLAY_RADAR_VISION_TOOLTIP,视野：由 Spin、Tetris 与三消等高价值消行比例计算。,Vision: Based on the share of high-value clears such as Spin Tetris and triples.,視野：SpinやTetrisやトリプルなど高価値な消去の割合から計算します。
+TXT_RADAR_TREND_IMPROVED,%s 近期提升 %.0f 分。最近平均 %.1f，对比前段 %.1f。,%s improved by %.0f points recently. Recent avg %.1f vs previous %.1f.,%s は最近 %.0f 点向上。直近平均 %.1f、前期間 %.1f。
+TXT_RADAR_TREND_DECLINED,%s 近期退步 %.0f 分。最近平均 %.1f，对比前段 %.1f。,%s declined by %.0f points recently. Recent avg %.1f vs previous %.1f.,%s は最近 %.0f 点低下。直近平均 %.1f、前期間 %.1f。
+TXT_RADAR_TREND_STABLE,%s 最近变化不大，差值 %.0f 分。最近平均 %.1f，对比前段 %.1f。,%s is mostly unchanged recently with a %.0f point gap. Recent avg %.1f vs previous %.1f.,%s は最近ほぼ変化なし。差は %.0f 点。直近平均 %.1f、前期間 %.1f。
 TXT_KEYBINDINGS,按键设置,KEY BINDINGS,キー設定
 TXT_BIND_TIP,点击一个槽位后按下键盘或手柄按键进行绑定（每个操作最多3个输入，按 ESC 取消监听）,Click a slot then press a keyboard or gamepad button to bind (up to 3 per action; press ESC to cancel).,スロットを押してからキーボードまたはゲームパッドのボタンを入力してください（各操作最大3つ、ESCでキャンセル）
 TXT_BIND_RESET_DEFAULT,恢复默认按键,RESET TO DEFAULT,デフォルトに戻す

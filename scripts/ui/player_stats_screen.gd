@@ -2,6 +2,18 @@ class_name PlayerStatsScreen
 extends Control
 
 const MAX_HISTORY_DISPLAY: int = 20
+const RADAR_TREND_WINDOW: int = 5
+const RADAR_TREND_MIN_GAMES: int = RADAR_TREND_WINDOW * 2
+const RADAR_TREND_STABLE_THRESHOLD: float = 5.0
+const RADAR_KEYS: Array[String] = ["speed", "attack", "efficiency", "structure", "stability", "vision"]
+const RADAR_LABEL_KEYS: Dictionary = {
+	"speed": "TXT_RADAR_SPEED",
+	"attack": "TXT_RADAR_ATTACK",
+	"efficiency": "TXT_RADAR_EFFICIENCY",
+	"structure": "TXT_RADAR_STRUCTURE",
+	"stability": "TXT_RADAR_STABILITY",
+	"vision": "TXT_RADAR_VISION",
+}
 
 const TEXT_DIM_COLOR := Color(0.55, 0.58, 0.70, 1.0)
 const VALUE_HIGHLIGHT_COLOR := Color(0.3, 0.85, 1.0, 1.0)
@@ -100,6 +112,13 @@ func _load_and_display_data() -> void:
 		radar = {"speed": 0, "attack": 0, "efficiency": 0, "structure": 0, "stability": 0, "vision": 0}
 	if radar_chart and radar_chart.has_method("set_data"):
 		radar_chart.set_data(radar)
+	if radar_chart and radar_chart.has_method("set_trend_data"):
+		var trend: Dictionary = _build_radar_trend(history)
+		var trend_deltas: Dictionary = trend.get("deltas", {})
+		if trend_deltas.is_empty():
+			radar_chart.call("clear_trend_data")
+		else:
+			radar_chart.call("set_trend_data", trend_deltas, trend.get("tooltips", {}))
 
 	lbl_player_name.text = str(stats.get("player_name", "-"))
 	lbl_total_games.text = str(total_games)
@@ -139,6 +158,79 @@ func _load_and_display_data() -> void:
 		lbl_kpp.text = tr("TXT_NA")
 
 	_populate_history(history)
+
+
+func _build_radar_trend(history: Array) -> Dictionary:
+	if history.size() < RADAR_TREND_MIN_GAMES:
+		return {"deltas": {}, "tooltips": {}}
+
+	var comparable_radars: Array[Dictionary] = []
+	for i in range(history.size() - 1, -1, -1):
+		var entry: Dictionary = history[i]
+		var radar: Dictionary = _get_entry_radar_scores(entry)
+		if _has_complete_radar(radar):
+			comparable_radars.push_front(radar)
+		if comparable_radars.size() >= RADAR_TREND_MIN_GAMES:
+			break
+
+	if comparable_radars.size() < RADAR_TREND_MIN_GAMES:
+		return {"deltas": {}, "tooltips": {}}
+
+	var previous_avg: Dictionary = _average_radar_window(comparable_radars, 0, RADAR_TREND_WINDOW)
+	var recent_avg: Dictionary = _average_radar_window(comparable_radars, RADAR_TREND_WINDOW, RADAR_TREND_WINDOW)
+	var deltas: Dictionary = {}
+	var tooltips: Dictionary = {}
+
+	for key in RADAR_KEYS:
+		var delta: float = float(recent_avg.get(key, 0.0)) - float(previous_avg.get(key, 0.0))
+		deltas[key] = delta
+		tooltips[key] = _build_radar_trend_tooltip(
+			key,
+			float(recent_avg.get(key, 0.0)),
+			float(previous_avg.get(key, 0.0)),
+			delta
+		)
+
+	return {"deltas": deltas, "tooltips": tooltips}
+
+
+func _get_entry_radar_scores(entry: Dictionary) -> Dictionary:
+	var direct_radar = entry.get("radar_scores", null)
+	if direct_radar is Dictionary and _has_complete_radar(direct_radar):
+		return direct_radar
+
+	var session_id: String = str(entry.get("session_id", ""))
+	var session: Dictionary = _load_session_data(session_id)
+	var session_radar = session.get("radar_scores", {})
+	if session_radar is Dictionary:
+		return session_radar
+	return {}
+
+
+func _has_complete_radar(radar: Dictionary) -> bool:
+	for key in RADAR_KEYS:
+		if not radar.has(key):
+			return false
+	return true
+
+
+func _average_radar_window(radars: Array[Dictionary], start_index: int, count: int) -> Dictionary:
+	var result: Dictionary = {}
+	for key in RADAR_KEYS:
+		var sum: float = 0.0
+		for i in range(start_index, start_index + count):
+			sum += float(radars[i].get(key, 0.0))
+		result[key] = snapped(sum / float(count), 0.1)
+	return result
+
+
+func _build_radar_trend_tooltip(key: String, recent_avg: float, previous_avg: float, delta: float) -> String:
+	var label_text: String = tr(str(RADAR_LABEL_KEYS.get(key, key)))
+	var abs_delta: float = absf(delta)
+	var translation_key: String = "TXT_RADAR_TREND_STABLE"
+	if abs_delta > RADAR_TREND_STABLE_THRESHOLD:
+		translation_key = "TXT_RADAR_TREND_IMPROVED" if delta > 0.0 else "TXT_RADAR_TREND_DECLINED"
+	return tr(translation_key) % [label_text, abs_delta, recent_avg, previous_avg]
 
 
 func _populate_history(history: Array) -> void:

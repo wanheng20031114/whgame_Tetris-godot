@@ -41,18 +41,27 @@ const DIMENSION_TOOLTIP_KEYS: Array = [
 
 # 同步外扩，避免文字放大后压在图边缘
 @export var label_offset: float = 40.0
+@export var top_label_extra_offset: Vector2 = Vector2(0.0, -18.0)
 
 @export var show_value_labels: bool = true
 @export var value_label_color: Color = Color(0.6, 0.9, 1.0, 0.8)
+@export var show_trend_labels: bool = true
+@export var trend_improve_color: Color = Color(0.30, 1.0, 0.45, 1.0)
+@export var trend_decline_color: Color = Color(1.0, 0.35, 0.20, 1.0)
+@export var trend_stable_color: Color = Color(0.86, 0.88, 0.98, 0.86)
+@export var trend_neutral_threshold: float = 5.0
 @export var grid_levels: int = 3
 @export var animation_duration: float = 0.6
 @export var auto_minimum_size: bool = true
 
 var _current_values: Array = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
 var _target_values: Array = [0.0, 0.0, 0.0, 0.0, 0.0, 0.0]
+var _trend_deltas: Dictionary = {}
+var _trend_tooltips: Dictionary = {}
 var _animating: bool = false
 var _tween: Tween = null
 var _label_tooltip_rects: Array[Rect2] = []
+var _trend_tooltip_rects: Array[Dictionary] = []
 
 
 func set_data(values: Dictionary, animate: bool = true) -> void:
@@ -77,6 +86,20 @@ func get_data() -> Dictionary:
 	for i in range(DIMENSION_COUNT):
 		result[DIMENSION_KEYS[i]] = _current_values[i]
 	return result
+
+
+func set_trend_data(deltas: Dictionary, tooltip_texts: Dictionary = {}) -> void:
+	_trend_deltas = deltas.duplicate()
+	_trend_tooltips = tooltip_texts.duplicate()
+	queue_redraw()
+
+
+func clear_trend_data() -> void:
+	if _trend_deltas.is_empty() and _trend_tooltips.is_empty():
+		return
+	_trend_deltas.clear()
+	_trend_tooltips.clear()
+	queue_redraw()
 
 
 func _start_animation() -> void:
@@ -104,6 +127,7 @@ func _start_animation() -> void:
 func _draw() -> void:
 	var center: Vector2 = size / 2.0
 	_label_tooltip_rects.clear()
+	_trend_tooltip_rects.clear()
 
 	for level in range(1, grid_levels + 1):
 		var ratio: float = float(level) / float(grid_levels)
@@ -142,6 +166,8 @@ func _draw() -> void:
 	for i in range(DIMENSION_COUNT):
 		var angle3: float = _get_angle(i)
 		var label_anchor: Vector2 = center + Vector2(cos(angle3), sin(angle3)) * (chart_radius + label_offset)
+		if i == 0:
+			label_anchor += top_label_extra_offset
 
 		var label_text: String = tr(DIMENSION_LABEL_KEYS[i])
 		var text_size: Vector2 = font.get_string_size(label_text, HORIZONTAL_ALIGNMENT_LEFT, -1, label_font_size)
@@ -156,8 +182,36 @@ func _draw() -> void:
 			var value_offset: Vector2 = Vector2(-value_size.x / 2.0, text_size.y / 4.0 + float(value_font_size) + 2.0)
 			draw_string(font, label_anchor + value_offset, value_text, HORIZONTAL_ALIGNMENT_LEFT, -1, value_font_size, value_label_color)
 
+			if show_trend_labels and _trend_deltas.has(DIMENSION_KEYS[i]):
+				var trend_font_size: int = maxi(12, int(round(float(label_font_size) * 0.44)))
+				var trend_text: String = _format_trend_label(float(_trend_deltas.get(DIMENSION_KEYS[i], 0.0)))
+				var trend_size: Vector2 = font.get_string_size(trend_text, HORIZONTAL_ALIGNMENT_LEFT, -1, trend_font_size)
+				var trend_offset: Vector2 = Vector2(
+					-trend_size.x / 2.0,
+					text_size.y / 4.0 + float(value_font_size) + float(trend_font_size) + 8.0
+				)
+				var trend_pos: Vector2 = label_anchor + trend_offset
+				draw_string(
+					font,
+					trend_pos,
+					trend_text,
+					HORIZONTAL_ALIGNMENT_LEFT,
+					-1,
+					trend_font_size,
+					_get_trend_color(float(_trend_deltas.get(DIMENSION_KEYS[i], 0.0)))
+				)
+				_trend_tooltip_rects.append({
+					"key": DIMENSION_KEYS[i],
+					"rect": _build_text_tooltip_rect(trend_pos, trend_size)
+				})
+
 
 func _get_tooltip(at_position: Vector2) -> String:
+	for trend_info in _trend_tooltip_rects:
+		var rect: Rect2 = trend_info.get("rect", Rect2())
+		if rect.has_point(at_position):
+			var key: String = str(trend_info.get("key", ""))
+			return str(_trend_tooltips.get(key, ""))
 	for i in range(_label_tooltip_rects.size()):
 		if _label_tooltip_rects[i].has_point(at_position):
 			return tr(DIMENSION_TOOLTIP_KEYS[i])
@@ -165,8 +219,27 @@ func _get_tooltip(at_position: Vector2) -> String:
 
 
 func _build_label_tooltip_rect(label_anchor: Vector2, text_size: Vector2) -> Rect2:
+	return _build_text_tooltip_rect(label_anchor - text_size * 0.5, text_size)
+
+
+func _build_text_tooltip_rect(text_position: Vector2, text_size: Vector2) -> Rect2:
 	var padding := Vector2(8.0, 8.0)
-	return Rect2(label_anchor - text_size * 0.5 - padding, text_size + padding * 2.0)
+	return Rect2(text_position - padding, text_size + padding * 2.0)
+
+
+func _format_trend_label(delta: float) -> String:
+	var rounded_delta: int = int(round(delta))
+	if rounded_delta > 0:
+		return "+%d" % rounded_delta
+	return str(rounded_delta)
+
+
+func _get_trend_color(delta: float) -> Color:
+	if absf(delta) <= trend_neutral_threshold:
+		return trend_stable_color
+	if delta > 0.0:
+		return trend_improve_color
+	return trend_decline_color
 
 
 func _get_vertex_dot_color(score: float) -> Color:

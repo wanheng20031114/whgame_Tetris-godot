@@ -218,6 +218,7 @@ static func update_stats(player_name: String, history_entry: Dictionary, radar_s
 	if not stats.has("history") or not (stats["history"] is Array):
 		stats["history"] = []
 	var history: Array = stats["history"]
+	history_entry["radar_scores"] = radar_scores.duplicate()
 	history.append(history_entry)
 	while history.size() > MAX_HISTORY_ENTRIES:
 		history.pop_front()
