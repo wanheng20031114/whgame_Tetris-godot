@@ -43,6 +43,7 @@ const GRAVITY_TABLE: Dictionary = {
 # ==============================================================================
 
 var score: int = 0 ## 当前总分
+var starting_level: int = 1 ## 起始等级；每累计 10 行在此基础上提升一级。
 var level: int = 1 ## 当前等级
 var lines: int = 0 ## 已消除的总行数
 var combo: int = -1 ## 当前连击计数（-1 表示无连击状态）
@@ -97,7 +98,7 @@ func process_line_clear(lines_cleared: int, is_spin: bool, is_t_spin: bool) -> v
 
 	# 6. 更新消行数和等级
 	lines += lines_cleared
-	var new_level: int = (lines / 10) + 1
+	var new_level: int = (lines / 10) + starting_level
 	if new_level != level:
 		level = new_level
 

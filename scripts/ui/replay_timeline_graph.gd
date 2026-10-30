@@ -30,6 +30,9 @@ func set_timeline_data(complexities: Array[float], losses: Array[int], pieces: A
 	_loss_values = losses.duplicate()
 	_piece_names = pieces.duplicate()
 	_elapsed_values = elapsed.duplicate()
+	_hover_step = -1
+	_dragging = false
+	tooltip_text = ""
 	_current_step = clampi(_current_step, 0, maxi(0, _complexity_values.size() - 1))
 	queue_redraw()
 
@@ -46,13 +49,16 @@ func set_editable(enabled: bool) -> void:
 
 func _draw() -> void:
 	var track := _track_rect()
-	draw_rect(track.grow(3.0), Color(0.035, 0.04, 0.065, 1.0), true)
-	draw_rect(track, Color(0.060, 0.068, 0.095, 1.0), true)
-	draw_line(Vector2(track.position.x, track.end.y), Vector2(track.end.x, track.end.y), Color(0.55, 0.65, 0.88, 0.16), 1.0, true)
+	var bg := StyleBoxFlat.new()
+	bg.bg_color = UITheme.color("surface2")
+	bg.set_corner_radius_all(12)
+	bg.anti_aliasing_size = 0.75
+	draw_style_box(bg, track.grow(4.0))
+	draw_line(Vector2(track.position.x, track.end.y), Vector2(track.end.x, track.end.y), Color(UITheme.color("border"), 0.6), 1.0, true)
 
 	var count := _complexity_values.size()
 	if count <= 0:
-		draw_line(Vector2(track.position.x, track.get_center().y), Vector2(track.end.x, track.get_center().y), Color(0.26, 0.30, 0.40, 0.8), 2.0, true)
+		draw_line(Vector2(track.position.x, track.get_center().y), Vector2(track.end.x, track.get_center().y), UITheme.color("faint"), 2.0, true)
 		return
 
 	var points := PackedVector2Array()
@@ -85,12 +91,12 @@ func _draw() -> void:
 
 	if _hover_step >= 0 and _hover_step < count:
 		var hx := _step_x(_hover_step, track)
-		draw_line(Vector2(hx, track.position.y - 2.0), Vector2(hx, track.end.y + 2.0), Color(1.0, 1.0, 1.0, 0.26), 1.0, true)
+		draw_line(Vector2(hx, track.position.y - 2.0), Vector2(hx, track.end.y + 2.0), Color(UITheme.color("text"), 0.25), 1.0, true)
 
 	var cx := _step_x(_current_step, track)
-	draw_line(Vector2(cx, track.position.y - 4.0), Vector2(cx, track.end.y + 5.0), Color(0.42, 0.95, 1.0, 1.0), 2.0, true)
-	draw_circle(Vector2(cx, track.end.y + 5.0), 4.0, Color(0.88, 0.95, 1.0, 1.0))
-	draw_circle(Vector2(cx, track.end.y + 5.0), 2.4, Color(0.0, 0.83, 1.0, 1.0))
+	draw_line(Vector2(cx, track.position.y - 4.0), Vector2(cx, track.end.y + 5.0), UITheme.color("cta"), 2.0, true)
+	draw_circle(Vector2(cx, track.end.y + 5.0), 5.0, UITheme.color("cta"), true, -1.0, true)
+	draw_circle(Vector2(cx, track.end.y + 5.0), 2.4, UITheme.color("accent"), true, -1.0, true)
 
 
 func _gui_input(event: InputEvent) -> void:
@@ -161,8 +167,8 @@ func _step_x(index: int, track: Rect2) -> float:
 
 func _loss_at(index: int) -> int:
 	if index < 0 or index >= _loss_values.size():
-		return 0
-	return maxi(0, _loss_values[index])
+		return -1
+	return _loss_values[index]
 
 
 func _draw_loss_marker(index: int, loss: int, track: Rect2) -> void:
@@ -232,7 +238,7 @@ func _build_tooltip(index: int) -> String:
 	var piece := _piece_names[index] if index < _piece_names.size() else "?"
 	var loss := _loss_at(index)
 	var elapsed := _elapsed_values[index] if index < _elapsed_values.size() else 0
-	var ai_text := "BEST" if loss <= 0 else "-%d" % loss
+	var ai_text := tr("TXT_NA") if loss < 0 else ("BEST" if loss == 0 else "-%d" % loss)
 	return "#%04d  %s  %s  |  C %.0f  |  %dms" % [index + 1, piece, ai_text, _complexity_values[index], elapsed]
 
 

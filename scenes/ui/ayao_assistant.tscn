@@ -1,0 +1,217 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/ayao_assistant_panel.gd" id="1_panel"]
+[ext_resource type="Texture2D" path="res://assets/assistant/ayao.png" id="2_portrait"]
+[ext_resource type="Script" path="res://scripts/ui/dialogue_typewriter.gd" id="3_typewriter"]
+[ext_resource type="AudioStream" path="res://audio/ayao_dialogue_blip.wav" id="4_blip"]
+
+[sub_resource type="AudioStreamRandomizer" id="DialogueVoice"]
+random_pitch = 1.07
+random_volume_offset_db = 1.0
+streams_count = 1
+stream_0/stream = ExtResource("4_blip")
+
+[sub_resource type="StyleBoxFlat" id="Card"]
+resource_local_to_scene = true
+content_margin_left = 12.0
+content_margin_top = 10.0
+content_margin_right = 12.0
+content_margin_bottom = 12.0
+bg_color = Color(0.184, 0.169, 0.208, 1)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.23, 0.43, 0.41, 1)
+corner_radius_top_left = 16
+corner_radius_top_right = 16
+corner_radius_bottom_left = 16
+corner_radius_bottom_right = 16
+
+[sub_resource type="StyleBoxFlat" id="AdviceCard"]
+resource_local_to_scene = true
+content_margin_left = 10.0
+content_margin_top = 8.0
+content_margin_right = 10.0
+content_margin_bottom = 8.0
+bg_color = Color(0.2, 0.26, 0.26, 1)
+corner_radius_top_left = 10
+corner_radius_top_right = 10
+corner_radius_bottom_left = 10
+corner_radius_bottom_right = 10
+
+[sub_resource type="Animation" id="Reset"]
+length = 0.001
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Content/Details/Intro/PortraitStage/Portrait:position")
+tracks/0/interp = 1
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0),
+"transitions": PackedFloat32Array(1),
+"update": 0,
+"values": [Vector2(0, 3)]
+}
+
+[sub_resource type="Animation" id="Idle"]
+resource_name = "idle"
+length = 3.2
+loop_mode = 1
+tracks/0/type = "value"
+tracks/0/imported = false
+tracks/0/enabled = true
+tracks/0/path = NodePath("Content/Details/Intro/PortraitStage/Portrait:position")
+tracks/0/interp = 2
+tracks/0/loop_wrap = true
+tracks/0/keys = {
+"times": PackedFloat32Array(0, 1.6, 3.2),
+"transitions": PackedFloat32Array(1, 1, 1),
+"update": 0,
+"values": [Vector2(0, 3), Vector2(0, -1), Vector2(0, 3)]
+}
+
+[sub_resource type="AnimationLibrary" id="Animations"]
+_data = {
+&"RESET": SubResource("Reset"),
+&"idle": SubResource("Idle")
+}
+
+[node name="AyaoAssistant" type="PanelContainer"]
+layout_mode = 2
+theme_override_styles/panel = SubResource("Card")
+script = ExtResource("1_panel")
+
+[node name="Content" type="VBoxContainer" parent="."]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Header" type="HBoxContainer" parent="Content"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="AssistantName" type="Label" parent="Content/Header"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_font_sizes/font_size = 22
+text = "TXT_AYAO_NAME"
+
+[node name="SourceLabel" type="Label" parent="Content/Header"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"MutedLabel"
+theme_override_font_sizes/font_size = 11
+text = "TXT_AYAO_LOCAL"
+
+[node name="ToggleButton" type="Button" parent="Content/Header"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(28, 28)
+layout_mode = 2
+size_flags_vertical = 4
+theme_type_variation = &"GhostButton"
+theme_override_font_sizes/font_size = 18
+text = "−"
+
+[node name="Details" type="VBoxContainer" parent="Content"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Intro" type="HBoxContainer" parent="Content/Details"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="PortraitStage" type="Control" parent="Content/Details/Intro"]
+custom_minimum_size = Vector2(88, 86)
+layout_mode = 2
+mouse_filter = 2
+
+[node name="Portrait" type="TextureRect" parent="Content/Details/Intro/PortraitStage"]
+unique_name_in_owner = true
+layout_mode = 0
+offset_top = 3.0
+offset_right = 88.0
+offset_bottom = 91.0
+mouse_filter = 2
+texture = ExtResource("2_portrait")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Heading" type="VBoxContainer" parent="Content/Details/Intro"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 5
+alignment = 1
+
+[node name="ReviewStep" type="Label" parent="Content/Details/Intro/Heading"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"MutedLabel"
+theme_override_font_sizes/font_size = 12
+text = "TXT_AYAO_WAITING"
+autowrap_mode = 2
+
+[node name="ReviewTitle" type="Label" parent="Content/Details/Intro/Heading"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 18
+text = "TXT_AYAO_WELCOME_TITLE"
+autowrap_mode = 2
+
+[node name="Observation" type="Label" parent="Content/Details"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "TXT_AYAO_WELCOME_BODY"
+autowrap_mode = 2
+visible_characters_behavior = 1
+
+[node name="AdviceCard" type="PanelContainer" parent="Content/Details"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_styles/panel = SubResource("AdviceCard")
+
+[node name="Content" type="VBoxContainer" parent="Content/Details/AdviceCard"]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="AdviceHeading" type="Label" parent="Content/Details/AdviceCard/Content"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_type_variation = &"MutedLabel"
+theme_override_font_sizes/font_size = 11
+text = "TXT_AYAO_ADVICE_HEADING"
+
+[node name="Advice" type="Label" parent="Content/Details/AdviceCard/Content"]
+unique_name_in_owner = true
+layout_mode = 2
+theme_override_font_sizes/font_size = 14
+text = "TXT_AYAO_WELCOME_ADVICE"
+autowrap_mode = 2
+visible_characters_behavior = 1
+
+[node name="PlanButton" type="Button" parent="Content/Details"]
+unique_name_in_owner = true
+visible = false
+layout_mode = 2
+theme_type_variation = &"GhostButton"
+theme_override_font_sizes/font_size = 13
+text = "TXT_AYAO_VIEW_PLAN"
+
+[node name="AnimationPlayer" type="AnimationPlayer" parent="."]
+libraries = {
+&"": SubResource("Animations")
+}
+autoplay = "idle"
+
+[node name="BlipAudio" type="AudioStreamPlayer" parent="."]
+stream = SubResource("DialogueVoice")
+volume_db = 4.0
+max_polyphony = 4
+
+[node name="Typewriter" type="Node" parent="." node_paths=PackedStringArray("labels", "blip_audio")]
+script = ExtResource("3_typewriter")
+labels = Array[NodePath]([NodePath("../Content/Details/Observation"), NodePath("../Content/Details/AdviceCard/Content/Advice")])
+blip_audio = NodePath("../BlipAudio")

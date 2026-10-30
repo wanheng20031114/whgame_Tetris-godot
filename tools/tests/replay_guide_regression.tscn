@@ -1,0 +1,26 @@
+[gd_scene load_steps=6 format=3]
+
+[ext_resource type="Script" path="res://tools/tests/replay_guide_regression.gd" id="1_test"]
+[ext_resource type="PackedScene" path="res://scenes/ui/player_stats_screen.tscn" id="2_stats"]
+[ext_resource type="PackedScene" path="res://scenes/ui/guide_system.tscn" id="3_guide"]
+[ext_resource type="PackedScene" path="res://scenes/ui/replay_system.tscn" id="4_replay"]
+[ext_resource type="Script" path="res://scripts/ui/radar_chart.gd" id="5_radar"]
+
+[node name="ReplayGuideRegression" type="Node"]
+script = ExtResource("1_test")
+
+[node name="Stats" parent="." instance=ExtResource("2_stats")]
+visible = false
+
+[node name="Guide" parent="." instance=ExtResource("3_guide")]
+visible = false
+
+[node name="Replay" parent="." instance=ExtResource("4_replay")]
+visible = false
+
+[node name="Radar" type="Control" parent="."]
+visible = false
+offset_right = 400.0
+offset_bottom = 400.0
+script = ExtResource("5_radar")
+auto_minimum_size = false

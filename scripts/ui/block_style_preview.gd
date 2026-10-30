@@ -1,7 +1,7 @@
 class_name BlockStylePreview
 extends Control
 
-var style_id := "inner":
+@export var style_id := "inner":
 	set(value):
 		style_id = value
 		queue_redraw()
@@ -35,11 +35,4 @@ func _draw() -> void:
 
 
 func _draw_block_cell(rect: Rect2, color: Color) -> void:
-	var manager := get_node_or_null("/root/BlockStyleManager")
-	if manager != null and manager.has_method("draw_cell"):
-		manager.call("draw_cell", self, rect, color, style_id)
-		return
-
-	draw_rect(rect, color)
-	draw_rect(rect, color.darkened(0.3), false, 2.0)
-	draw_rect(rect.grow(-4.0), color.lightened(0.4), false, 1.0)
+	BlockStyleManager.draw_cell(self, rect, color, style_id)

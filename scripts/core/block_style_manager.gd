@@ -161,9 +161,14 @@ func _load_style_id() -> String:
 func _save_style_id() -> void:
 	var path := _get_settings_path()
 	var config := ConfigFile.new()
-	config.load(path)
+	var storage_load_error := config.load(path)
+	if storage_load_error != OK and storage_load_error != ERR_FILE_NOT_FOUND:
+		StorageBudget.report_error("Settings could not be read; the existing file was retained: " + error_string(storage_load_error))
+		return
 	config.set_value(SETTINGS_SECTION, SETTINGS_KEY, _current_style_id)
-	config.save(path)
+	var storage_save_error := config.save(path)
+	if storage_save_error != OK:
+		StorageBudget.report_error("Settings could not be saved: " + error_string(storage_save_error))
 
 
 func _get_settings_path() -> String:

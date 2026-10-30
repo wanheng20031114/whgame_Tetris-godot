@@ -26,25 +26,18 @@ var _current_pname: String = ""
 
 # 卡片视觉参数（统一放常量，后续调风格只改这里）
 const CARD_NORMAL_SCALE := Vector2(1.0, 1.0)
-const CARD_HOVER_SCALE := Vector2(1.05, 1.05)
-const CARD_GLOW_BORDER_WIDTH := 3
-const CARD_GLOW_SHADOW_SIZE := 20
-const CARD_GLOW_BORDER_COLOR := Color(0.45, 0.87, 1.0, 1.0)
-const CARD_GLOW_SHADOW_COLOR := Color(0.35, 0.78, 1.0, 0.45)
-const CARD_ACTIVE_MODULATE := Color(1.06, 1.06, 1.10, 1.0)
-const CARD_NORMAL_MODULATE := Color(1.0, 1.0, 1.0, 1.0)
+const CARD_HOVER_SCALE := Vector2(1.03, 1.03)
+const CARD_STYLE := &"CardPanel"
+const CARD_STYLE_ACTIVE := &"CardPanelActive"
 
-# 为每张卡缓存“默认样式”和“发光样式”，避免重复构建对象
-var _card_base_styles: Dictionary = {}
-var _card_glow_styles: Dictionary = {}
 var _cards: Array[PanelContainer] = []
+var _activating := false
 
 
 func _ready() -> void:
 	if lbl_player_name:
 		lbl_player_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-		lbl_player_name.clip_text = true
-		lbl_player_name.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+		lbl_player_name.custom_minimum_size.x = 64
 
 	# 绑定点击输入
 	card_marathon.gui_input.connect(_on_card_input.bind(card_marathon, "marathon"))
@@ -76,38 +69,34 @@ func _ready() -> void:
 	card_guide.focus_mode = Control.FOCUS_ALL
 	card_multiplayer.focus_mode = Control.FOCUS_ALL
 	card_replay.focus_mode = Control.FOCUS_ALL
+	# 与场景中的 2×2 网格一致；方向键由 Godot 的原生焦点系统处理。
 	card_marathon.focus_neighbor_right = card_guide.get_path()
+	card_marathon.focus_neighbor_bottom = card_multiplayer.get_path()
+	card_marathon.focus_neighbor_top = btn_stats.get_path()
+	card_marathon.focus_neighbor_left = card_marathon.get_path()
 	card_guide.focus_neighbor_left = card_marathon.get_path()
-	card_guide.focus_neighbor_right = card_multiplayer.get_path()
-	card_multiplayer.focus_neighbor_left = card_guide.get_path()
+	card_guide.focus_neighbor_bottom = card_replay.get_path()
+	card_guide.focus_neighbor_top = btn_settings.get_path()
+	card_guide.focus_neighbor_right = card_guide.get_path()
+	card_multiplayer.focus_neighbor_top = card_marathon.get_path()
 	card_multiplayer.focus_neighbor_right = card_replay.get_path()
+	card_multiplayer.focus_neighbor_left = card_multiplayer.get_path()
+	card_multiplayer.focus_neighbor_bottom = card_multiplayer.get_path()
+	card_replay.focus_neighbor_top = card_guide.get_path()
 	card_replay.focus_neighbor_left = card_multiplayer.get_path()
-	if btn_stats:
-		card_marathon.focus_neighbor_bottom = btn_stats.get_path()
-		card_guide.focus_neighbor_bottom = btn_stats.get_path()
-		card_multiplayer.focus_neighbor_bottom = btn_stats.get_path()
-		card_replay.focus_neighbor_bottom = btn_stats.get_path()
-		btn_stats.focus_neighbor_top = card_multiplayer.get_path()
-		if btn_block_style:
-			btn_stats.focus_neighbor_right = btn_block_style.get_path()
-	if btn_block_style:
-		btn_block_style.focus_mode = Control.FOCUS_ALL
-		btn_block_style.focus_neighbor_left = btn_stats.get_path() if btn_stats else card_replay.get_path()
-		btn_block_style.focus_neighbor_right = btn_settings.get_path() if btn_settings else NodePath("")
-		btn_block_style.focus_neighbor_top = card_replay.get_path()
-	if btn_settings:
-		btn_settings.focus_mode = Control.FOCUS_ALL
-		btn_settings.focus_neighbor_left = btn_block_style.get_path() if btn_block_style else (btn_stats.get_path() if btn_stats else card_replay.get_path())
-		btn_settings.focus_neighbor_top = card_replay.get_path()
+	card_replay.focus_neighbor_right = card_replay.get_path()
+	card_replay.focus_neighbor_bottom = card_replay.get_path()
+	btn_stats.focus_neighbor_bottom = card_marathon.get_path()
+	btn_stats.focus_neighbor_right = btn_block_style.get_path()
+	btn_block_style.focus_neighbor_left = btn_stats.get_path()
+	btn_block_style.focus_neighbor_right = btn_settings.get_path()
+	btn_block_style.focus_neighbor_bottom = card_guide.get_path()
+	btn_settings.focus_neighbor_left = btn_block_style.get_path()
+	btn_settings.focus_neighbor_bottom = card_guide.get_path()
 
 	# 缩放动画基准点设为卡片中心
-	card_marathon.pivot_offset = card_marathon.size / 2.0
-	card_guide.pivot_offset = card_guide.size / 2.0
-	card_multiplayer.pivot_offset = card_multiplayer.size / 2.0
-	card_replay.pivot_offset = card_replay.size / 2.0
-
-	# 初始化卡片外发光样式（默认态 + 选中态）
-	_init_card_glow_styles()
+	for card in _cards:
+		card.pivot_offset_ratio = Vector2(0.5, 0.5)
 
 	# 关键调整：
 	# 默认不预选任何卡片，进入大厅时两个模式都不发光。
@@ -165,28 +154,16 @@ func _update_texts() -> void:
 	if lbl_guide:
 		lbl_guide.text = tr("TXT_LOBBY_GUIDE_TITLE")
 
-	var lbl_m_desc = get_node_or_null("%CardMarathon/VBoxContainer/Desc")
-	if lbl_m_desc:
-		lbl_m_desc.text = tr("TXT_MARATHON_DESC")
 
-	var lbl_g_desc = get_node_or_null("%CardGuide/VBoxContainer/Desc")
-	if lbl_g_desc:
-		lbl_g_desc.text = tr("TXT_LOBBY_GUIDE_DESC")
 
-	var lbl_mp_desc = get_node_or_null("%CardMultiplayer/VBoxContainer/Desc")
-	if lbl_mp_desc:
-		lbl_mp_desc.text = tr("TXT_MULTIPLAYER_DESC")
 
 	var lbl_replay = get_node_or_null("%CardReplay/VBoxContainer/Title")
 	if lbl_replay:
 		lbl_replay.text = tr("TXT_REPLAY")
 
-	var lbl_r_desc = get_node_or_null("%CardReplay/VBoxContainer/Desc")
-	if lbl_r_desc:
-		lbl_r_desc.text = tr("TXT_REPLAY_DESC")
 
 	if lbl_player_name and not _current_pname.is_empty():
-		lbl_player_name.text = "%s, %s" % [tr("TXT_WELCOME"), _current_pname]
+		lbl_player_name.text = _current_pname
 
 	# 右上角数据按钮的tooltip跟随语言切换
 	if btn_stats:
@@ -195,48 +172,21 @@ func _update_texts() -> void:
 
 ## UIManager 切入大厅时调用，做一个淡入
 func play_entrance_animation() -> void:
-	modulate.a = 0.0
-	var tween = create_tween().set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_QUART)
-	tween.tween_property(self, "modulate:a", 1.0, 0.8)
+	UITheme.stagger_in(self, 0.06)
 
 
 ## -----------------------------------------------------------------------------
 ## 卡片交互与外发光
 ## -----------------------------------------------------------------------------
 
-func _init_card_glow_styles() -> void:
-	# 每张卡都从当前 panel 样式复制出两份：
-	# - base: 默认样式
-	# - glow: 选中时的高亮外发光样式
-	for card in [card_marathon, card_guide, card_multiplayer, card_replay]:
-		var panel_style: StyleBox = card.get_theme_stylebox("panel")
-		if not (panel_style is StyleBoxFlat):
-			continue
-
-		var base_style := (panel_style as StyleBoxFlat).duplicate(true) as StyleBoxFlat
-		_card_base_styles[card] = base_style
-
-		var glow_style := base_style.duplicate(true) as StyleBoxFlat
-		glow_style.border_width_left = maxi(glow_style.border_width_left, CARD_GLOW_BORDER_WIDTH)
-		glow_style.border_width_top = maxi(glow_style.border_width_top, CARD_GLOW_BORDER_WIDTH)
-		glow_style.border_width_right = maxi(glow_style.border_width_right, CARD_GLOW_BORDER_WIDTH)
-		glow_style.border_width_bottom = maxi(glow_style.border_width_bottom, CARD_GLOW_BORDER_WIDTH)
-		glow_style.border_color = CARD_GLOW_BORDER_COLOR
-		glow_style.shadow_size = maxi(glow_style.shadow_size, CARD_GLOW_SHADOW_SIZE)
-		glow_style.shadow_color = CARD_GLOW_SHADOW_COLOR
-		_card_glow_styles[card] = glow_style
-
-		# 先落默认样式，后续由 _refresh_card_visuals 控制切换
-		card.add_theme_stylebox_override("panel", base_style)
-
-
 func _on_card_hover(card: Control, _is_hovering: bool) -> void:
 	# 不直接信任事件参数，而是实时计算“当前是否选中”，避免鼠标与焦点事件交错导致闪烁。
+	if _activating:
+		return
 	_refresh_card_visuals()
 
 	var is_active := _is_card_active(card)
-	var tween = create_tween().set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
-	card.pivot_offset = card.size / 2.0
+	var tween = UITheme.motion_tween(card).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
 	tween.tween_property(
 		card,
 		"scale",
@@ -253,14 +203,12 @@ func _is_card_active(card: Control) -> bool:
 
 
 func _set_card_glow(card: PanelContainer, active: bool) -> void:
-	if active and _card_glow_styles.has(card):
-		card.add_theme_stylebox_override("panel", _card_glow_styles[card])
-		card.modulate = CARD_ACTIVE_MODULATE
-		return
-
-	if _card_base_styles.has(card):
-		card.add_theme_stylebox_override("panel", _card_base_styles[card])
-	card.modulate = CARD_NORMAL_MODULATE
+	if card is ModeCard:
+		(card as ModeCard).active = active
+	else:
+		card.theme_type_variation = CARD_STYLE_ACTIVE if active else CARD_STYLE
+	var glyph := card.get_node("VBoxContainer/Glyph") as ModeGlyph
+	glyph.active = active
 
 
 func _refresh_card_visuals() -> void:
@@ -278,37 +226,24 @@ func _on_card_input(event: InputEvent, card: Control, mode: String) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if _is_settings_menu_open():
 		return
-	if event.is_action_pressed("ui_left"):
-		_focus_card_by_delta(-1)
-		get_viewport().set_input_as_handled()
-	elif event.is_action_pressed("ui_right"):
-		_focus_card_by_delta(1)
-		get_viewport().set_input_as_handled()
-	elif event.is_action_pressed("ui_accept"):
+	if event.is_action_pressed("ui_accept"):
 		var focused_card := _get_focused_card()
 		var focused_mode := _get_focused_card_mode(focused_card)
 		if focused_card != null and not focused_mode.is_empty():
 			_activate_mode(focused_card, focused_mode)
 			get_viewport().set_input_as_handled()
+	elif get_viewport().gui_get_focus_owner() == null and (
+		event.is_action_pressed("ui_left") or event.is_action_pressed("ui_right")
+		or event.is_action_pressed("ui_up") or event.is_action_pressed("ui_down")
+	):
+		card_marathon.grab_focus()
+		get_viewport().set_input_as_handled()
 
 
 func _is_settings_menu_open() -> bool:
 	var settings_open := btn_settings != null and btn_settings.has_method("is_menu_open") and bool(btn_settings.call("is_menu_open"))
 	var style_open := btn_block_style != null and btn_block_style.has_method("is_menu_open") and bool(btn_block_style.call("is_menu_open"))
 	return settings_open or style_open
-
-
-func _focus_card_by_delta(delta: int) -> void:
-	if _cards.is_empty():
-		return
-	var focused_index := _get_focused_card_index()
-	if focused_index < 0:
-		focused_index = 1 if delta > 0 else 0
-	else:
-		focused_index = clampi(focused_index + delta, 0, _cards.size() - 1)
-	var card := _cards[focused_index]
-	card.grab_focus()
-	_refresh_card_visuals()
 
 
 func _get_focused_card_index() -> int:
@@ -338,11 +273,14 @@ func _get_focused_card_mode(card: Control) -> String:
 
 
 func _activate_mode(card: Control, mode: String) -> void:
+	if _activating:
+		return
+	_activating = true
 	if ButtonSfx:
 		ButtonSfx.play_click()
 
 	# 确认点击反馈（按下回弹）
-	var tween = create_tween().set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
+	var tween = UITheme.motion_tween(card).set_ease(Tween.EASE_OUT).set_trans(Tween.TRANS_BACK)
 	tween.tween_property(card, "scale", Vector2(0.95, 0.95), 0.1)
 	tween.tween_property(card, "scale", CARD_HOVER_SCALE, 0.1)
 
@@ -360,4 +298,6 @@ func _activate_mode(card: Control, mode: String) -> void:
 
 ## 数据按钮点击回调：发出 open_player_stats 信号。
 func _on_stats_pressed() -> void:
-	open_player_stats.emit()
+	if not _activating:
+		_activating = true
+		open_player_stats.emit()

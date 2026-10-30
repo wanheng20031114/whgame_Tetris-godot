@@ -25,7 +25,7 @@ extends TetrisCore
 @onready var sfx_tetris: AudioStreamPlayer = $SfxSuccess
 @onready var sfx_spin: AudioStreamPlayer = $SfxSpin
 @onready var sfx_death: AudioStreamPlayer = $SfxDeath
-@onready var sfx_move: AudioStreamPlayer = get_node_or_null("SfxMove") as AudioStreamPlayer
+@onready var sfx_move: AudioStreamPlayer = $SfxMove
 
 # ------------------------------------------------------------------------------
 # 资源预载
@@ -36,7 +36,6 @@ const SFX_LINE_CLEAR_STREAM: AudioStream = preload("res://audio/line_clear.ogg")
 const SFX_TETRIS_STREAM: AudioStream = preload("res://audio/tetris.ogg")
 const SFX_SPIN_STREAM: AudioStream = preload("res://audio/spin.ogg")
 const SFX_DEATH_STREAM: AudioStream = preload("res://audio/death.ogg")
-const SFX_MOVE_STREAM: AudioStream = preload("res://audio/move_scrape.wav")
 const MOVE_SFX_MIN_INTERVAL_MSEC: int = 45
 const ATTACK_DAMAGE_POPUP := preload("res://scripts/ui/attack_damage_popup.gd")
 const B2B_STREAK_BADGE := preload("res://scripts/ui/b2b_streak_badge.gd")
@@ -74,6 +73,7 @@ const WARNING_STAGE_SECONDS: float = 6.0
 # 生命周期
 # ------------------------------------------------------------------------------
 func _ready() -> void:
+	NetworkManager.disconnected.connect(_on_server_disconnected)
 	super._ready()
 	_apply_match_seed()
 	_assign_audio_streams()
@@ -146,14 +146,6 @@ func _assign_audio_streams() -> void:
 		sfx_spin.stream = SFX_SPIN_STREAM
 	if sfx_death:
 		sfx_death.stream = SFX_DEATH_STREAM
-	if sfx_move == null:
-		sfx_move = AudioStreamPlayer.new()
-		sfx_move.name = "SfxMove"
-		add_child(sfx_move)
-	sfx_move.stream = SFX_MOVE_STREAM
-	sfx_move.volume_db = 1.5
-	sfx_move.pitch_scale = 1.0
-	sfx_move.max_polyphony = 4
 
 
 func _on_successful_horizontal_move(_dx: int) -> void:
@@ -328,7 +320,7 @@ func _build_spin_text(piece_type: int, is_t_spin: bool) -> String:
 	var piece_name: String = _piece_type_to_letter(piece_type)
 	if piece_name.is_empty():
 		return "SPIN!"
-	return "%s-SPIN!" % piece_name
+	return ("%s-SPIN MINI" if last_spin_mini else "%s-SPIN!") % piece_name
 
 ## 将方块类型映射为单字母。
 func _piece_type_to_letter(piece_type: int) -> String:
@@ -386,10 +378,11 @@ func _update_texts() -> void:
 		else:
 			label_opponent_name.text = NetworkManager.opponent_name
 
-func _physics_process(delta: float) -> void:
-	process_logic(delta)
+func _process(delta: float) -> void:
+	# 输入在渲染帧处理，避免物理帧带来的额外延迟（与 TETR.IO 一致的响应）
 	if _data_collector and _data_collector.is_active() and not game_over and not paused:
 		_count_key_presses()
+	process_logic(delta)
 	if not game_over and not paused:
 		_update_multiplayer_garbage(delta)
 
@@ -408,15 +401,23 @@ func _refresh_player_garbage_bar() -> void:
 	if player_garbage_bar == null:
 		return
 
-	var grey_count: int = 0
-	var yellow_count: int = 0
-	for attack in pending_attacks:
-		if float(attack["delay"]) > WARNING_STAGE_SECONDS:
-			grey_count += int(attack["amount"])
-		else:
-			yellow_count += int(attack["amount"])
+	player_garbage_bar.sync_queue(pending_attacks, ready_garbage, ATTACK_DELAY_SECONDS, WARNING_STAGE_SECONDS)
 
-	player_garbage_bar.update_bar(grey_count, yellow_count, ready_garbage)
+## 攻击弹打向对手棋盘左下（对手的垃圾入场处），命中时对手棋盘被震动
+func _fire_at_opponent(amount: int) -> void:
+	if opponent_board == null:
+		return
+	var xf := opponent_board.get_global_transform_with_canvas()
+	var target := xf * Vector2(0, opponent_board.visible_rows * opponent_board.cell_size * 0.82)
+	_fire_outgoing(target, amount, func():
+		if is_instance_valid(opponent_board):
+			opponent_board.bump(Vector2(4.0, 0)))
+
+func _incoming_garbage_total() -> int:
+	var total: int = ready_garbage
+	for attack in pending_attacks:
+		total += int(attack["amount"])
+	return total
 
 func _unhandled_input(event: InputEvent) -> void:
 	# 游戏结束后 ESC 等同于返回大厅。
@@ -424,7 +425,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		if event.is_action_pressed("ui_cancel"):
 			_save_and_cleanup_data()
 			NetworkManager.decline_rematch()
-			get_tree().change_scene_to_file("res://scenes/ui/multiplayer_lobby.tscn")
+			UITheme.goto_scene("res://scenes/ui/multiplayer_lobby.tscn")
 			var vp := get_viewport()
 			if vp:
 				vp.set_input_as_handled()
@@ -446,16 +447,13 @@ func _on_local_lines_cleared(amount: int, is_spin: bool, is_t_spin: bool, damage
 
 	# 与单人保持一致的音效规则。
 	if is_spin or is_t_spin:
-		if sfx_spin:
-			sfx_spin.play()
+		_play_clear_sfx(sfx_spin)
 		_show_action_text(_build_spin_text(cur_type, is_t_spin))
 	elif amount == 4:
-		if sfx_tetris:
-			sfx_tetris.play()
+		_play_clear_sfx(sfx_tetris)
 		_show_action_text("TETRIS!")
 	else:
-		if sfx_line_clear:
-			sfx_line_clear.play()
+		_play_clear_sfx(sfx_line_clear)
 
 	if scoring.combo > 0:
 		_show_combo_text(scoring.combo)
@@ -477,8 +475,11 @@ func _on_local_lines_cleared(amount: int, is_spin: bool, is_t_spin: bool, damage
 		if int(target["amount"]) <= 0:
 			pending_attacks.pop_front()
 
+	if damage - block_amount > 0:
+		_fire_cancel(player_garbage_bar, damage - block_amount)
 	if block_amount > 0:
 		NetworkManager.send_attack(block_amount)
+		_fire_at_opponent(block_amount)
 
 	_refresh_player_garbage_bar()
 
@@ -498,6 +499,7 @@ func _lock_piece() -> void:
 	var next_pieces_at_lock: Array = bag.peek(5)
 
 	lock_timer.stop()
+	var is_spin: bool = _resolve_spin()
 	board.lock_piece(cur_type, cur_rot, cur_col, cur_row, PieceData.COLORS[cur_type])
 
 	var full_grid_before_clear: Array = board.get_grid_state()
@@ -506,16 +508,13 @@ func _lock_piece() -> void:
 		if r < full_grid_before_clear.size():
 			_cached_board_after_drop.append(full_grid_before_clear[r])
 
-	var is_spin: bool = false
-	if last_was_rotation and _is_spin_piece_type(cur_type):
-		is_spin = _check_immobile()
 
 	var clear_result: Dictionary = board.clear_lines_with_data()
 	var cleared: int = int(clear_result["cleared"])
 	var cleared_rows_data: Array = clear_result["rows_data"]
 	var dmg: int = 0
 	if cleared > 0:
-		var is_t_spin: bool = (cur_type == PieceData.Type.T and is_spin)
+		var is_t_spin: bool = _is_full_t_spin()
 		scoring.process_line_clear(cleared, is_spin, is_t_spin)
 		dmg = _calculate_damage(cleared, is_spin, is_t_spin)
 		lines_cleared.emit(cleared, is_spin, is_t_spin, dmg)
@@ -526,15 +525,17 @@ func _lock_piece() -> void:
 	score_changed.emit(scoring.score, scoring.level, scoring.lines)
 	piece_locked.emit(cur_type, board.get_grid_state())
 
+	var garbage_topped_out := false
 	var did_clear_lines: bool = scoring.lines > lines_before_lock
 	if will_receive_garbage and not did_clear_lines and board:
-		board.add_garbage_lines(ready_garbage)
+		garbage_topped_out = board.add_garbage_lines(ready_garbage)
 		ready_garbage = 0
+		if player_garbage_bar:
+			player_garbage_bar.mark_entered()
 		_refresh_player_garbage_bar()
 		NetworkManager.sync_board(board.get_grid_state())
 
 	hold_used = false
-	_spawn_next_piece()
 
 	_record_piece_snapshot(
 		locked_piece_type,
@@ -543,6 +544,10 @@ func _lock_piece() -> void:
 		locked_row,
 		next_pieces_at_lock
 	)
+	if garbage_topped_out:
+		_trigger_game_over()
+	else:
+		_spawn_next_piece()
 
 func _try_hold() -> void:
 	if not hold_used:
@@ -567,13 +572,20 @@ func _on_opponent_board_updated(grid_data: Array) -> void:
 		opponent_board.set_grid_state(grid_data)
 
 func _on_attack_received(amount: int) -> void:
-	if amount <= 0:
+	if game_over or amount <= 0 or amount > 12:
 		return
 
-	for _i in range(amount):
-		pending_attacks.append({"delay": ATTACK_DELAY_SECONDS, "amount": 1})
-
+	var queued := ready_garbage
+	for attack in pending_attacks:
+		queued += int(attack["amount"])
+	if queued >= board.total_rows:
+		return
+	pending_attacks.append({"delay": ATTACK_DELAY_SECONDS, "amount": mini(amount, board.total_rows - queued)})
 	_refresh_player_garbage_bar()
+	if opponent_board:
+		var r := opponent_board.get_global_transform_with_canvas()
+		var src := r * Vector2(0, opponent_board.visible_rows * opponent_board.cell_size * 0.55)
+		_fire_incoming(src, player_garbage_bar, amount)
 
 func _on_opponent_game_over() -> void:
 	_set_status_key("TXT_OPPONENT_DEFEATED")
@@ -613,9 +625,7 @@ func _on_rows_cleared(rows_data: Array) -> void:
 	if board == null or rows_data.is_empty():
 		return
 
-	var effect := LineClearEffect.new()
-	board.add_child(effect)
-	effect.setup(rows_data, board.cell_size, board.buffer_rows)
+	_spawn_line_clear_fx(rows_data)
 	var popup_parent: Node = _fx_layer if _fx_layer else self
 	ATTACK_DAMAGE_POPUP.spawn(popup_parent, board, _last_damage_this_lock, rows_data, _attack_popup_style())
 
@@ -728,3 +738,15 @@ func _evaluate_structure_scores(board_state_visible: Array) -> Dictionary:
 			return result2
 
 	return {"structure_score": 0.0, "stability_score": 0.0}
+
+func _on_server_disconnected() -> void:
+	game_over = true
+	_set_status_key("TXT_DISCONNECTED")
+	if bgm:
+		bgm.stop()
+	_show_game_over_panel("TXT_DISCONNECTED")
+	_save_and_cleanup_data()
+
+
+func _exit_tree() -> void:
+	_save_and_cleanup_data()

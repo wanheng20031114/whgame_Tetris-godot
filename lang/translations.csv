@@ -10,6 +10,7 @@ TXT_LANGUAGE,语言,LANGUAGE,言語
 TXT_RESOLUTION,分辨率,RESOLUTION,解像度
 TXT_FULLSCREEN,全屏,FULLSCREEN,フルスクリーン
 TXT_MASTER_VOLUME,总体音量,MASTER VOLUME,全体音量
+TXT_THEME,主题,THEME,テーマ
 TXT_INITIALIZE,初始化,INITIALIZE,初期化
 TXT_ENTER_NAME,输入用户名,ENTER NAME,名前を入力
 TXT_CALLSIGN,用户名：,NAME:,名前：
@@ -373,9 +374,9 @@ TXT_GUIDE_BASIC_TECH_TAG,"习惯","Habits","習慣"
 TXT_GUIDE_BASIC_TECH_TIME,"8 分钟","8 mins","8分"
 TXT_GUIDE_BASIC_TECH_SUMMARY,"整理新手最先该练的通用思路：堆叠、预览、垃圾与操作效率。","Learn the first habits to practice: stacking, preview, garbage, and input efficiency.","初心者が先に練習すべき考え方として、Stacking、Next Preview、Garbage、操作効率を整理します。"
 TXT_GUIDE_BASIC_REPLAY_TITLE,"Replay 复盘与成长","Replay Review and Growth","Replay 振り返りと成長"
-TXT_GUIDE_BASIC_REPLAY_TAG,"占位","Draft","準備中"
-TXT_GUIDE_BASIC_REPLAY_TIME,"后续","Later","後続"
-TXT_GUIDE_BASIC_REPLAY_SUMMARY,"后续连接 Replay 系统，说明如何阅读 AI 分析并复盘自己的局。","Later this will connect to Replay and explain how to read AI analysis.","後続では Replay システムと接続し、AI分析を読みながら自分の対局を振り返る方法を扱います。"
+TXT_GUIDE_BASIC_REPLAY_TAG,复盘,Review,振り返り
+TXT_GUIDE_BASIC_REPLAY_TIME,3 分钟,3 min,3分
+TXT_GUIDE_BASIC_REPLAY_SUMMARY,逐步查看历史对局，结合整局指标、当前步 AI 损失与候选路线找到改进方向。,"Step through past games and compare overall metrics, move loss, and AI routes to find ways to improve.",過去の対局を一手ずつ確認し、全体指標・各手のAI損失・候補ルートから改善点を探します。
 TXT_GUIDE_PATH_VERSUS,"对战机制","Versus Rules","対戦メカニクス"
 TXT_GUIDE_PATH_ATTACK,"攻击力","Attack Power","攻撃力"
 TXT_GUIDE_PATH_TECHNIQUE,"游戏技巧","Techniques","プレイ技術"
@@ -404,4 +405,62 @@ TXT_GUIDE_TECH_SOFT_DROP_TITLE,"减少不必要的软降","Reduce unnecessary so
 TXT_GUIDE_TECH_SOFT_DROP_1,"硬降更快，软降会增加操作时间和按键数。","Hard drop is faster. Soft drop increases time and inputs.","Hard Drop の方が速く、Soft Drop は操作時間と入力数を増やします。"
 TXT_GUIDE_TECH_SOFT_DROP_2,"T-Spin 等技巧确实需要软降，但普通堆叠时应尽量减少长距离软降。","T-Spin and similar techniques sometimes need soft drop, but normal stacking should avoid long soft drops when possible.","T-Spin などでは Soft Drop が必要になることがありますが、通常のStackingでは長距離の Soft Drop をできるだけ減らします。"
 TXT_GUIDE_REPLAY_PLACEHOLDER_TITLE,"04 Replay 复盘与成长","04 Replay Review and Growth","04 Replay 振り返りと成長"
-TXT_GUIDE_REPLAY_PLACEHOLDER_BODY,"这一章后续连接 Replay 系统：解释如何查看自己的消行、攻击、Combo、T-Spin、地形风险与 AI 建议。当前先保留位置，等 Replay 的 Guide 文案定稿后再展开。","This chapter will later connect to the Replay system and explain how to read clears, attack, Combo, T-Spin, terrain risk, and AI suggestions. It is kept as a placeholder until the Replay guide text is finalized.","この章は後続で Replay システムと接続し、自分の消去、攻撃、Combo、T-Spin、地形リスク、AI提案の読み方を説明します。現時点では位置を確保し、Replay 用の Guide 文面が固まってから展開します。"
+TXT_GUIDE_REPLAY_PLACEHOLDER_BODY,1. 从大厅进入复盘系统，选择一场历史对局。使用滑块、前后步按钮或时间线定位每一手，观察落点、消行、攻击和堆叠变化。\n\n2. 左侧显示整局指标及当前步的 AI 损失。结合当时的盘面理解分数；N/A 表示该步没有有效评分，不代表最佳落点。\n\n3. 点击 ? 查看 AI 候选路线，对照自己的落点与后续空间。候选路线仅供参考：先找一个能解释清楚的改进点，再回到游戏中练习。,"1. Open Replay from the lobby and select a past game. Use the slider, previous/next buttons, or timeline to inspect each placement and its effect on line clears, attacks, and the stack.\n\n2. The left panel shows overall metrics and AI loss for the current move. Read each score in the context of the board. N/A means the move has no valid score; it does not mean the placement was best.\n\n3. Click ? to inspect AI candidate routes and compare their placements and resulting space with yours. Treat these routes as suggestions. Pick one improvement you can explain, then practice it in a game.",1. ロビーからリプレイを開き、過去の対局を選びます。スライダー、前後の手に進むボタン、タイムラインで各手を確認し、配置・ライン消去・攻撃・積み上がりの変化を見ます。\n\n2. 左側には対局全体の指標と現在の手のAI損失が表示されます。盤面の状況と合わせて読み取りましょう。N/Aは有効な評価がないことを示し、最善の配置という意味ではありません。\n\n3. ?を押すとAIの候補ルートを確認できます。自分の配置や次の手のための空間と比べましょう。候補は参考情報です。理由を説明できる改善点を一つ選び、実戦で試してください。
+TXT_HANDLING,操作手感,HANDLING,ハンドリング
+TXT_HANDLING_HINT,与 TETR.IO 相同：DAS 自动移动延迟 · ARR 移动间隔 · SDF 软降倍率 · DCD 旋转后 DAS 截断（单位：帧）,Same as TETR.IO: DAS auto-shift delay · ARR repeat rate · SDF soft drop factor · DCD DAS cut delay (in frames),TETR.IO と同じ：DAS 自動移動遅延 · ARR 移動間隔 · SDF ソフトドロップ倍率 · DCD 回転後の DAS カット（フレーム）
+TXT_STORAGE_PAUSED,部分记录保存已暂停，游戏可以继续。旧记录已保留。,Some recording has paused. You can keep playing. Existing records are retained.,一部の記録保存を停止しました。ゲームは続行できます。既存の記録は保持されます。
+TXT_CONNECTION_ADDRESS_INVALID,请输入有效服务器地址和 1–65535 范围内的端口。,Enter a server address and a port from 1 to 65535.,サーバーアドレスと1～65535のポートを入力してください。
+TXT_CONNECTION_FAILED_REASON,连接失败（%s）,Connection failed (%s),接続失敗（%s）
+TXT_CONNECTION_TIMEOUT,连接或登录超时（%d 秒），请重试。,Connection or login timed out after %d seconds. Please retry.,接続またはログインが%d秒でタイムアウトしました。再試行してください。
+TXT_TETRIS33_WAIT_PLAYERS,等待 %d 名玩家,WAITING FOR %d PLAYERS,%d人の参加待ち
+TXT_TETRIS33_ALIVE,存活,ALIVE,生存
+TXT_TETRIS33_LEFT,剩余 %d/%d,LEFT %d/%d,残り %d/%d
+TXT_TETRIS33_FINISHED,已结束,FINISHED,終了
+TXT_TETRIS33_SPECTATING,观战中,SPECTATING,観戦中
+TXT_TETRIS33_RANK,第 %d 名,RANK #%d,%d位
+TXT_TETRIS33_WINNER,胜者 #1,WINNER #1,優勝 #1
+TXT_TETRIS33_TARGET,目标 %s,TARGET %s,ターゲット %s
+TXT_TETRIS33_AUTO,自动,AUTO,自動
+TXT_TETRIS33_ATTACK_READY,准备攻击,ATTACK READY,攻撃準備完了
+TXT_TETRIS33_INCOMING,受到攻击 +%d,INCOMING +%d,被攻撃 +%d
+TXT_TETRIS33_ATTACK,攻击 %s +%d,ATTACK %s +%d,攻撃 %s +%d
+TXT_AYAO_NAME,阿咬,Ayao,阿咬
+TXT_AYAO_LOCAL,本地分析,Local review,ローカル分析
+TXT_AYAO_ADVICE_HEADING,下一步可以这样做,TRY NEXT,次の一手のヒント
+TXT_AYAO_WAITING,陪你一起看回放,Your replay companion,リプレイのおとも
+TXT_AYAO_WELCOME_TITLE,一块一块，慢慢来,One piece at a time,一つずつ、ゆっくり
+TXT_AYAO_WELCOME_BODY,我是阿咬。选一局回放，我陪你看看每一步。,I’m Ayao. Pick a replay and we’ll look at each move together.,阿咬だよ。リプレイを選んで、一手ずつ一緒に見ていこう。
+TXT_AYAO_WELCOME_ADVICE,每次只关注一个小变化，把好习惯慢慢留下来。,"Focus on one small change at a time, and keep building good habits.",一度に小さな変化を一つだけ見て、いい習慣を増やしていこう。
+TXT_AYAO_STEP,第 %d / %d 步,Step %d / %d,%d / %d 手目
+TXT_AYAO_COLLAPSE,收起阿咬的点评,Collapse Ayao’s review,アドバイスをたたむ
+TXT_AYAO_EXPAND,展开阿咬的点评,Expand Ayao’s review,アドバイスを開く
+TXT_AYAO_VIEW_PLAN,看看参考走法,Compare suggested move,参考の置き方を見る
+TXT_AYAO_HIDE_PLAN,回到我的落子,Back to my placement,自分の置き方に戻る
+TXT_AYAO_TITLE_PRAISE,这步有亮点,A good moment,いいところ発見
+TXT_AYAO_TITLE_TIP,试试这个,Try this next,次はこうしてみよう
+TXT_AYAO_TITLE_OBSERVE,看看局面,Reading the board,盤面を見てみよう
+TXT_AYAO_NO_BOARD,这步缺少完整棋盘，阿咬先不下结论。,"This step has no complete board, so I cannot assess its shape yet.",この手の盤面が揃っていないので、形の評価は保留するね。
+TXT_AYAO_DANGER,最高处已到 %d/%d 行，留给下一块的空间不多了。,The stack reaches row %d of %d. Space for the next piece is tight.,高さが %d/%d 段まで来ているよ。次のミノを置く余裕が少ないね。
+TXT_AYAO_NEW_HOLES,这步结束后，空洞比上一步多 %d 个，目前有 %d 个。,"After this step, there are %d more buried gaps: %d in total.",この手の後は穴が %d 個増えて、合計 %d 個になったよ。
+TXT_AYAO_FEWER_HOLES,空洞减少了 %d 个！现在还剩 %d 个，局面更好整理了。,%d buried gaps are gone! There are %d left to work through.,穴が %d 個減ったね！ あと %d 個、少し整理できたよ。
+TXT_AYAO_PERFECT_CLEAR,全清！棋盘空出来了，这次消除很漂亮。,Perfect clear! That clear left the whole board empty.,パーフェクトクリア！ 消去後の盤面がきれいに空いたね。
+TXT_AYAO_T_SPIN,T-Spin 消除了 %d 行，旋转用得漂亮。,A T-Spin cleared %d lines. Nicely turned!,Tスピンで %d ライン消去。うまく回せたね！
+TXT_AYAO_TETRIS,一次消掉四行，Tetris！,Four lines in one move. Tetris!,一度に4ライン消去。テトリス！
+TXT_AYAO_COMBO,连续 %d 次落子都有消行，连击接上了！,%d placements in a row have cleared lines. The combo continues!,%d 手続けてライン消去。コンボがつながったね！
+TXT_AYAO_CLEAR_ATTACK,这步消除了 %d 行，产生了 %d 行攻击。,This move cleared %d lines and generated %d lines of attack.,この手は %d ライン消去で、%d ラインの攻撃を生んだね。
+TXT_AYAO_COMPARE_PLAN,本地分析找到了一种评分更高的走法，可以对照看看。,The local analysis found a higher-scoring move worth comparing.,ローカル分析で、評価の高い別の置き方が見つかったよ。
+TXT_AYAO_CLOSE_TO_BEST,按当前本地评估，这步很接近找到的最佳走法。,"In the current local evaluation, this is close to the best move found.",今回のローカル評価では、見つかった最善手に近い置き方だよ。
+TXT_AYAO_BURIED_HOLES,盘面里还有 %d 个被盖住的空洞。,There are still %d buried gaps in the board.,盤面にはまだ、上がふさがった穴が %d 個あるよ。
+TXT_AYAO_ROUGH_SURFACE,现在的表面起伏比较大，下一块的选择会受限制。,The uneven surface gives the next piece fewer simple places to fit.,表面の段差が大きいので、次のミノを置ける場所が限られるね。
+TXT_AYAO_CLEAR,这步消除了 %d 行，做得好。,You cleared %d lines with this placement. Nicely done.,この手で %d ライン消せたね。いい調子！
+TXT_AYAO_CLEAN_SURFACE,目前堆得不高，也没有被盖住的空洞。,"The stack is low, with no buried gaps at the moment.",今は積み上がりが低く、ふさがった穴もないね。
+TXT_AYAO_PLACED,这步之后，棋盘最高处是 %d 行。,"After this placement, the highest column is %d rows tall.",この手の後、一番高い列は %d 段になったよ。
+TXT_AYAO_ADVICE_REVIEW_RESULT,可以先查看这步的消行记录和方块位置。,"For now, check the recorded clear and piece position.",まずは消去の記録と、ミノを置いた位置を確認しよう。
+TXT_AYAO_ADVICE_LOWER_STACK,先找能消行降高度的位置，给出生区留出空间。,Look for a clear that lowers the stack and opens the spawn area.,まずはラインを消して高さを下げ、出現位置に空間を作ろう。
+TXT_AYAO_ADVICE_AVOID_COVERING,试着让方块底部贴合地形，放下前看看有没有封住空格。,Match the bottom of the piece to the surface; check for gaps before locking.,ミノの底を地形に合わせて、固定前に空間をふさいでいないか見よう。
+TXT_AYAO_ADVICE_UNCOVER,优先消掉空洞上方的行，逐步把它们露出来。,Work on clearing the rows above those gaps to uncover them.,穴より上のラインを消して、少しずつ穴を露出させよう。
+TXT_AYAO_ADVICE_LOOK_AHEAD,落下前多看一块 NEXT，给下一块留个合适的位置。,Check one piece ahead in NEXT and leave it a useful place to land.,固定前にNEXTを1個先まで見て、置きやすい場所を残そう。
+TXT_AYAO_ADVICE_KEEP_B2B,背靠背已经接上；留意下一次四消或旋转消行的机会。,Back-to-back is active; look for another Tetris or spin clear.,Back-to-Backが続いているよ。次のテトリスやスピン消去を探そう。
+TXT_AYAO_ADVICE_OPEN_PLAN,点「看看参考走法」，对比两种落点留下的地形。,Use “Compare suggested move” to compare the surface left by each placement.,「参考の置き方を見る」で、置いた後の地形を比べよう。
+TXT_AYAO_ADVICE_SMOOTH_SURFACE,试着填低处，避免继续抬高已经凸出的列。,Try filling the low spots without making the tall columns taller.,低い場所を埋めて、高い列をさらに伸ばさないようにしてみよう。
+TXT_AYAO_AFTER_CLEAR,消行后局面,After clearing,ライン消去後

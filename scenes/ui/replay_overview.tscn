@@ -1,0 +1,503 @@
+[gd_scene load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/radar_chart.gd" id="1_radar"]
+
+[sub_resource type="StyleBoxFlat" id="Style_metric"]
+content_margin_left = 4.0
+content_margin_top = 4.0
+content_margin_right = 4.0
+content_margin_bottom = 4.0
+bg_color = Color(0.18, 0.21, 0.24, 1)
+corner_radius_top_left = 12
+corner_radius_top_right = 12
+corner_radius_bottom_right = 12
+corner_radius_bottom_left = 12
+
+[sub_resource type="StyleBoxFlat" id="Style_stat"]
+resource_local_to_scene = true
+content_margin_left = 7.0
+content_margin_top = 2.0
+content_margin_right = 7.0
+content_margin_bottom = 2.0
+bg_color = Color(0.1843, 0.1686, 0.2078, 1)
+corner_radius_top_left = 9
+corner_radius_top_right = 9
+corner_radius_bottom_right = 9
+corner_radius_bottom_left = 9
+
+[sub_resource type="StyleBoxFlat" id="Style_full_stat"]
+resource_local_to_scene = true
+content_margin_left = 7.0
+content_margin_top = 4.0
+content_margin_right = 7.0
+content_margin_bottom = 4.0
+bg_color = Color(0.1843, 0.1686, 0.2078, 1)
+corner_radius_top_left = 9
+corner_radius_top_right = 9
+corner_radius_bottom_right = 9
+corner_radius_bottom_left = 9
+
+[node name="SessionOverview" type="VBoxContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 4
+
+[node name="OverviewTitle" type="Label" parent="."]
+layout_mode = 2
+theme_type_variation = &"EyebrowLabel"
+theme_override_font_sizes/font_size = 16
+text = "本局总览"
+
+[node name="HeroRow" type="HBoxContainer" parent="."]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="RadarChart" type="Control" parent="HeroRow"]
+custom_minimum_size = Vector2(160, 150)
+layout_mode = 2
+mouse_filter = 1
+script = ExtResource("1_radar")
+chart_radius = 43.0
+outline_width = 2.0
+vertex_dot_radius = 2.6
+label_font_size = 12
+label_offset = 15.0
+top_label_extra_offset = Vector2(0, -8)
+show_value_labels = false
+animation_duration = 0.45
+auto_minimum_size = false
+
+[node name="CoreMetrics" type="GridContainer" parent="HeroRow"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+theme_override_constants/h_separation = 6
+theme_override_constants/v_separation = 6
+columns = 2
+
+[node name="pps" type="PanelContainer" parent="HeroRow/CoreMetrics"]
+custom_minimum_size = Vector2(62, 50)
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+theme_override_styles/panel = SubResource("Style_metric")
+
+[node name="Content" type="VBoxContainer" parent="HeroRow/CoreMetrics/pps"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 0
+alignment = 1
+
+[node name="Value" type="Label" parent="HeroRow/CoreMetrics/pps/Content"]
+layout_mode = 2
+mouse_filter = 0
+theme_type_variation = &"ValueLabel"
+theme_override_font_sizes/font_size = 21
+text = "—"
+horizontal_alignment = 1
+
+[node name="Label" type="Label" parent="HeroRow/CoreMetrics/pps/Content"]
+layout_mode = 2
+mouse_filter = 0
+theme_type_variation = &"EyebrowLabel"
+theme_override_font_sizes/font_size = 11
+text = "PPS"
+horizontal_alignment = 1
+
+[node name="apm" type="PanelContainer" parent="HeroRow/CoreMetrics"]
+custom_minimum_size = Vector2(62, 50)
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+theme_override_styles/panel = SubResource("Style_metric")
+
+[node name="Content" type="VBoxContainer" parent="HeroRow/CoreMetrics/apm"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 0
+alignment = 1
+
+[node name="Value" type="Label" parent="HeroRow/CoreMetrics/apm/Content"]
+layout_mode = 2
+mouse_filter = 0
+theme_type_variation = &"ValueLabel"
+theme_override_font_sizes/font_size = 21
+text = "—"
+horizontal_alignment = 1
+
+[node name="Label" type="Label" parent="HeroRow/CoreMetrics/apm/Content"]
+layout_mode = 2
+mouse_filter = 0
+theme_type_variation = &"EyebrowLabel"
+theme_override_font_sizes/font_size = 11
+text = "APM"
+horizontal_alignment = 1
+
+[node name="app" type="PanelContainer" parent="HeroRow/CoreMetrics"]
+custom_minimum_size = Vector2(62, 50)
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+theme_override_styles/panel = SubResource("Style_metric")
+
+[node name="Content" type="VBoxContainer" parent="HeroRow/CoreMetrics/app"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 0
+alignment = 1
+
+[node name="Value" type="Label" parent="HeroRow/CoreMetrics/app/Content"]
+layout_mode = 2
+mouse_filter = 0
+theme_type_variation = &"ValueLabel"
+theme_override_font_sizes/font_size = 21
+text = "—"
+horizontal_alignment = 1
+
+[node name="Label" type="Label" parent="HeroRow/CoreMetrics/app/Content"]
+layout_mode = 2
+mouse_filter = 0
+theme_type_variation = &"EyebrowLabel"
+theme_override_font_sizes/font_size = 11
+text = "APP"
+horizontal_alignment = 1
+
+[node name="kpp" type="PanelContainer" parent="HeroRow/CoreMetrics"]
+custom_minimum_size = Vector2(62, 50)
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+theme_override_styles/panel = SubResource("Style_metric")
+
+[node name="Content" type="VBoxContainer" parent="HeroRow/CoreMetrics/kpp"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 0
+alignment = 1
+
+[node name="Value" type="Label" parent="HeroRow/CoreMetrics/kpp/Content"]
+layout_mode = 2
+mouse_filter = 0
+theme_type_variation = &"ValueLabel"
+theme_override_font_sizes/font_size = 21
+text = "—"
+horizontal_alignment = 1
+
+[node name="Label" type="Label" parent="HeroRow/CoreMetrics/kpp/Content"]
+layout_mode = 2
+mouse_filter = 0
+theme_type_variation = &"EyebrowLabel"
+theme_override_font_sizes/font_size = 11
+text = "KPP"
+horizontal_alignment = 1
+
+[node name="SessionStats" type="GridContainer" parent="."]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/h_separation = 6
+theme_override_constants/v_separation = 2
+columns = 2
+
+[node name="score" type="PanelContainer" parent="SessionStats"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+theme_override_styles/panel = SubResource("Style_stat")
+
+[node name="Content" type="VBoxContainer" parent="SessionStats/score"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="Title" type="Label" parent="SessionStats/score/Content"]
+layout_mode = 2
+mouse_filter = 2
+theme_type_variation = &"MutedLabel"
+theme_override_font_sizes/font_size = 12
+text = "分数"
+
+[node name="Value" type="Label" parent="SessionStats/score/Content"]
+layout_mode = 2
+mouse_filter = 2
+theme_type_variation = &"ValueLabel"
+theme_override_font_sizes/font_size = 16
+text = "—"
+
+[node name="duration" type="PanelContainer" parent="SessionStats"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+theme_override_styles/panel = SubResource("Style_stat")
+
+[node name="Content" type="VBoxContainer" parent="SessionStats/duration"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="Title" type="Label" parent="SessionStats/duration/Content"]
+layout_mode = 2
+mouse_filter = 2
+theme_type_variation = &"MutedLabel"
+theme_override_font_sizes/font_size = 12
+text = "时长"
+
+[node name="Value" type="Label" parent="SessionStats/duration/Content"]
+layout_mode = 2
+mouse_filter = 2
+theme_type_variation = &"ValueLabel"
+theme_override_font_sizes/font_size = 16
+text = "—"
+
+[node name="pieces" type="PanelContainer" parent="SessionStats"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+theme_override_styles/panel = SubResource("Style_stat")
+
+[node name="Content" type="VBoxContainer" parent="SessionStats/pieces"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="Title" type="Label" parent="SessionStats/pieces/Content"]
+layout_mode = 2
+mouse_filter = 2
+theme_type_variation = &"MutedLabel"
+theme_override_font_sizes/font_size = 12
+text = "方块"
+
+[node name="Value" type="Label" parent="SessionStats/pieces/Content"]
+layout_mode = 2
+mouse_filter = 2
+theme_type_variation = &"ValueLabel"
+theme_override_font_sizes/font_size = 16
+text = "—"
+
+[node name="lines" type="PanelContainer" parent="SessionStats"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+theme_override_styles/panel = SubResource("Style_stat")
+
+[node name="Content" type="VBoxContainer" parent="SessionStats/lines"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="Title" type="Label" parent="SessionStats/lines/Content"]
+layout_mode = 2
+mouse_filter = 2
+theme_type_variation = &"MutedLabel"
+theme_override_font_sizes/font_size = 12
+text = "消行"
+
+[node name="Value" type="Label" parent="SessionStats/lines/Content"]
+layout_mode = 2
+mouse_filter = 2
+theme_type_variation = &"ValueLabel"
+theme_override_font_sizes/font_size = 16
+text = "—"
+
+[node name="damage" type="PanelContainer" parent="SessionStats"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+theme_override_styles/panel = SubResource("Style_stat")
+
+[node name="Content" type="VBoxContainer" parent="SessionStats/damage"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="Title" type="Label" parent="SessionStats/damage/Content"]
+layout_mode = 2
+mouse_filter = 2
+theme_type_variation = &"MutedLabel"
+theme_override_font_sizes/font_size = 12
+text = "攻击"
+
+[node name="Value" type="Label" parent="SessionStats/damage/Content"]
+layout_mode = 2
+mouse_filter = 2
+theme_type_variation = &"ValueLabel"
+theme_override_font_sizes/font_size = 16
+text = "—"
+
+[node name="keys" type="PanelContainer" parent="SessionStats"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+theme_override_styles/panel = SubResource("Style_stat")
+
+[node name="Content" type="VBoxContainer" parent="SessionStats/keys"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="Title" type="Label" parent="SessionStats/keys/Content"]
+layout_mode = 2
+mouse_filter = 2
+theme_type_variation = &"MutedLabel"
+theme_override_font_sizes/font_size = 12
+text = "按键"
+
+[node name="Value" type="Label" parent="SessionStats/keys/Content"]
+layout_mode = 2
+mouse_filter = 2
+theme_type_variation = &"ValueLabel"
+theme_override_font_sizes/font_size = 16
+text = "—"
+
+[node name="quads" type="PanelContainer" parent="SessionStats"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+theme_override_styles/panel = SubResource("Style_stat")
+
+[node name="Content" type="VBoxContainer" parent="SessionStats/quads"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="Title" type="Label" parent="SessionStats/quads/Content"]
+layout_mode = 2
+mouse_filter = 2
+theme_type_variation = &"MutedLabel"
+theme_override_font_sizes/font_size = 12
+text = "四消"
+
+[node name="Value" type="Label" parent="SessionStats/quads/Content"]
+layout_mode = 2
+mouse_filter = 2
+theme_type_variation = &"ValueLabel"
+theme_override_font_sizes/font_size = 16
+text = "—"
+
+[node name="tspins" type="PanelContainer" parent="SessionStats"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+theme_override_styles/panel = SubResource("Style_stat")
+
+[node name="Content" type="VBoxContainer" parent="SessionStats/tspins"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="Title" type="Label" parent="SessionStats/tspins/Content"]
+layout_mode = 2
+mouse_filter = 2
+theme_type_variation = &"MutedLabel"
+theme_override_font_sizes/font_size = 12
+text = "T旋消行"
+
+[node name="Value" type="Label" parent="SessionStats/tspins/Content"]
+layout_mode = 2
+mouse_filter = 2
+theme_type_variation = &"ValueLabel"
+theme_override_font_sizes/font_size = 16
+text = "—"
+
+[node name="combo" type="PanelContainer" parent="SessionStats"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+theme_override_styles/panel = SubResource("Style_stat")
+
+[node name="Content" type="VBoxContainer" parent="SessionStats/combo"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="Title" type="Label" parent="SessionStats/combo/Content"]
+layout_mode = 2
+mouse_filter = 2
+theme_type_variation = &"MutedLabel"
+theme_override_font_sizes/font_size = 12
+text = "最高连击"
+
+[node name="Value" type="Label" parent="SessionStats/combo/Content"]
+layout_mode = 2
+mouse_filter = 2
+theme_type_variation = &"ValueLabel"
+theme_override_font_sizes/font_size = 16
+text = "—"
+
+[node name="b2b" type="PanelContainer" parent="SessionStats"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+theme_override_styles/panel = SubResource("Style_stat")
+
+[node name="Content" type="VBoxContainer" parent="SessionStats/b2b"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 0
+
+[node name="Title" type="Label" parent="SessionStats/b2b/Content"]
+layout_mode = 2
+mouse_filter = 2
+theme_type_variation = &"MutedLabel"
+theme_override_font_sizes/font_size = 12
+text = "最高 B2B"
+
+[node name="Value" type="Label" parent="SessionStats/b2b/Content"]
+layout_mode = 2
+mouse_filter = 2
+theme_type_variation = &"ValueLabel"
+theme_override_font_sizes/font_size = 16
+text = "—"
+
+[node name="clears" type="PanelContainer" parent="."]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+theme_override_styles/panel = SubResource("Style_full_stat")
+
+[node name="Content" type="HBoxContainer" parent="clears"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 6
+
+[node name="Title" type="Label" parent="clears/Content"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+theme_type_variation = &"MutedLabel"
+theme_override_font_sizes/font_size = 12
+text = "消行分布"
+
+[node name="Value" type="Label" parent="clears/Content"]
+layout_mode = 2
+mouse_filter = 2
+theme_type_variation = &"ValueLabel"
+theme_override_font_sizes/font_size = 14
+text = "—"
+horizontal_alignment = 2
+
+[node name="ai_score" type="PanelContainer" parent="."]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+theme_override_styles/panel = SubResource("Style_full_stat")
+
+[node name="Content" type="HBoxContainer" parent="ai_score"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 6
+
+[node name="Title" type="Label" parent="ai_score/Content"]
+layout_mode = 2
+size_flags_horizontal = 3
+mouse_filter = 2
+theme_type_variation = &"MutedLabel"
+theme_override_font_sizes/font_size = 12
+text = "全局 AI 评分"
+
+[node name="Value" type="Label" parent="ai_score/Content"]
+layout_mode = 2
+mouse_filter = 2
+theme_type_variation = &"ValueLabel"
+theme_override_font_sizes/font_size = 14
+text = "—"
+horizontal_alignment = 2

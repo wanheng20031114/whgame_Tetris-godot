@@ -1,4 +1,4 @@
-# WIDE TETRIS
+# TETRIS
 
 [日本語](#日本語) | [简体中文](#简体中文) | [English](#english)
 
@@ -8,7 +8,7 @@
 
 ### 概要
 
-WIDE TETRIS は Godot 4 で制作された現代的な Tetris クローンです。SRS 回転、Hold、7-Bag、Lock Delay、B2B、Combo、Garbage Queue、T-Spin 判定、ローカル統計、リプレイ閲覧、AI リプレイ分析を含みます。
+TETRIS は Godot 4 で制作された現代的な Tetris クローンです。SRS 回転、Hold、7-Bag、Lock Delay、B2B、Combo、Garbage Queue、T-Spin 判定、ローカル統計、リプレイ閲覧、AI リプレイ分析を含みます。
 
 現在の AI 分析はプレイ中の支援ではなく、対局後のリプレイ分析用です。プレイヤーは各配置の良し悪し、ミスになった判断、AI が推奨する配置をリプレイ画面で確認できます。
 
@@ -103,7 +103,7 @@ userdata/               ローカル実行時の保存データ
 
 ### 项目简介
 
-WIDE TETRIS 是一个使用 Godot 4 开发的现代俄罗斯方块项目。项目包含 SRS 旋转、Hold、7-Bag、锁定延迟、B2B、Combo、垃圾行队列、T-Spin 判定、本地统计、对局回放和 AI 复盘分析。
+TETRIS 是一个使用 Godot 4 开发的现代俄罗斯方块项目。项目包含 SRS 旋转、Hold、7-Bag、锁定延迟、B2B、Combo、垃圾行队列、T-Spin 判定、本地统计、对局回放和 AI 复盘分析。
 
 当前 AI 的目标不是在玩家游玩中实时辅助，而是在对局结束后，通过 replay 分析帮助玩家快速判断每一步操作的好坏，发现导致失误的放置或判断，并看到 AI 推荐的更优落点。
 
@@ -198,7 +198,7 @@ userdata/               本地运行时保存数据
 
 ### Overview
 
-WIDE TETRIS is a modern Tetris project built with Godot 4. It includes SRS rotation, Hold, 7-Bag, lock delay, B2B, combo, garbage queue, T-Spin detection, local player statistics, replay viewing, and AI replay analysis.
+TETRIS is a modern Tetris project built with Godot 4. It includes SRS rotation, Hold, 7-Bag, lock delay, B2B, combo, garbage queue, T-Spin detection, local player statistics, replay viewing, and AI replay analysis.
 
 The current AI goal is post-game analysis, not live in-game assistance. After a match, players can review each placement, spot mistakes, and compare their move with AI-recommended placements.
 

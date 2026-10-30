@@ -8,7 +8,7 @@ extends TetrisCore
 @onready var label_score: Label = $HUD/ScoreLabel
 @onready var label_level: Label = $HUD/LevelLabel
 @onready var label_lines: Label = $HUD/LinesLabel
-@onready var label_game_over: Label = $HUD/GameOverLabel
+@onready var label_game_over: Label = %GameOverLabel
 @onready var label_spin_text: Label = $HUD/SpinTextLabel
 @onready var label_combo_text: Label = $HUD/ComboTextLabel
 
@@ -18,25 +18,27 @@ extends TetrisCore
 @onready var sfx_tetris: AudioStreamPlayer = $SfxSuccess
 @onready var sfx_spin: AudioStreamPlayer = $SfxSpin
 @onready var sfx_death: AudioStreamPlayer = $SfxDeath
-@onready var sfx_move: AudioStreamPlayer = get_node_or_null("SfxMove") as AudioStreamPlayer
+@onready var sfx_move: AudioStreamPlayer = $SfxMove
 
 var garbage_bar: GarbageBar
 var single_player_attack_timer: float = 0.0
 var pending_attacks: Array = []
 var ready_garbage: int = 0
 
-var game_over_panel: PanelContainer
-var btn_restart: Button
-var btn_return: Button
+@onready var game_over_panel: PanelContainer = %GameOverOverlay
+@onready var btn_restart: Button = %RestartButton
+@onready var btn_return: Button = %ReturnButton
 var _game_over_focus_ready_msec: int = 0
 
 var spin_text_tween: Tween
 var combo_text_tween: Tween
+var _combo_text_base_y: float = 0.0
 var _last_move_sfx_msec: int = 0
 
 const GARBAGE_BAR_GAP: float = 6.0
+const SP_ATTACK_DELAY: float = 12.0
+const SP_WARNING_STAGE: float = 6.0
 const MOVE_SFX_MIN_INTERVAL_MSEC: int = 45
-const SFX_MOVE_STREAM: AudioStream = preload("res://audio/move_scrape.wav")
 const ATTACK_DAMAGE_POPUP := preload("res://scripts/ui/attack_damage_popup.gd")
 const B2B_STREAK_BADGE := preload("res://scripts/ui/b2b_streak_badge.gd")
 
@@ -61,7 +63,6 @@ func _ready() -> void:
 	_setup_input_actions()
 
 	_initialize_ui()
-	_assign_move_sfx_stream()
 	_update_texts()
 
 	score_changed.connect(_on_score_changed)
@@ -86,12 +87,12 @@ func _notification(what: int) -> void:
 		_update_texts()
 
 func _process(delta: float) -> void:
-	# 先跑核心逻辑（移动/重力/锁定等）。
-	process_logic(delta)
+	# 输入先归入当前方块，再处理本帧锁定。
 
 	# 统计本块按键次数（用于 KPP）。
 	if _data_collector and _data_collector.is_active() and not game_over and not paused:
 		_count_key_presses()
+	process_logic(delta)
 
 	# 更新单人受攻击条与入场计时。
 	if not game_over and not paused:
@@ -129,11 +130,14 @@ func _update_single_player_garbage(delta: float) -> void:
 
 		if single_player_attack_timer >= current_interval:
 			single_player_attack_timer = 0.0
-			pending_attacks.append({"delay": 12.0, "amount": 1})
+			pending_attacks.append({"delay": SP_ATTACK_DELAY, "amount": 1})
+			if garbage_bar:
+				garbage_bar.sync_queue(pending_attacks, ready_garbage, SP_ATTACK_DELAY, SP_WARNING_STAGE)
+				# 环境攻击：从垃圾槽正上方落入
+				var bar_top := AttackFX.canvas_pos(garbage_bar)
+				_fire_incoming(bar_top + Vector2(garbage_bar.size.x * 0.5, -48), garbage_bar, 1)
 
 	var new_pending: Array = []
-	var grey_count: int = 0
-	var yellow_count: int = 0
 
 	# 更新攻击包倒计时：到时进入 ready_garbage，否则保留在队列。
 	for attack in pending_attacks:
@@ -142,25 +146,17 @@ func _update_single_player_garbage(delta: float) -> void:
 			ready_garbage += attack["amount"]
 		else:
 			new_pending.append(attack)
-			if attack["delay"] > 6.0:
-				grey_count += attack["amount"]
-			else:
-				yellow_count += attack["amount"]
 	pending_attacks = new_pending
 
 	if garbage_bar:
-		garbage_bar.update_bar(grey_count, yellow_count, ready_garbage)
+		garbage_bar.sync_queue(pending_attacks, ready_garbage, SP_ATTACK_DELAY, SP_WARNING_STAGE)
 
 
-func _assign_move_sfx_stream() -> void:
-	if sfx_move == null:
-		sfx_move = AudioStreamPlayer.new()
-		sfx_move.name = "SfxMove"
-		add_child(sfx_move)
-	sfx_move.stream = SFX_MOVE_STREAM
-	sfx_move.volume_db = 1.5
-	sfx_move.pitch_scale = 1.0
-	sfx_move.max_polyphony = 4
+func _incoming_garbage_total() -> int:
+	var total: int = ready_garbage
+	for attack in pending_attacks:
+		total += int(attack["amount"])
+	return total
 
 
 func _on_successful_horizontal_move(_dx: int) -> void:
@@ -195,16 +191,13 @@ func _on_lines_cleared(amount: int, is_spin: bool, is_t_spin: bool, dmg: int) ->
 	# 音效分流：Spin > Tetris > 普通消行。
 	var did_spin_clear: bool = (is_spin or is_t_spin)
 	if did_spin_clear:
-		if sfx_spin:
-			sfx_spin.play()
+		_play_clear_sfx(sfx_spin)
 		_show_spin_text(_build_spin_text(cur_type, is_t_spin))
 	elif amount == 4:
-		if sfx_tetris:
-			sfx_tetris.play()
+		_play_clear_sfx(sfx_tetris)
 		_show_spin_text("TETRIS!")
 	else:
-		if sfx_line_clear:
-			sfx_line_clear.play()
+		_play_clear_sfx(sfx_line_clear)
 
 	# 连击提示。
 	if scoring.combo > 0:
@@ -225,6 +218,10 @@ func _on_lines_cleared(amount: int, is_spin: bool, is_t_spin: bool, dmg: int) ->
 		if target["amount"] <= 0:
 			pending_attacks.pop_front()
 
+	var canceled: int = dmg - block_amount
+	if canceled > 0 and garbage_bar:
+		_fire_cancel(garbage_bar, canceled)
+
 func _lock_piece() -> void:
 	# 锁定前记录状态，用于判断是否“无消行吃垃圾”。
 	var will_receive_garbage: bool = (ready_garbage > 0)
@@ -243,6 +240,7 @@ func _lock_piece() -> void:
 
 	# === 内联 TetrisCore._lock_piece() 逻辑，以便在 lock 与 clear 之间捕获棋盘 ===
 	lock_timer.stop()
+	var is_spin: bool = _resolve_spin()
 	board.lock_piece(cur_type, cur_rot, cur_col, cur_row, PieceData.COLORS[cur_type])
 
 	# >>> 捕获消行前的棋盘状态（方块已放置但未消行）<<<
@@ -253,9 +251,6 @@ func _lock_piece() -> void:
 			_cached_board_after_drop.append(full_grid_before_clear[r])
 
 	# 检查特殊旋转
-	var is_spin: bool = false
-	if last_was_rotation and _is_spin_piece_type(cur_type):
-		is_spin = _check_immobile()
 
 	# 执行消行逻辑
 	var clear_result: Dictionary = board.clear_lines_with_data()
@@ -263,7 +258,7 @@ func _lock_piece() -> void:
 	var cleared_rows_data: Array = clear_result["rows_data"]
 	var dmg: int = 0
 	if cleared > 0:
-		var is_t_spin = (cur_type == PieceData.Type.T and is_spin)
+		var is_t_spin = _is_full_t_spin()
 		scoring.process_line_clear(cleared, is_spin, is_t_spin)
 		dmg = _calculate_damage(cleared, is_spin, is_t_spin)
 		lines_cleared.emit(cleared, is_spin, is_t_spin, dmg)
@@ -278,14 +273,17 @@ func _lock_piece() -> void:
 
 	_play_piece_lock_sound_once()
 
+	var garbage_topped_out := false
 	var did_clear_lines: bool = scoring.lines > lines_before_lock
 	if will_receive_garbage and not did_clear_lines:
-		board.add_garbage_lines(ready_garbage)
+		garbage_topped_out = board.add_garbage_lines(ready_garbage)
 		ready_garbage = 0
+		if garbage_bar:
+			garbage_bar.mark_entered()
+			garbage_bar.sync_queue(pending_attacks, ready_garbage, SP_ATTACK_DELAY, SP_WARNING_STAGE)
 
 	# 每次锁定后记录一次快照。
 	hold_used = false
-	_spawn_next_piece()
 
 	_record_piece_snapshot(
 		locked_piece_type,
@@ -294,6 +292,10 @@ func _lock_piece() -> void:
 		locked_row,
 		next_pieces_at_lock
 	)
+	if garbage_topped_out:
+		_trigger_game_over()
+	else:
+		_spawn_next_piece()
 
 func _on_game_over() -> void:
 	if label_game_over:
@@ -338,40 +340,17 @@ func _initialize_ui() -> void:
 		label_combo_text.add_theme_color_override("font_outline_color", Color(0.03, 0.06, 0.10, 1.0))
 		label_combo_text.add_theme_constant_override("outline_size", 6)
 
-	game_over_panel = PanelContainer.new()
-	var sb_go := StyleBoxFlat.new()
-	sb_go.bg_color = Color(0, 0, 0, 0.85)
-	game_over_panel.add_theme_stylebox_override("panel", sb_go)
-	game_over_panel.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	game_over_panel.hide()
-
-	var go_vbox := VBoxContainer.new()
-	go_vbox.alignment = BoxContainer.ALIGNMENT_CENTER
-	go_vbox.add_theme_constant_override("separation", 20)
-
-	btn_restart = Button.new()
-	btn_restart.custom_minimum_size = Vector2(240, 50)
-	btn_restart.focus_mode = Control.FOCUS_ALL
 	btn_restart.pressed.connect(func():
 		_save_and_cleanup_data()
 		get_tree().reload_current_scene()
 	)
 
-	btn_return = Button.new()
-	btn_return.custom_minimum_size = Vector2(240, 50)
-	btn_return.focus_mode = Control.FOCUS_ALL
 	btn_return.pressed.connect(func():
 		_save_and_cleanup_data()
-		get_tree().change_scene_to_file("res://scenes/ui/main.tscn")
+		UITheme.goto_scene("res://scenes/ui/main.tscn")
 	)
 
-	go_vbox.add_child(btn_restart)
-	go_vbox.add_child(btn_return)
-
-	var go_center := CenterContainer.new()
-	go_center.add_child(go_vbox)
-	game_over_panel.add_child(go_center)
-	$HUD.add_child(game_over_panel)
 	btn_restart.focus_neighbor_top = btn_restart.get_path()
 	btn_restart.focus_neighbor_bottom = btn_return.get_path()
 	btn_return.focus_neighbor_top = btn_restart.get_path()
@@ -400,6 +379,8 @@ func _update_texts() -> void:
 		btn_restart.text = tr("TXT_RESTART")
 	if btn_return:
 		btn_return.text = tr("TXT_RETURN_LOBBY")
+	label_game_over.text = tr("TXT_GAME_OVER")
+	_on_score_changed(scoring.score, scoring.level, scoring.lines)
 
 
 func _layout_garbage_bar() -> void:
@@ -442,6 +423,7 @@ func _layout_effect_labels() -> void:
 		label_combo_text.offset_top = maxf(108.0, board.position.y + 72.0)
 		label_combo_text.offset_right = board_center_x + 260.0
 		label_combo_text.offset_bottom = label_combo_text.offset_top + 72.0
+		_combo_text_base_y = label_combo_text.position.y
 
 func _build_spin_text(piece_type: int, is_t_spin: bool) -> String:
 	if is_t_spin:
@@ -449,7 +431,7 @@ func _build_spin_text(piece_type: int, is_t_spin: bool) -> String:
 	var piece_name: String = _piece_type_to_letter(piece_type)
 	if piece_name.is_empty():
 		return "SPIN!"
-	return "%s-SPIN!" % piece_name
+	return ("%s-SPIN MINI" if last_spin_mini else "%s-SPIN!") % piece_name
 
 func _piece_type_to_letter(piece_type: int) -> String:
 	match piece_type:
@@ -513,11 +495,11 @@ func _show_combo_text(combo_count: int) -> void:
 	label_combo_text.visible = true
 	label_combo_text.modulate = _combo_color(combo_count)
 	label_combo_text.modulate.a = 1.0
-	label_combo_text.position.y = label_combo_text.offset_top + 8.0
+	label_combo_text.position.y = _combo_text_base_y + 8.0
 
 	combo_text_tween = create_tween()
 	combo_text_tween.set_parallel(true)
-	combo_text_tween.tween_property(label_combo_text, "position:y", label_combo_text.offset_top, 0.10)
+	combo_text_tween.tween_property(label_combo_text, "position:y", _combo_text_base_y, 0.10)
 	combo_text_tween.chain()
 	combo_text_tween.tween_interval(0.20)
 	combo_text_tween.tween_property(label_combo_text, "modulate:a", 0.0, 0.45)
@@ -543,9 +525,7 @@ func _on_rows_cleared(rows_data: Array) -> void:
 	if board == null or rows_data.is_empty():
 		return
 
-	var effect := LineClearEffect.new()
-	board.add_child(effect)
-	effect.setup(rows_data, board.cell_size, board.buffer_rows)
+	_spawn_line_clear_fx(rows_data)
 	var popup_parent: Node = get_node_or_null("HUD")
 	var popup_node: Node = popup_parent if popup_parent else self
 	ATTACK_DAMAGE_POPUP.spawn(popup_node, board, _last_damage_this_lock, rows_data, _attack_popup_style())
@@ -656,3 +636,7 @@ func _evaluate_structure_scores(board_state_visible: Array) -> Dictionary:
 			return result2
 
 	return {"structure_score": 0.0, "stability_score": 0.0}
+
+
+func _exit_tree() -> void:
+	_save_and_cleanup_data()

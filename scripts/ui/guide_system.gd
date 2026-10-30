@@ -1,17 +1,12 @@
 class_name GuideSystem
 extends Control
 
-const BOARD_VIEW_SCENE := preload("res://scripts/ui/guide_board_view.gd")
 const SCENARIO_RUNNER := preload("res://scripts/ui/guide_scenario_runner.gd")
 const OVERVIEW_PAGE_SCENE := preload("res://scenes/ui/guide/overview_page.tscn")
 const BASICS_PAGE_SCENE := preload("res://scenes/ui/guide/basics_page.tscn")
 const CHAPTER_PAGE_SCENE := preload("res://scenes/ui/guide/chapter_page.tscn")
 const SIMULATION_PAGE_SCENE := preload("res://scenes/ui/guide/simulation_page.tscn")
 
-const EMPTY := 0
-const GARBAGE := 8
-const SIM_ROWS := 20
-const SIM_COLS := 10
 
 ## 攻击力表（对战标准）
 const ATTACK_TABLE: Array = [
@@ -37,37 +32,52 @@ var overview_button: Button
 var board_view: Control
 var feedback_label: Label
 var objective_label: Label
-var demo_timer: Timer
 var demo_tween: Tween
 var demo_action_label: Label
 var demo_step: int = 0
 var in_simulation: bool = false
 
 var sim_id: String = ""
-var sim_grid: Array = []
-var sim_piece_type: int = PieceData.Type.I
-var sim_rot: int = PieceData.RotationState.SPAWN
-var sim_col: int = 4
-var sim_row: int = 2
-var sim_sequence: Array = []
 var sim_sequence_index: int = 0
 var sim_combo: int = 0
 var sim_attempts: int = 0
 var sim_success: bool = false
-var sim_last_was_rotation: bool = false
 var sim_started_msec: int = 0
 var sim_hint_visible: bool = true
 var sim_locked: bool = false
 var scenario_runner: RefCounted
+var _feedback_key: String = ""
+var _feedback_args: Array = []
+var _feedback_success: bool = false
+var _feedback_danger: bool = false
 
 
 func _ready() -> void:
 	_build_chapters()
 	_build_shell()
 	_show_overview()
+	UITheme.theme_changed.connect(_on_theme_changed)
+
+
+## 代码生成的样式取自调色板，切换主题时重建当前页面
+func _on_theme_changed(_mode: String) -> void:
+	_build_shell_styles()
+	if in_simulation:
+		_rebuild_sidebar()
+		_refresh_sim_texts()
+	elif selected_index == -1:
+		_show_overview()
+	elif selected_index <= -100:
+		_show_basic_chapter(_basic_index_from_selection(selected_index))
+	else:
+		_show_chapter(selected_index)
 
 
 func _notification(what: int) -> void:
+	if what == NOTIFICATION_TRANSLATION_CHANGED and is_node_ready():
+		_build_chapters()
+		_apply_shell_texts()
+		_on_theme_changed(UITheme.mode)
 	if what == NOTIFICATION_RESIZED and is_inside_tree() and board_view:
 		board_view.queue_redraw()
 
@@ -194,45 +204,68 @@ func _build_shell() -> void:
 	overview_button = %OverviewButton
 	_apply_shell_texts()
 
-	var header := get_node_or_null("Page/Header") as PanelContainer
-	if header:
-		header.add_theme_stylebox_override("panel", _style(Color("ffffff"), Color("e2e8f0"), 0, 0))
-
-	var sidebar_panel := get_node_or_null("Page/BodyMargin/Body/SidebarPanel") as PanelContainer
-	if sidebar_panel:
-		sidebar_panel.add_theme_stylebox_override("panel", _style(Color("f8fbff"), Color("d8e4f1"), 8, 1))
-
+	_build_shell_styles()
 	var back := %BackButton as Button
-	_style_button(back, false)
-	back.add_theme_stylebox_override("normal", _style(Color("ffffff"), Color("cbd5e1"), 8, 1))
-	back.add_theme_stylebox_override("hover", _style(Color("e0f2fe"), Color("38bdf8"), 8, 1))
-	back.add_theme_stylebox_override("pressed", _style(Color("bae6fd"), Color("0284c7"), 8, 1))
-	back.add_theme_stylebox_override("focus", _style(Color("e0f2fe"), Color("0284c7"), 8, 1))
-	back.pressed.connect(func(): get_tree().change_scene_to_file("res://scenes/ui/main.tscn"))
+	back.pressed.connect(func(): UITheme.goto_scene("res://scenes/ui/main.tscn"))
 
 	overview_button.pressed.connect(_show_overview)
 
 	_rebuild_sidebar()
 
-	demo_timer = Timer.new()
-	add_child(demo_timer)
+
+
+
+func _build_shell_styles() -> void:
+	var header := get_node_or_null("Page/Header") as PanelContainer
+	if header:
+		header.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
+	var sidebar_panel := get_node_or_null("Page/BodyMargin/Body/SidebarPanel") as PanelContainer
+	if sidebar_panel:
+		sidebar_panel.theme_type_variation = &"GlassPanel"
+	# 阅读 → 演示 → 模拟：彩色步骤条
+	var tabs := get_node_or_null("Page/Header/Margin/Row/Tabs") as HBoxContainer
+	if tabs:
+		tabs.add_theme_constant_override("separation", 6)
+		for child in tabs.get_children():
+			if child.has_meta(&"step_arrow"):
+				child.queue_free()
+		var names := ["ReadTab", "DemoTab", "TryTab"]
+		for i in names.size():
+			var tab := tabs.get_node(names[i]) as Label
+			var chip := _hue_chip("", _hue(i))
+			tab.add_theme_stylebox_override("normal", chip.get_theme_stylebox("normal"))
+			tab.add_theme_color_override("font_color", chip.get_theme_color("font_color"))
+			tab.add_theme_font_size_override("font_size", 13)
+			tab.custom_minimum_size = Vector2(0, 30)
+			tab.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+			chip.free()
+			if i > 0:
+				var arrow := _label("›", 18, _c("faint"))
+				arrow.autowrap_mode = TextServer.AUTOWRAP_OFF
+				arrow.set_meta(&"step_arrow", true)
+				tabs.add_child(arrow)
+				tabs.move_child(arrow, tab.get_index())
+	if overview_button:
+		_style_sidebar_button(overview_button, selected_index == -1 and not in_simulation)
 
 
 func _apply_shell_texts() -> void:
 	var back := %BackButton as Button
 	back.text = tr("TXT_GUIDE_BACK")
-	overview_button.text = "  " + tr("TXT_GUIDE_OVERVIEW_NAV")
-	(get_node("Page/Header/Margin/Row/Tabs/ReadTab") as Label).text = tr("TXT_GUIDE_READ")
-	(get_node("Page/Header/Margin/Row/Tabs/DemoTab") as Label).text = tr("TXT_GUIDE_DEMO")
-	(get_node("Page/Header/Margin/Row/Tabs/TryTab") as Label).text = tr("TXT_GUIDE_SIM")
+	overview_button.text = tr("TXT_GUIDE_OVERVIEW_NAV")
+	(get_node("Page/Header/Margin/Row/Tabs/ReadTab") as Label).text = "  1  %s  " % tr("TXT_GUIDE_READ")
+	(get_node("Page/Header/Margin/Row/Tabs/DemoTab") as Label).text = "  2  %s  " % tr("TXT_GUIDE_DEMO")
+	(get_node("Page/Header/Margin/Row/Tabs/TryTab") as Label).text = "  3  %s  " % tr("TXT_GUIDE_SIM")
 	(get_node("Page/BodyMargin/Body/SidebarPanel/SidebarMargin/Sidebar/BasicsSectionLabel") as Label).text = tr("TXT_GUIDE_BASICS")
 	(get_node("Page/BodyMargin/Body/SidebarPanel/SidebarMargin/Sidebar/SectionLabel") as Label).text = tr("TXT_GUIDE_CHAPTERS")
 
 
 func _rebuild_sidebar() -> void:
 	for child in basics_list.get_children():
+		basics_list.remove_child(child)
 		child.queue_free()
 	for child in chapters_list.get_children():
+		chapters_list.remove_child(child)
 		child.queue_free()
 
 	if overview_button:
@@ -240,11 +273,11 @@ func _rebuild_sidebar() -> void:
 
 	for i in range(basics_chapters.size()):
 		var basics: Dictionary = basics_chapters[i]
-		basics_list.add_child(_sidebar_button("%s  %s" % [basics["number"], basics["title"]], _basic_selection(i)))
+		basics_list.add_child(_sidebar_button("%s  %s" % [basics["number"], basics["title"]], _basic_selection(i), _hue(i)))
 
 	for i in range(chapters.size()):
 		var chapter: Dictionary = chapters[i]
-		chapters_list.add_child(_sidebar_button("%s  %s" % [chapter["number"], chapter["title"]], i))
+		chapters_list.add_child(_sidebar_button("%s  %s" % [chapter["number"], chapter["title"]], i, _hue(i + basics_chapters.size())))
 
 
 func _basic_selection(index: int) -> int:
@@ -255,14 +288,15 @@ func _basic_index_from_selection(value: int) -> int:
 	return -100 - value
 
 
-func _sidebar_button(text: String, index: int) -> Button:
+func _sidebar_button(text: String, index: int, hue: String = "accent") -> Button:
 	var btn := Button.new()
-	btn.text = "  " + text
+	btn.text = text
 	btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
 	btn.custom_minimum_size = Vector2(0, 42)
 	btn.focus_mode = Control.FOCUS_ALL
+	btn.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
 	var active := index == selected_index and not in_simulation
-	_style_sidebar_button(btn, active)
+	_style_sidebar_button(btn, active, hue)
 	if index == -1:
 		btn.pressed.connect(_show_overview)
 	elif index <= -100:
@@ -272,17 +306,26 @@ func _sidebar_button(text: String, index: int) -> Button:
 	return btn
 
 
-func _style_sidebar_button(btn: Button, active: bool) -> void:
-	var normal_color := Color("e0f2fe") if active else Color("ffffff")
-	var border_color := Color("0284c7") if active else Color("d8e4f1")
-	btn.add_theme_stylebox_override("normal", _style(normal_color, border_color, 8, 1))
-	btn.add_theme_stylebox_override("hover", _style(Color("f0f9ff"), Color("38bdf8"), 8, 1))
-	btn.add_theme_stylebox_override("pressed", _style(Color("bae6fd"), Color("0ea5e9"), 8, 1))
-	btn.add_theme_stylebox_override("focus", _style(Color("e0f2fe"), Color("0284c7"), 8, 1))
-	btn.add_theme_color_override("font_color", Color("12345a"))
-	btn.add_theme_color_override("font_hover_color", Color("075985"))
-	btn.add_theme_color_override("font_pressed_color", Color("0369a1"))
-	btn.add_theme_color_override("font_focus_color", Color("075985"))
+func _style_sidebar_button(btn: Button, active: bool, hue: String = "accent") -> void:
+	btn.theme_type_variation = &"NavButton"
+	for key in ["normal", "hover", "pressed", "focus"]:
+		btn.remove_theme_stylebox_override(key)
+	for key in ["font_color", "font_hover_color", "font_focus_color"]:
+		btn.remove_theme_color_override(key)
+	btn.set_meta(&"nav_hue", hue)
+	if active:
+		# 选中项：章节色柔底 + 左侧色条
+		var col := _c(hue)
+		var box := _style(col, col, 99, 0)
+		box.content_margin_left = 18
+		box.content_margin_top = 10
+		box.content_margin_bottom = 10
+		btn.add_theme_stylebox_override("normal", box)
+		btn.add_theme_stylebox_override("hover", box)
+		var fg := _c("ink") if UITheme.is_dark() else Color.WHITE
+		btn.add_theme_color_override("font_color", fg)
+		btn.add_theme_color_override("font_hover_color", fg)
+		btn.add_theme_color_override("font_focus_color", fg)
 
 
 func _show_overview() -> void:
@@ -300,9 +343,16 @@ func _show_overview() -> void:
 	(page.get_node("%HeroTitle") as Label).text = tr("TXT_GUIDE_HERO_TITLE")
 	(page.get_node("PageMargin/Page/HeroPanel/HeroMargin/HeroBox/HeroBody") as Label).text = tr("TXT_GUIDE_HERO_BODY")
 
-	var path := page.get_node("%PathBox") as HBoxContainer
-	for item in [tr("TXT_GUIDE_BASICS"), tr("TXT_GUIDE_PATH_VERSUS"), tr("TXT_GUIDE_PATH_ATTACK"), tr("TXT_GUIDE_PATH_TECHNIQUE"), "Wall Kick", "Combo", "T-Spin Double"]:
-		path.add_child(_chip(item, Color("ecfdf5"), Color("047857")))
+	_flatten_panel(page.get_node("PageMargin/Page/PathPanel"))
+	_flatten_panel(page.get_node("PageMargin/Page/CardsPanel"))
+	var path := page.get_node("%PathBox") as HFlowContainer
+	var steps := [tr("TXT_GUIDE_BASICS"), tr("TXT_GUIDE_PATH_VERSUS"), tr("TXT_GUIDE_PATH_ATTACK"), tr("TXT_GUIDE_PATH_TECHNIQUE"), "Wall Kick", "Combo", "T-Spin Double"]
+	for i in steps.size():
+		if i > 0:
+			var arrow := _label("›", 18, _c("faint"))
+			arrow.autowrap_mode = TextServer.AUTOWRAP_OFF
+			path.add_child(arrow)
+		path.add_child(_hue_chip(steps[i], _hue(i)))
 
 	var basics_grid := page.get_node("%BasicsGrid") as GridContainer
 	(page.get_node("%BasicsTitle") as Label).text = tr("TXT_GUIDE_BASICS")
@@ -342,23 +392,26 @@ func _show_basic_chapter(index: int) -> void:
 
 func _basic_overview_card(index: int) -> Control:
 	var chapter: Dictionary = basics_chapters[index]
-	var card := _panel()
-	card.custom_minimum_size = Vector2(360, 150)
-	var margin := _margin(card, 18, 16, 18, 16)
+	var hue := _hue(index)
+	var card := _hue_card(int(String(chapter["number"])), hue)
+	card.custom_minimum_size = Vector2(320, 150)
 	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 8)
-	margin.add_child(box)
+	box.add_theme_constant_override("separation", 10)
+	box.mouse_filter = Control.MOUSE_FILTER_PASS
+	card.add_child(box)
 
 	var top := HBoxContainer.new()
+	top.add_theme_constant_override("separation", 10)
 	box.add_child(top)
-	top.add_child(_chip(chapter["number"], Color("dbeafe"), Color("1d4ed8")))
-	var title := _label(chapter["title"], 20, Color("0f1f45"))
+	var title := _label(chapter["title"], 20, _c("text"))
+	title.add_theme_font_override("font", get_theme_font("font", "HeaderLabel"))
+	title.add_theme_stylebox_override("normal", _badge_indent())
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(title)
-	top.add_child(_chip(chapter["tag"], Color("fef3c7"), Color("92400e")))
+	top.add_child(_hue_chip(chapter["tag"], hue))
 
 	box.add_child(_paragraph(chapter["summary"]))
-	box.add_child(_label("%s %s" % [tr("TXT_GUIDE_ESTIMATE_PREFIX"), String(chapter["time"])], 13, Color("64748b")))
+	box.add_child(_label("%s %s" % [tr("TXT_GUIDE_ESTIMATE_PREFIX"), String(chapter["time"])], 13, _c("muted")))
 
 	var read_btn := _primary_button(tr("TXT_GUIDE_VIEW"), false)
 	read_btn.pressed.connect(_show_basic_chapter.bind(index))
@@ -368,23 +421,26 @@ func _basic_overview_card(index: int) -> Control:
 
 func _chapter_card(index: int) -> Control:
 	var chapter: Dictionary = chapters[index]
-	var card := _panel()
-	card.custom_minimum_size = Vector2(360, 170)
-	var margin := _margin(card, 18, 16, 18, 16)
+	var hue := _hue(index + basics_chapters.size())
+	var card := _hue_card(int(String(chapter["number"])), hue)
+	card.custom_minimum_size = Vector2(320, 170)
 	var box := VBoxContainer.new()
-	box.add_theme_constant_override("separation", 8)
-	margin.add_child(box)
+	box.add_theme_constant_override("separation", 10)
+	box.mouse_filter = Control.MOUSE_FILTER_PASS
+	card.add_child(box)
 
 	var top := HBoxContainer.new()
+	top.add_theme_constant_override("separation", 10)
 	box.add_child(top)
-	top.add_child(_chip(chapter["number"], Color("dbeafe"), Color("1d4ed8")))
-	var title := _label(chapter["title"], 20, Color("0f1f45"))
+	var title := _label(chapter["title"], 20, _c("text"))
+	title.add_theme_font_override("font", get_theme_font("font", "HeaderLabel"))
+	title.add_theme_stylebox_override("normal", _badge_indent())
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(title)
-	top.add_child(_chip(chapter["tag"], Color("fef3c7"), Color("92400e")))
+	top.add_child(_hue_chip(chapter["tag"], hue))
 
 	box.add_child(_paragraph(chapter["summary"]))
-	box.add_child(_label("%s %s" % [tr("TXT_GUIDE_ESTIMATE_PREFIX"), String(chapter["time"])], 13, Color("64748b")))
+	box.add_child(_label("%s %s" % [tr("TXT_GUIDE_ESTIMATE_PREFIX"), String(chapter["time"])], 13, _c("muted")))
 
 	var buttons := HBoxContainer.new()
 	buttons.add_theme_constant_override("separation", 10)
@@ -417,7 +473,7 @@ func _show_chapter(index: int) -> void:
 
 	var chip := page.get_node("%Chip") as Label
 	chip.text = "  %s / %s / %s  " % [chapter["number"], chapter["tag"], chapter["time"]]
-	chip.add_theme_stylebox_override("normal", _style(Color("e0f2fe"), Color("e0f2fe"), 8, 0))
+	chip.add_theme_stylebox_override("normal", _style(_soft("accent", 0.14), _soft("accent", 0.14), 8, 0))
 	(page.get_node("ArticleScroll/ArticleMargin/Article/ConceptSection/ConceptMargin/ConceptBox/ConceptTitle") as Label).text = tr("TXT_GUIDE_CONCEPT")
 	(page.get_node("ArticleScroll/ArticleMargin/Article/WhySection/WhyMargin/WhyBox/WhyTitle") as Label).text = tr("TXT_GUIDE_WHY")
 	(page.get_node("ArticleScroll/ArticleMargin/Article/ValueSection/ValueMargin/ValueBox/ValueTitle") as Label).text = tr("TXT_GUIDE_VALUE")
@@ -450,7 +506,7 @@ func _show_chapter(index: int) -> void:
 
 	demo_action_label = page.get_node("%ActionLabel") as Label
 	demo_action_label.text = tr("TXT_GUIDE_READY")
-	demo_action_label.add_theme_stylebox_override("normal", _style(Color("ecfdf5"), Color("bbf7d0"), 8, 1))
+	demo_action_label.add_theme_stylebox_override("normal", _style(_soft("success", 0.12), _soft("success", 0.35), 8, 1))
 	board_view = page.get_node("%BoardView")
 	_start_demo_for_chapter(chapter["sim"])
 
@@ -700,25 +756,23 @@ func _start_simulation(chapter_sim_id: String, chapter_index: int) -> void:
 func _reset_simulation() -> void:
 	scenario_runner = SCENARIO_RUNNER.new()
 	scenario_runner.setup(sim_id, 0)
-	sim_grid = scenario_runner.grid
 	sim_sequence_index = 0
 	sim_combo = -1
 	sim_attempts = 0
 	sim_success = false
 	sim_locked = false
-	sim_last_was_rotation = false
 	sim_hint_visible = true
 	sim_started_msec = Time.get_ticks_msec()
 
 	match sim_id:
 		"tspin":
-			_set_feedback(tr("TXT_GUIDE_OBJ_TSPIN"))
+			_set_feedback("TXT_GUIDE_OBJ_TSPIN")
 		"combo":
-			_set_feedback(tr("TXT_GUIDE_OBJ_COMBO"))
+			_set_feedback("TXT_GUIDE_OBJ_COMBO")
 		"wallkick":
-			_set_feedback(tr("TXT_GUIDE_OBJ_WALLKICK"))
+			_set_feedback("TXT_GUIDE_OBJ_WALLKICK")
 		_:
-			_set_feedback(tr("TXT_GUIDE_OBJ_TETRIS"))
+			_set_feedback("TXT_GUIDE_OBJ_TETRIS")
 
 	_update_objective()
 	_refresh_sim_view()
@@ -747,24 +801,29 @@ func _update_objective() -> void:
 			objective_label.text = tr("TXT_GUIDE_SIM_TETRIS")
 
 
-func _set_feedback(text: String, success: bool = false, danger: bool = false) -> void:
+func _refresh_sim_texts() -> void:
+	var page := content_root.get_child(0)
+	(page.get_node("%FocusHint") as Label).text = tr("TXT_GUIDE_SIM_HINT")
+	(page.get_node("%ResetButton") as Button).text = tr("TXT_GUIDE_RESET")
+	(page.get_node("%ExitButton") as Button).text = tr("TXT_GUIDE_EXIT_SIM")
+	_update_objective()
+	_set_feedback(_feedback_key, _feedback_success, _feedback_danger, _feedback_args)
+
+
+func _set_feedback(key: String, success: bool = false, danger: bool = false, args: Array = []) -> void:
+	_feedback_key = key
+	_feedback_args = args
+	_feedback_success = success
+	_feedback_danger = danger
 	if feedback_label == null:
 		return
-	feedback_label.text = text
+	feedback_label.text = tr(key) if args.is_empty() else tr(key) % args
 	if success:
-		feedback_label.add_theme_color_override("font_color", Color("047857"))
+		feedback_label.add_theme_color_override("font_color", _c("success"))
 	elif danger:
-		feedback_label.add_theme_color_override("font_color", Color("b45309"))
+		feedback_label.add_theme_color_override("font_color", _c("warning"))
 	else:
-		feedback_label.add_theme_color_override("font_color", Color("475569"))
-
-
-func _spawn_sim_piece(piece_type: int, col: int, row: int, rot: int = PieceData.RotationState.SPAWN) -> void:
-	sim_piece_type = piece_type
-	sim_col = col
-	sim_row = row
-	sim_rot = rot
-	sim_last_was_rotation = false
+		feedback_label.add_theme_color_override("font_color", _c("muted"))
 
 
 func _sim_move(dx: int, dy: int) -> void:
@@ -780,7 +839,7 @@ func _sim_rotate(direction: int) -> void:
 	if scenario_runner.try_rotate(direction):
 		_refresh_sim_view()
 		return
-	_set_feedback(tr("TXT_GUIDE_ERR_ROT"), false, true)
+	_set_feedback("TXT_GUIDE_ERR_ROT", false, true)
 
 
 func _sim_hard_drop() -> void:
@@ -794,7 +853,7 @@ func _sim_lock_now() -> void:
 	if sim_success or sim_locked or scenario_runner == null:
 		return
 	if scenario_runner.is_valid(scenario_runner.piece_type, scenario_runner.rot, scenario_runner.col, scenario_runner.row + 1):
-		_set_feedback(tr("TXT_GUIDE_ERR_LOCK"), false, true)
+		_set_feedback("TXT_GUIDE_ERR_LOCK", false, true)
 		return
 	_lock_sim_piece()
 
@@ -816,23 +875,23 @@ func _lock_sim_piece() -> void:
 			if scenario_runner.piece_type == PieceData.Type.T and bool(result["spin"]) and cleared >= 2:
 				sim_success = true
 				sim_locked = true
-				_set_feedback(tr("TXT_GUIDE_SUC_TSPIN") % elapsed, true)
+				_set_feedback("TXT_GUIDE_SUC_TSPIN", true, false, [elapsed])
 			elif scenario_runner.piece_type == PieceData.Type.T and bool(result["spin"]) and cleared == 1:
 				sim_locked = true
-				_set_feedback(tr("TXT_GUIDE_ERR_TSPIN_1"), false, true)
+				_set_feedback("TXT_GUIDE_ERR_TSPIN_1", false, true)
 			else:
 				sim_locked = true
-				_set_feedback(tr("TXT_GUIDE_ERR_TSPIN_0"), false, true)
+				_set_feedback("TXT_GUIDE_ERR_TSPIN_0", false, true)
 		"combo":
 			if cleared > 0:
 				sim_combo += 1
 				if sim_combo >= 4:
 					sim_success = true
 					sim_locked = true
-					_set_feedback(tr("TXT_GUIDE_SUC_COMBO") % elapsed, true)
+					_set_feedback("TXT_GUIDE_SUC_COMBO", true, false, [elapsed])
 				else:
 					var extra: int = int(COMBO_ATTACK_TABLE[mini(sim_combo, COMBO_ATTACK_TABLE.size() - 1)])
-					_set_feedback(tr("TXT_GUIDE_SUC_COMBO_N") % [sim_combo, extra], true)
+					_set_feedback("TXT_GUIDE_SUC_COMBO_N", true, false, [sim_combo, extra])
 					sim_sequence_index += 1
 					scenario_runner.phase = sim_sequence_index
 					scenario_runner.spawn(PieceData.Type.O, 7, 2, PieceData.RotationState.SPAWN)
@@ -840,22 +899,22 @@ func _lock_sim_piece() -> void:
 			else:
 				sim_combo = 0
 				sim_locked = true
-				_set_feedback(tr("TXT_GUIDE_ERR_COMBO"), false, true)
+				_set_feedback("TXT_GUIDE_ERR_COMBO", false, true)
 		"wallkick":
 			sim_locked = true
 			if bool(result["spin"]) and cleared >= 2:
 				sim_success = true
-				_set_feedback(tr("TXT_GUIDE_SUC_LSPIN"), true)
+				_set_feedback("TXT_GUIDE_SUC_LSPIN", true)
 			else:
-				_set_feedback(tr("TXT_GUIDE_ERR_LSPIN"), false, true)
+				_set_feedback("TXT_GUIDE_ERR_LSPIN", false, true)
 		_:
 			if scenario_runner.piece_type == PieceData.Type.I and cleared == 4:
 				sim_success = true
 				sim_locked = true
-				_set_feedback(tr("TXT_GUIDE_SUC_TETRIS") % elapsed, true)
+				_set_feedback("TXT_GUIDE_SUC_TETRIS", true, false, [elapsed])
 			else:
 				sim_locked = true
-				_set_feedback(tr("TXT_GUIDE_ERR_TETRIS"), false, true)
+				_set_feedback("TXT_GUIDE_ERR_TETRIS", false, true)
 
 	_update_objective()
 	_refresh_sim_view()
@@ -864,7 +923,6 @@ func _lock_sim_piece() -> void:
 func _refresh_sim_view() -> void:
 	if board_view == null or scenario_runner == null:
 		return
-	sim_grid = scenario_runner.grid
 	board_view.set_state(
 		scenario_runner.grid,
 		{} if sim_locked else scenario_runner.piece_dict(),
@@ -872,127 +930,6 @@ func _refresh_sim_view() -> void:
 		scenario_runner.highlight_rows(),
 		scenario_runner.focus_cells()
 	)
-
-
-func _sim_target_cells() -> Array:
-	match sim_id:
-		"tspin":
-			return _piece_cells(PieceData.Type.T, PieceData.RotationState.TWO, 5, 18)
-		"combo":
-			if sim_sequence_index == 0:
-				return _piece_cells(PieceData.Type.O, PieceData.RotationState.SPAWN, 8, 19)
-			return _piece_cells(PieceData.Type.O, PieceData.RotationState.SPAWN, 8, 19 - sim_sequence_index * 2)
-		"wallkick":
-			return _piece_cells(PieceData.Type.L, PieceData.RotationState.R, 8, 12)
-		_:
-			return _piece_cells(PieceData.Type.I, PieceData.RotationState.R, 8, 17)
-
-
-func _sim_highlight_rows() -> Array:
-	match sim_id:
-		"tspin":
-			return [18, 19]
-		"combo":
-			return [18, 19] if sim_sequence_index == 0 else [19]
-		"wallkick":
-			return []
-		_:
-			return [16, 17, 18, 19]
-
-
-func _sim_valid(type: int, rot_state: int, col_pos: int, row_pos: int) -> bool:
-	for offset in PieceData.SHAPES[type][rot_state]:
-		var c := col_pos + int(offset.x)
-		var r := row_pos + int(offset.y)
-		if c < 0 or c >= SIM_COLS:
-			return false
-		if r >= SIM_ROWS:
-			return false
-		if r < 0:
-			continue
-		if int(sim_grid[r][c]) != EMPTY:
-			return false
-	return true
-
-
-func _piece_cells(type: int, rot_state: int, col_pos: int, row_pos: int) -> Array:
-	var cells: Array = []
-	for offset in PieceData.SHAPES[type][rot_state]:
-		cells.append(Vector2i(col_pos + int(offset.x), row_pos + int(offset.y)))
-	return cells
-
-
-func _clear_sim_lines() -> int:
-	var new_grid: Array = []
-	var cleared := 0
-	for grid_row in range(SIM_ROWS):
-		var full := true
-		for grid_col in range(SIM_COLS):
-			if int(sim_grid[grid_row][grid_col]) == EMPTY:
-				full = false
-				break
-		if full:
-			cleared += 1
-		else:
-			new_grid.append(sim_grid[grid_row])
-	for _i in range(cleared):
-		new_grid.insert(0, _empty_row())
-	sim_grid = new_grid
-	return cleared
-
-
-func _fill_tetris_grid(grid: Array) -> void:
-	for grid_row in range(16, 20):
-		for grid_col in range(0, 9):
-			grid[grid_row][grid_col] = GARBAGE
-
-
-func _fill_tspin_grid(grid: Array) -> void:
-	for grid_col in range(SIM_COLS):
-		if grid_col < 4 or grid_col > 6:
-			grid[18][grid_col] = GARBAGE
-	grid[19][3] = GARBAGE
-	grid[19][4] = GARBAGE
-	grid[19][6] = GARBAGE
-	grid[19][7] = GARBAGE
-	grid[17][4] = GARBAGE
-
-
-func _fill_combo_phase_grid(grid: Array, phase: int) -> void:
-	for grid_row in range(16, 20):
-		for grid_col in range(SIM_COLS):
-			var hole_a := 4 if phase != 1 else 8
-			var hole_b := 5 if phase != 1 else 9
-			if grid_col != hole_a and grid_col != hole_b:
-				grid[grid_row][grid_col] = GARBAGE
-	if phase == 0:
-		for grid_row in [18, 19]:
-			for grid_col in range(SIM_COLS):
-				if grid_col != 4 and grid_col != 5:
-					grid[grid_row][grid_col] = GARBAGE
-	elif phase == 1:
-		for grid_row in range(16, 20):
-			for grid_col in range(SIM_COLS):
-				if grid_col != 8:
-					grid[grid_row][grid_col] = GARBAGE
-	else:
-		for grid_col in range(SIM_COLS):
-			if grid_col < 4 or grid_col > 6:
-				grid[19][grid_col] = GARBAGE
-
-
-func _empty_grid() -> Array:
-	var data: Array = []
-	for _r in range(SIM_ROWS):
-		data.append(_empty_row())
-	return data
-
-
-func _empty_row() -> Array:
-	var grid_row: Array = []
-	for _c in range(SIM_COLS):
-		grid_row.append(EMPTY)
-	return grid_row
 
 
 func _versus_tetris_section(show_title: bool = true) -> Control:
@@ -1003,7 +940,7 @@ func _versus_tetris_section(show_title: bool = true) -> Control:
 	margin.add_child(box)
 
 	if show_title:
-		box.add_child(_label(tr("TXT_GUIDE_VERSUS_TITLE"), 22, Color("0f1f45")))
+		box.add_child(_label(tr("TXT_GUIDE_VERSUS_TITLE"), 22, _c("text")))
 	box.add_child(_paragraph(tr("TXT_GUIDE_VERSUS_BODY_1")))
 	box.add_child(_paragraph(tr("TXT_GUIDE_VERSUS_BODY_2")))
 
@@ -1023,7 +960,7 @@ func _general_technique_section(show_title: bool = true) -> Control:
 	margin.add_child(box)
 
 	if show_title:
-		box.add_child(_label(tr("TXT_GUIDE_TECH_TITLE"), 22, Color("0f1f45")))
+		box.add_child(_label(tr("TXT_GUIDE_TECH_TITLE"), 22, _c("text")))
 	box.add_child(_paragraph(tr("TXT_GUIDE_TECH_BODY")))
 	box.add_child(_list_section(tr("TXT_GUIDE_TECH_HIGH_VALUE_TITLE"), [
 		tr("TXT_GUIDE_TECH_HIGH_VALUE_1"),
@@ -1063,7 +1000,7 @@ func _attack_table() -> Control:
 	margin.add_child(box)
 
 	# 标题
-	box.add_child(_label(tr("TXT_GUIDE_ATK_TITLE"), 22, Color("0f1f45")))
+	box.add_child(_label(tr("TXT_GUIDE_ATK_TITLE"), 22, _c("text")))
 	box.add_child(_paragraph(tr("TXT_GUIDE_ATK_DESC")))
 
 	# 攻击力表格
@@ -1077,46 +1014,46 @@ func _attack_table() -> Control:
 	var headers := [tr("TXT_GUIDE_ATK_H1"), tr("TXT_GUIDE_ATK_H2"), tr("TXT_GUIDE_ATK_H3")]
 	for header_index in range(3):
 		var header_text: String = headers[header_index]
-		var header := _label(header_text, 14, Color("ffffff"))
+		var header := _label(header_text, 14, _c("accent_text"))
 		header.custom_minimum_size = Vector2(170 if header_index == 0 else 120, 32)
 		header.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		header.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 		header.autowrap_mode = TextServer.AUTOWRAP_OFF
-		header.add_theme_stylebox_override("normal", _style(Color("1d4ed8"), Color("1d4ed8"), 4, 0))
+		header.add_theme_stylebox_override("normal", _style(_c("accent"), _c("accent"), 4, 0))
 		table_grid.add_child(header)
 
 	# 数据行
 	for row_data in ATTACK_TABLE:
 		var is_high := int(row_data[2]) >= 4
-		var bg := Color("fef3c7") if is_high else Color("f8fafc")
+		var bg := _soft("warning", 0.16) if is_high else _c("surface2")
 		for cell_idx in range(3):
-			var cell_label := _label(row_data[cell_idx], 14, Color("1e293b"))
+			var cell_label := _label(row_data[cell_idx], 14, _c("text"))
 			cell_label.custom_minimum_size = Vector2(170 if cell_idx == 0 else 120, 30)
 			cell_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 			cell_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 			cell_label.autowrap_mode = TextServer.AUTOWRAP_OFF
-			cell_label.add_theme_stylebox_override("normal", _style(bg, Color("e2e8f0"), 2, 1))
+			cell_label.add_theme_stylebox_override("normal", _style(bg, _c("border"), 2, 1))
 			table_grid.add_child(cell_label)
 
 	# B2B 说明
 	var b2b_panel := _panel()
-	b2b_panel.add_theme_stylebox_override("panel", _style(Color("eff6ff"), Color("93c5fd"), 8, 1))
+	b2b_panel.add_theme_stylebox_override("panel", _style(_soft("accent", 0.08), _soft("accent", 0.4), 8, 1))
 	var b2b_margin := _margin(b2b_panel, 14, 10, 14, 10)
 	var b2b_box := VBoxContainer.new()
 	b2b_box.add_theme_constant_override("separation", 4)
 	b2b_margin.add_child(b2b_box)
-	b2b_box.add_child(_label(tr("TXT_GUIDE_B2B_TITLE"), 15, Color("1d4ed8")))
+	b2b_box.add_child(_label(tr("TXT_GUIDE_B2B_TITLE"), 15, _c("accent")))
 	b2b_box.add_child(_paragraph(tr("TXT_GUIDE_B2B_DESC")))
 	box.add_child(b2b_panel)
 
 	# Combo 说明
 	var combo_panel := _panel()
-	combo_panel.add_theme_stylebox_override("panel", _style(Color("ecfdf5"), Color("86efac"), 8, 1))
+	combo_panel.add_theme_stylebox_override("panel", _style(_soft("success", 0.12), _soft("success", 0.4), 8, 1))
 	var combo_margin := _margin(combo_panel, 14, 10, 14, 10)
 	var combo_box := VBoxContainer.new()
 	combo_box.add_theme_constant_override("separation", 4)
 	combo_margin.add_child(combo_box)
-	combo_box.add_child(_label(tr("TXT_GUIDE_COMBO_TITLE"), 15, Color("047857")))
+	combo_box.add_child(_label(tr("TXT_GUIDE_COMBO_TITLE"), 15, _c("success")))
 	combo_box.add_child(_paragraph(tr("TXT_GUIDE_COMBO_DESC1")))
 	combo_box.add_child(_paragraph(tr("TXT_GUIDE_COMBO_DESC2")))
 	box.add_child(combo_panel)
@@ -1130,7 +1067,7 @@ func _text_section(title: String, text: String) -> Control:
 	var section_box := VBoxContainer.new()
 	section_box.add_theme_constant_override("separation", 8)
 	margin.add_child(section_box)
-	section_box.add_child(_label(title, 19, Color("0f1f45")))
+	section_box.add_child(_label(title, 19, _c("text")))
 	section_box.add_child(_paragraph(text))
 	return panel
 
@@ -1141,7 +1078,7 @@ func _list_section(title: String, items: Array) -> Control:
 	var section_box := VBoxContainer.new()
 	section_box.add_theme_constant_override("separation", 8)
 	margin.add_child(section_box)
-	section_box.add_child(_label(title, 19, Color("0f1f45")))
+	section_box.add_child(_label(title, 19, _c("text")))
 	for item in items:
 		section_box.add_child(_paragraph("• " + String(item)))
 	return panel
@@ -1184,35 +1121,76 @@ func _primary_button(text: String, filled: bool) -> Button:
 
 func _style_button(btn: Button, filled: bool) -> void:
 	btn.focus_mode = Control.FOCUS_ALL
-	if filled:
-		btn.add_theme_stylebox_override("normal", _style(Color("2563eb"), Color("1d4ed8"), 8, 1))
-		btn.add_theme_stylebox_override("hover", _style(Color("1d4ed8"), Color("1e40af"), 8, 1))
-		btn.add_theme_stylebox_override("pressed", _style(Color("1e40af"), Color("1e3a8a"), 8, 1))
-		btn.add_theme_color_override("font_color", Color("ffffff"))
-		btn.add_theme_color_override("font_hover_color", Color("ffffff"))
-		btn.add_theme_color_override("font_pressed_color", Color("e0e7ff"))
-		btn.add_theme_color_override("font_focus_color", Color("ffffff"))
-	else:
-		btn.add_theme_stylebox_override("normal", _style(Color("ffffff"), Color("bfdbfe"), 8, 1))
-		btn.add_theme_stylebox_override("hover", _style(Color("eff6ff"), Color("60a5fa"), 8, 1))
-		btn.add_theme_stylebox_override("pressed", _style(Color("dbeafe"), Color("3b82f6"), 8, 1))
-		btn.add_theme_color_override("font_color", Color("1d4ed8"))
-		btn.add_theme_color_override("font_hover_color", Color("1d4ed8"))
-		btn.add_theme_color_override("font_pressed_color", Color("1e40af"))
-		btn.add_theme_color_override("font_focus_color", Color("1d4ed8"))
+	btn.theme_type_variation = &"AccentButton" if filled else &""
 
 
 func _panel() -> PanelContainer:
 	var panel := PanelContainer.new()
 	panel.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	panel.add_theme_stylebox_override("panel", _style(Color("ffffff"), Color("d8e4f1"), 8, 1))
+	panel.theme_type_variation = &"CardPanel"
 	return panel
+
+
+func _flatten_panel(node: Node) -> void:
+	var panel := node as PanelContainer
+	if panel:
+		panel.add_theme_stylebox_override("panel", StyleBoxEmpty.new())
+		var m := panel.get_child(0) as MarginContainer
+		if m:
+			for side in ["margin_left", "margin_right", "margin_top"]:
+				m.add_theme_constant_override(side, 0)
 
 
 func _style_panel_node(node: Node) -> void:
 	var panel := node as PanelContainer
 	if panel:
-		panel.add_theme_stylebox_override("panel", _style(Color("ffffff"), Color("d8e4f1"), 8, 1))
+		panel.theme_type_variation = &"CardPanel"
+
+
+
+func _c(key: String) -> Color:
+	return UITheme.color(key)
+
+
+const HUES: Array[String] = ["cyan", "amber", "pink", "violet"]
+
+
+func _hue(i: int) -> String:
+	return HUES[posmod(i, HUES.size())]
+
+
+## 色相小标签：淡色底 + 加深的同色字（保证可读性），无描边
+func _hue_chip(text: String, hue: String) -> Label:
+	var dark := UITheme.is_dark()
+	var col := _c(hue)
+	var bg := Color(col, 0.2) if dark else col.lerp(Color.WHITE, 0.72)
+	var fg := col.lightened(0.15) if dark else col.darkened(0.42)
+	var label := _chip(text, bg, fg)
+	label.add_theme_font_override("font", get_theme_font("font", "HeaderLabel"))
+	var sb := label.get_theme_stylebox("normal") as StyleBoxFlat
+	sb.set_corner_radius_all(99)
+	return label
+
+
+func _badge_indent() -> StyleBoxEmpty:
+	var sb := StyleBoxEmpty.new()
+	sb.content_margin_left = 40
+	return sb
+
+
+func _hue_card(index: int, hue: String) -> ModeCard:
+	var card := ModeCard.new()
+	card.hue = hue
+	card.index = index
+	card.show_arrow = false
+	card.hover_activate = true
+	card.corner_radius = 20
+	card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	return card
+
+
+func _soft(key: String, amount: float) -> Color:
+	return UITheme.soft(key, amount)
 
 
 func _style(bg: Color, border: Color, radius: int, border_width: int) -> StyleBoxFlat:
@@ -1258,7 +1236,7 @@ func _paragraph(text: String) -> Label:
 	label.text = text
 	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	label.add_theme_font_size_override("font_size", 15)
-	label.add_theme_color_override("font_color", Color("475569"))
+	label.add_theme_color_override("font_color", _c("muted"))
 	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	return label
 
@@ -1275,49 +1253,10 @@ func _chip(text: String, bg: Color, fg: Color) -> Label:
 
 
 func _clear_content() -> void:
+	_stop_demo_animation()
 	if content_root == null:
 		return
 	for child in content_root.get_children():
+		content_root.remove_child(child)
 		child.queue_free()
 	board_view = null
-
-
-## ---- 以下是 guide_system.gd 中保留但不再被 simulation 按钮调用的旧方法 ----
-## 保留 _demo_scene 用于兼容性（虽然新逻辑通过 scenario_runner 驱动）
-
-func _demo_piece(piece_type_val: int, rot_val: int, col_val: float, row_val: float) -> Dictionary:
-	return {"type": piece_type_val, "rot": rot_val, "col": col_val, "row": row_val}
-
-
-func _grid_with_piece(grid: Array, piece: Dictionary) -> Array:
-	var result := _copy_grid(grid)
-	for pos in _piece_cells(int(piece["type"]), int(piece["rot"]), int(round(float(piece["col"]))), int(round(float(piece["row"])))):
-		if pos.y >= 0 and pos.y < SIM_ROWS and pos.x >= 0 and pos.x < SIM_COLS:
-			result[pos.y][pos.x] = int(piece["type"]) + 1
-	return result
-
-
-func _grid_after_clear(grid: Array) -> Array:
-	var result := _copy_grid(grid)
-	var new_grid: Array = []
-	var cleared := 0
-	for grid_row in range(SIM_ROWS):
-		var full := true
-		for grid_col in range(SIM_COLS):
-			if int(result[grid_row][grid_col]) == EMPTY:
-				full = false
-				break
-		if full:
-			cleared += 1
-		else:
-			new_grid.append(result[grid_row])
-	for _i in range(cleared):
-		new_grid.insert(0, _empty_row())
-	return new_grid
-
-
-func _copy_grid(grid: Array) -> Array:
-	var copy: Array = []
-	for grid_row in grid:
-		copy.append((grid_row as Array).duplicate())
-	return copy

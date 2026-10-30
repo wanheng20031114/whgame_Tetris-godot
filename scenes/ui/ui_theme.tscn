@@ -1,0 +1,38 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/ui_theme.gd" id="1_theme"]
+[ext_resource type="Shader" path="res://shaders/theme_reveal.gdshader" id="2_reveal"]
+
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_reveal"]
+shader = ExtResource("2_reveal")
+shader_parameter/progress = 0.0
+shader_parameter/origin = Vector2(0.5, 0.5)
+shader_parameter/aspect = 1.7778
+shader_parameter/edge = 0.04
+
+[node name="UITheme" type="Node"]
+script = ExtResource("1_theme")
+
+[node name="Overlay" type="CanvasLayer" parent="."]
+layer = 128
+
+[node name="Reveal" type="TextureRect" parent="Overlay"]
+visible = false
+material = SubResource("ShaderMaterial_reveal")
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+expand_mode = 1
+stretch_mode = 0
+
+[node name="Fade" type="ColorRect" parent="Overlay"]
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0, 0, 0, 0)

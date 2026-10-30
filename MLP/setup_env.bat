@@ -1,11 +1,11 @@
 @echo off
 setlocal
 
-title WIDE TETRIS AI Setup
+title TETRIS AI Setup
 cd /d "%~dp0"
 
 echo ============================================
-echo   WIDE TETRIS - AI Environment Setup
+echo   TETRIS - AI Environment Setup
 echo ============================================
 echo.
 echo This window installs the local Python AI runtime.

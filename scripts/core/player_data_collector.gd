@@ -12,9 +12,7 @@
 class_name PlayerDataCollector
 extends RefCounted
 
-const SNAPSHOT_ESTIMATED_BYTES: int = 1200
-const MEMORY_LIMIT_BYTES: int = 2_000_000_000
-const MAX_SNAPSHOTS: int = 1_666_666
+const MAX_SNAPSHOTS: int = 10_000
 
 const PIECE_TYPE_NAMES: Dictionary = {
 	0: "I", 1: "O", 2: "T", 3: "S", 4: "Z", 5: "J", 6: "L"
@@ -37,6 +35,8 @@ var _local_player_slot: int = 1
 
 var _session_start_ticks_ms: int = 0
 var _session_start_iso: String = ""
+var _session_id: String = ""
+var _recording_limit_reported: bool = false
 var _last_piece_ticks_ms: int = 0
 
 var key_presses_this_piece: int = 0
@@ -85,7 +85,7 @@ func start_session(
 	match_type: String = "",
 	local_player_slot: int = 1
 ) -> void:
-	_active = true
+	_active = PlayerDataStore.can_start_session()
 	_player_name = player_name
 	_game_mode = game_mode
 	_player_count = maxi(player_count, 1)
@@ -93,6 +93,8 @@ func start_session(
 	_local_player_slot = maxi(local_player_slot, 1)
 	_session_start_ticks_ms = Time.get_ticks_msec()
 	_session_start_iso = _get_iso_datetime()
+	_session_id = _session_start_iso.replace(":", "-") + "_" + Crypto.new().generate_random_bytes(16).hex_encode()
+	_recording_limit_reported = false
 	_last_piece_ticks_ms = _session_start_ticks_ms
 
 	_piece_index = 0
@@ -251,10 +253,12 @@ func record_piece_drop(
 	}
 
 	if _snapshots.size() >= MAX_SNAPSHOTS:
-		_snapshots.pop_front()
 		_discarded_snapshots += 1
-
-	_snapshots.append(snapshot)
+		if not _recording_limit_reported:
+			_recording_limit_reported = true
+			StorageBudget.report_error("Replay recording reached 10,000 pieces. Existing snapshots are retained; gameplay and totals continue.")
+	else:
+		_snapshots.append(snapshot)
 	_piece_index += 1
 
 
@@ -303,7 +307,7 @@ func end_session(final_score: int, final_level: int, final_lines: int) -> Dictio
 		"match_type": _match_type,
 		"player_count": _player_count,
 		"local_player_slot": _local_player_slot,
-		"session_id": _session_start_iso,
+		"session_id": _session_id,
 		"start_time": _session_start_iso,
 		"end_time": end_iso,
 		"duration_seconds": duration_seconds,
@@ -334,10 +338,8 @@ func end_session(final_score: int, final_level: int, final_lines: int) -> Dictio
 		"snapshots": _snapshots
 	}
 
-	PlayerDataStore.save_session(session_data)
-
 	var history_entry: Dictionary = {
-		"session_id": _session_start_iso,
+		"session_id": _session_id,
 		"date": _session_start_iso.left(10),
 		"game_mode": _game_mode,
 		"match_type": _match_type,
@@ -354,9 +356,10 @@ func end_session(final_score: int, final_level: int, final_lines: int) -> Dictio
 		"stability": avg_stability,
 		"pieces_placed": pieces_placed
 	}
-	PlayerDataStore.update_stats(_player_name, history_entry, radar)
-
-	_snapshots.clear()
+	PlayerDataStore.persist_session(session_data, history_entry, radar)
+	# The returned session and pending-save queue own this array even when saving
+	# fails. Starting another game must never clear their recorded snapshots.
+	_snapshots = []
 	return session_data
 
 

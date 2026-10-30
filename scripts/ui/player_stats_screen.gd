@@ -1,6 +1,7 @@
 class_name PlayerStatsScreen
 extends Control
 
+const HISTORY_ROW_SCENE := preload("res://scenes/ui/history_row.tscn")
 const MAX_HISTORY_DISPLAY: int = 20
 const RADAR_TREND_WINDOW: int = 5
 const RADAR_TREND_MIN_GAMES: int = RADAR_TREND_WINDOW * 2
@@ -15,8 +16,6 @@ const RADAR_LABEL_KEYS: Dictionary = {
 	"vision": "TXT_RADAR_VISION",
 }
 
-const TEXT_DIM_COLOR := Color(0.55, 0.58, 0.70, 1.0)
-const VALUE_HIGHLIGHT_COLOR := Color(0.3, 0.85, 1.0, 1.0)
 const BODY_FONT_SIZE: int = 18
 
 @onready var btn_back: Button = %BtnBack
@@ -66,6 +65,11 @@ const BODY_FONT_SIZE: int = 18
 
 func _ready() -> void:
 	btn_back.pressed.connect(_on_back_pressed)
+	_style_stats_card()
+	_apply_radar_palette()
+	UITheme.theme_changed.connect(func(_m):
+		_apply_radar_palette()
+		_load_and_display_data())
 	_update_texts()
 	_load_and_display_data()
 	call_deferred("_focus_default_control")
@@ -246,75 +250,27 @@ func _populate_history(history: Array) -> void:
 		history_container.add_child(_create_history_row(entry))
 
 
-func _create_history_row(entry: Dictionary) -> VBoxContainer:
-	var row := VBoxContainer.new()
-	row.add_theme_constant_override("separation", 6)
-
-	var header := HBoxContainer.new()
-	header.add_theme_constant_override("separation", 12)
-	row.add_child(header)
-
-	var lbl_date := Label.new()
-	lbl_date.text = str(entry.get("date", "???"))
-	lbl_date.custom_minimum_size = Vector2(95, 0)
-	_apply_row_label_style(lbl_date, false)
-	header.add_child(lbl_date)
-
-	var lbl_score := Label.new()
-	lbl_score.text = "%s: %s" % [tr("TXT_SCORE"), _format_number(int(entry.get("score", 0)))]
-	lbl_score.custom_minimum_size = Vector2(150, 0)
-	_apply_row_label_style(lbl_score, true)
-	header.add_child(lbl_score)
-
-	var lbl_lines := Label.new()
-	lbl_lines.text = "%s: %d" % [tr("TXT_LINES"), int(entry.get("lines", 0))]
-	lbl_lines.custom_minimum_size = Vector2(90, 0)
-	_apply_row_label_style(lbl_lines, false)
-	header.add_child(lbl_lines)
-
-	var lbl_pps2 := Label.new()
-	lbl_pps2.text = "%s: %.2f" % [tr("TXT_PPS_EXPLAIN"), float(entry.get("pps", 0.0))]
-	lbl_pps2.custom_minimum_size = Vector2(95, 0)
-	_apply_row_label_style(lbl_pps2, false)
-	header.add_child(lbl_pps2)
-
-	var lbl_duration := Label.new()
-	lbl_duration.text = "%s: %s" % [tr("TXT_TIME"), _format_duration(float(entry.get("duration_seconds", 0.0)))]
-	lbl_duration.custom_minimum_size = Vector2(90, 0)
-	_apply_row_label_style(lbl_duration, false)
-	header.add_child(lbl_duration)
-
-	var spacer := Control.new()
-	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	header.add_child(spacer)
-
-	var btn_toggle := Button.new()
-	btn_toggle.text = "v"
-	btn_toggle.custom_minimum_size = Vector2(28, 24)
-	header.add_child(btn_toggle)
-
-	var detail := Label.new()
-	detail.visible = false
-	detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	detail.add_theme_font_size_override("font_size", BODY_FONT_SIZE - 3)
-	detail.add_theme_color_override("font_color", TEXT_DIM_COLOR)
-	row.add_child(detail)
-
+func _create_history_row(entry: Dictionary) -> Control:
+	var card := HISTORY_ROW_SCENE.instantiate()
+	(card.get_node("Content/Header/Date") as Label).text = str(entry.get("date", "???"))
+	var metrics := card.get_node("Content/Metrics")
+	(metrics.get_node("Score") as Label).text = "%s: %s" % [tr("TXT_SCORE"), _format_number(int(entry.get("score", 0)))]
+	(metrics.get_node("Lines") as Label).text = "%s: %d" % [tr("TXT_LINES"), int(entry.get("lines", 0))]
+	(metrics.get_node("PPS") as Label).text = "PPS: %.2f" % float(entry.get("pps", 0.0))
+	(metrics.get_node("PPS") as Label).tooltip_text = tr("TXT_PPS_EXPLAIN")
+	(metrics.get_node("Duration") as Label).text = "%s: %s" % [tr("TXT_TIME"), _format_duration(float(entry.get("duration_seconds", 0.0)))]
+	var btn_toggle := card.get_node("Content/Header/Toggle") as Button
+	btn_toggle.tooltip_text = tr("TXT_RECENT_HISTORY")
+	var detail := card.get_node("Content/Detail") as Label
 	var state := {"loaded": false}
 	btn_toggle.pressed.connect(func() -> void:
 		if not state["loaded"]:
 			detail.text = _build_session_detail_text(entry)
 			state["loaded"] = true
 		detail.visible = not detail.visible
-		btn_toggle.text = "^" if detail.visible else "v"
+		btn_toggle.text = "▴" if detail.visible else "▾"
 	)
-
-	return row
-
-
-func _apply_row_label_style(label: Label, highlight: bool) -> void:
-	label.add_theme_font_size_override("font_size", BODY_FONT_SIZE - 2)
-	label.add_theme_color_override("font_color", VALUE_HIGHLIGHT_COLOR if highlight else TEXT_DIM_COLOR)
+	return card
 
 
 func _build_session_detail_text(entry: Dictionary) -> String:
@@ -403,30 +359,87 @@ func _load_session_data(session_id: String) -> Dictionary:
 	if session_id.is_empty():
 		return {}
 	var safe_id: String = session_id.replace(":", "-")
+	if safe_id.validate_filename() != safe_id:
+		return {}
 	var path: String = PlayerDataStore.get_sessions_dir().path_join("session_%s.json" % safe_id)
 	if not FileAccess.file_exists(path):
 		return {}
-	var file := FileAccess.open(path, FileAccess.READ)
-	if file == null:
+	var loaded := StorageBudget.read_bounded(path, PlayerDataStore.MAX_SESSION_BYTES)
+	if loaded.error != OK:
 		return {}
-	var content: String = file.get_as_text()
-	file.close()
-	var json := JSON.new()
-	if json.parse(content) != OK:
-		return {}
-	return json.data if json.data is Dictionary else {}
+	var parsed = JSON.parse_string((loaded.data as PackedByteArray).get_string_from_utf8())
+	return parsed if parsed is Dictionary else {}
 
 
 func _on_back_pressed() -> void:
-	get_tree().change_scene_to_file("res://scenes/ui/main.tscn")
+	UITheme.goto_scene("res://scenes/ui/main.tscn")
+
+
+## 统计卡：每一行包成胶囊数据行（名称左、粗体数值右），分组标题加圆点
+func _style_stats_card() -> void:
+	var vbox := stats_card.get_node("StatsVBox") as VBoxContainer
+	vbox.add_theme_constant_override("separation", 8)
+	stats_title.theme_type_variation = &"EyebrowLabel"
+	stats_title.add_theme_font_size_override("font_size", 18)
+	history_title.theme_type_variation = &"EyebrowLabel"
+	history_title.add_theme_font_size_override("font_size", 18)
+	for row in vbox.get_children():
+		if not (row is HBoxContainer and String(row.name).begins_with("Row")):
+			continue
+		var idx := row.get_index()
+		var pill := PanelContainer.new()
+		pill.theme_type_variation = &"RowPanel"
+		pill.custom_minimum_size = Vector2(0, 44)
+		vbox.add_child(pill)
+		vbox.move_child(pill, idx)
+		row.reparent(pill, false)
+		var dot := Control.new()
+		dot.custom_minimum_size = Vector2(26, 26)
+		dot.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		dot.draw.connect(func():
+			dot.draw_circle(dot.size * 0.5, 13.0, UITheme.color("surface"), true, -1.0, true)
+			dot.draw_circle(dot.size * 0.5, 4.5, UITheme.color("accent"), true, -1.0, true))
+		UITheme.theme_changed.connect(func(_mode): dot.queue_redraw())
+		row.add_child(dot)
+		row.move_child(dot, 0)
+		(row as HBoxContainer).add_theme_constant_override("separation", 12)
+		for lbl in row.get_children():
+			if not (lbl is Label):
+				continue
+			var l := lbl as Label
+			if String(l.name).ends_with("Val"):
+				l.theme_type_variation = &"ValueLabel"
+				l.add_theme_font_size_override("font_size", 18)
+				l.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+			else:
+				l.theme_type_variation = &"MutedLabel"
+				l.add_theme_font_size_override("font_size", 16)
+			l.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+
+
+func _apply_radar_palette() -> void:
+	var radar := radar_chart as RadarChart
+	if radar == null:
+		return
+	radar.grid_color = Color(UITheme.color("border"), 0.9)
+	radar.axis_color = Color(UITheme.color("border"), 0.7)
+	radar.fill_color = Color(UITheme.color("accent"), 0.22)
+	radar.outline_color = UITheme.color("accent")
+	radar.vertex_dot_color = UITheme.color("accent")
+	radar.label_color = UITheme.color("text")
+	radar.value_label_color = UITheme.color("muted")
+	radar.trend_stable_color = UITheme.color("muted")
+	radar.label_font_size = 20
+	radar.outline_width = 3.0
+	radar.queue_redraw()
 
 
 func _update_texts() -> void:
 	btn_back.text = tr("TXT_BACK")
 	lbl_title.text = tr("TXT_PLAYER_STATS")
 	lbl_no_data.text = tr("TXT_NO_DATA")
-	stats_title.text = tr("TXT_PLAYER_STATS")
-	history_title.text = tr("TXT_RECENT_HISTORY")
+	stats_title.text = "•  " + tr("TXT_PLAYER_STATS")
+	history_title.text = "•  " + tr("TXT_RECENT_HISTORY")
 
 	lbl_name_player.text = tr("TXT_PLAYER")
 	lbl_name_total_games.text = tr("TXT_TOTAL_GAMES")

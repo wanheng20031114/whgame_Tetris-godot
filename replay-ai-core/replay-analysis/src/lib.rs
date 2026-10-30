@@ -145,19 +145,18 @@ pub fn rank_current_moves(
     if state.use_hold {
         let mut hold_board = board.clone();
         if let Some(next) = hold_board.advance_queue() {
-            let hold_piece = hold_board
-                .hold(next)
-                .unwrap_or_else(|| hold_board.advance_queue().unwrap());
-            add_ranked_moves(
-                &mut moves,
-                &hold_board,
-                hold_piece,
-                true,
-                state.movement_mode,
-                state.spawn_rule,
-                previous_score,
-                weights,
-            );
+            if let Some(hold_piece) = hold_board.hold(next).or_else(|| hold_board.advance_queue()) {
+                add_ranked_moves(
+                    &mut moves,
+                    &hold_board,
+                    hold_piece,
+                    true,
+                    state.movement_mode,
+                    state.spawn_rule,
+                    previous_score,
+                    weights,
+                );
+            }
         }
     }
 
@@ -201,7 +200,7 @@ pub fn recommend_plan(
     let mut steps = Vec::new();
     let plan = info.plan();
     for (index, (placement, lock)) in plan.iter().take(max_steps).enumerate() {
-        let hold = consume_piece_for_plan(&mut board, *placement, state.use_hold).unwrap_or(false);
+        let hold = consume_piece_for_plan(&mut board, *placement, state.use_hold)?;
         let inputs = if index == 0 && placement.same_location(&mv.expected_location) {
             mv.inputs.clone()
         } else {
@@ -247,9 +246,7 @@ fn consume_piece_for_plan(
     if !use_hold {
         return None;
     }
-    let held = board
-        .hold(next)
-        .unwrap_or_else(|| board.advance_queue().unwrap());
+    let held = board.hold(next).or_else(|| board.advance_queue())?;
     if held == placement.kind.0 {
         Some(true)
     } else {
@@ -260,9 +257,7 @@ fn consume_piece_for_plan(
 fn apply_queue_and_hold(board: &mut Board, placement: FallingPiece, used_hold: bool) -> Option<()> {
     let next = board.advance_queue()?;
     if used_hold {
-        let held = board
-            .hold(next)
-            .unwrap_or_else(|| board.advance_queue().unwrap());
+        let held = board.hold(next).or_else(|| board.advance_queue())?;
         if held != placement.kind.0 {
             return None;
         }
@@ -315,5 +310,28 @@ fn add_ranked_moves(
                 lock,
             },
         });
+    }
+}
+
+#[cfg(test)]
+mod queue_tests {
+    use super::*;
+
+    #[test]
+    fn current_piece_without_preview_still_has_legal_non_hold_moves() {
+        let mut state = AnalysisState::default();
+        state.next.push(Piece::I);
+        let moves = rank_current_moves(&state, None, &Standard::default());
+        assert!(!moves.is_empty());
+        assert!(moves.iter().all(|mv| !mv.used_hold));
+    }
+
+    #[test]
+    fn consuming_an_unavailable_hold_piece_returns_none() {
+        let mut state = AnalysisState::default();
+        state.next.push(Piece::I);
+        let placement = SpawnRule::Row19Or20.spawn(Piece::O, &make_board(&state)).unwrap();
+        assert_eq!(consume_piece_for_plan(&mut make_board(&state), placement, true), None);
+        assert_eq!(apply_queue_and_hold(&mut make_board(&state), placement, true), None);
     }
 }

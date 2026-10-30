@@ -28,8 +28,8 @@ const SECTION_RESOLUTION: String = "Resolution"
 const SECTION_DISPLAY: String = "Display"
 const SECTION_AUDIO: String = "Audio"
 const DEFAULT_MASTER_VOLUME_PERCENT: float = 60.0
-const PANEL_WIDTH: float = 820.0
-const PANEL_MAX_HEIGHT: float = 660.0
+const PANEL_WIDTH: float = 1040.0
+const PANEL_MAX_HEIGHT: float = 620.0
 const PANEL_SCREEN_MARGIN: float = 48.0
 
 # 默认分辨率 ID
@@ -59,8 +59,9 @@ var panel: PanelContainer           # 菜单主面板
 var settings_scroll: ScrollContainer # 设置菜单整体滚动区
 var option_btn: OptionButton        # 语言选择下拉框
 var resolution_option_btn: OptionButton # 分辨率选择下拉框
-var fullscreen_checkbox: Button     # 全屏开关按钮（模拟复选框）
-var fullscreen_indicator: Panel     # 全屏开关的状态指示器
+var fullscreen_checkbox: Button     # 全屏开关（ToggleSwitch）
+var backdrop: ColorRect             # 菜单背后的压暗遮罩
+var theme_switch: ThemeSwitch       # 深浅主题开关
 var volume_slider: HSlider          # 总体音量滑块
 var volume_value_lbl: Label         # 音量百分比标签
 var close_btn: Button               # 关闭/确定按钮
@@ -71,11 +72,15 @@ var _icon_hovered: bool = false
 # 各种文本标签
 var title_lbl: Label
 var lang_lbl: Label
+var theme_lbl: Label
 var resolution_lbl: Label
 var fullscreen_lbl: Label
 var volume_lbl: Label
 var keybind_title_lbl: Label
 var keybind_hint_lbl: Label
+var handling_title_lbl: Label
+var _handling_sliders: Dictionary = {}
+var _handling_values: Dictionary = {}
 
 # 按键绑定 UI 的动态映射
 var _action_name_labels: Dictionary = {}    # 操作名称标签映射
@@ -89,105 +94,6 @@ var _capture_slot: int = -1        # 正在捕获按键的槽位索引
 
 # --- 辅助方法 ---
 
-## 创建复选框风格的样式盒
-func _make_checkbox_style(bg: Color, border: Color) -> StyleBoxFlat:
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = bg
-	sb.border_color = border
-	sb.corner_radius_top_left = 4
-	sb.corner_radius_top_right = 4
-	sb.corner_radius_bottom_left = 4
-	sb.corner_radius_bottom_right = 4
-	sb.border_width_left = 2
-	sb.border_width_top = 2
-	sb.border_width_right = 2
-	sb.border_width_bottom = 2
-	return sb
-
-## 创建全屏指示器的样式盒
-func _make_fullscreen_indicator_style() -> StyleBoxFlat:
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color(0.2, 0.86, 0.35, 0.98) # 鲜亮的绿色
-	sb.corner_radius_top_left = 3
-	sb.corner_radius_top_right = 3
-	sb.corner_radius_bottom_left = 3
-	sb.corner_radius_bottom_right = 3
-	return sb
-
-func _make_slider_track_style(fill: bool = false) -> StyleBoxFlat:
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color(0.02, 0.76, 1.0, 0.92) if fill else Color(0.10, 0.12, 0.19, 0.96)
-	sb.corner_radius_top_left = 4
-	sb.corner_radius_top_right = 4
-	sb.corner_radius_bottom_left = 4
-	sb.corner_radius_bottom_right = 4
-	sb.content_margin_top = 5
-	sb.content_margin_bottom = 5
-	if not fill:
-		sb.border_width_left = 1
-		sb.border_width_top = 1
-		sb.border_width_right = 1
-		sb.border_width_bottom = 1
-		sb.border_color = Color(0.22, 0.34, 0.52, 0.95)
-	return sb
-
-func _make_slider_grabber_style(active: bool = false) -> StyleBoxFlat:
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color(0.92, 0.98, 1.0, 1.0) if active else Color(0.72, 0.82, 0.95, 1.0)
-	sb.corner_radius_top_left = 5
-	sb.corner_radius_top_right = 5
-	sb.corner_radius_bottom_left = 5
-	sb.corner_radius_bottom_right = 5
-	sb.content_margin_left = 5
-	sb.content_margin_right = 5
-	sb.content_margin_top = 12
-	sb.content_margin_bottom = 12
-	return sb
-
-func _make_scrollbar_track_style() -> StyleBoxFlat:
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color(0.06, 0.07, 0.11, 0.96)
-	sb.corner_radius_top_left = 6
-	sb.corner_radius_top_right = 6
-	sb.corner_radius_bottom_left = 6
-	sb.corner_radius_bottom_right = 6
-	sb.content_margin_left = 4
-	sb.content_margin_right = 4
-	return sb
-
-func _make_scrollbar_grabber_style(active: bool = false) -> StyleBoxFlat:
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color(0.72, 0.80, 0.96, 0.95) if active else Color(0.45, 0.54, 0.72, 0.88)
-	sb.corner_radius_top_left = 5
-	sb.corner_radius_top_right = 5
-	sb.corner_radius_bottom_left = 5
-	sb.corner_radius_bottom_right = 5
-	sb.content_margin_left = 6
-	sb.content_margin_right = 6
-	return sb
-
-func _style_settings_scrollbar() -> void:
-	if settings_scroll == null:
-		return
-	var scrollbar := settings_scroll.get_v_scroll_bar()
-	if scrollbar == null:
-		return
-	scrollbar.custom_minimum_size = Vector2(18, 0)
-	scrollbar.add_theme_constant_override("width", 16)
-	scrollbar.add_theme_stylebox_override("scroll", _make_scrollbar_track_style())
-	scrollbar.add_theme_stylebox_override("scroll_focus", _make_scrollbar_track_style())
-	scrollbar.add_theme_stylebox_override("grabber", _make_scrollbar_grabber_style(false))
-	scrollbar.add_theme_stylebox_override("grabber_highlight", _make_scrollbar_grabber_style(true))
-	scrollbar.add_theme_stylebox_override("grabber_pressed", _make_scrollbar_grabber_style(true))
-
-## 更新全屏开关的视觉状态
-func _update_fullscreen_checkbox_visual() -> void:
-	if fullscreen_checkbox == null:
-		return
-	fullscreen_checkbox.text = "" # 按钮文本留空，使用指示器显示状态
-	if fullscreen_indicator:
-		fullscreen_indicator.visible = fullscreen_checkbox.button_pressed
-
 # --- 生命周期回调 ---
 
 func _ready() -> void:
@@ -197,267 +103,122 @@ func _ready() -> void:
 	mouse_entered.connect(_on_icon_hover_changed.bind(true))
 	mouse_exited.connect(_on_icon_hover_changed.bind(false))
 
-	# 1. 初始化设置与应用
+	# 启动配置只由 AutoLoad 应用一次；场景内齿轮只绑定可编辑的原生场景。
 	var config := ConfigFile.new()
-	
-	# 设置语言
-	var loc := _load_saved_locale(config)
-	if loc.is_empty():
-		loc = _detect_locale_from_system()
-	TranslationServer.set_locale(loc)
-	
-	# 应用显示设置（分辨率、全屏）
-	_apply_saved_display_settings(config)
-	_apply_saved_audio_settings(config)
-	
-	# 应用按键绑定
-	_capture_default_bindings_if_needed()
-	_apply_saved_bindings()
+	if get_path() == NodePath("/root/SettingsMenu"):
+		var loc := _load_saved_locale(config)
+		TranslationServer.set_locale(_detect_locale_from_system() if loc.is_empty() else loc)
+		_apply_saved_display_settings(config)
+		_apply_saved_audio_settings(config)
+		_capture_default_bindings_if_needed()
+		_apply_saved_bindings()
+		visible = false
+		mouse_filter = Control.MOUSE_FILTER_IGNORE
+		focus_mode = Control.FOCUS_NONE
+		return
 
-	# 2. 动态构建 UI 界面
-	canvas_layer = CanvasLayer.new()
-	canvas_layer.layer = 100 # 确保菜单在最上层
-
-	# 面板样式
-	panel = PanelContainer.new()
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color(0.1, 0.1, 0.15, 0.95)
-	sb.corner_radius_top_left = 8
-	sb.corner_radius_top_right = 8
-	sb.corner_radius_bottom_left = 8
-	sb.corner_radius_bottom_right = 8
-	sb.border_width_left = 2
-	sb.border_width_top = 2
-	sb.border_width_right = 2
-	sb.border_width_bottom = 2
-	sb.border_color = Color(0.5, 0.5, 0.8, 1)
-	panel.add_theme_stylebox_override("panel", sb)
-
-	panel.custom_minimum_size = Vector2(PANEL_WIDTH, 620)
-	panel.set_anchors_and_offsets_preset(Control.PRESET_CENTER, Control.PRESET_MODE_KEEP_SIZE)
-
-	# 垂直布局容器
-	var vbox := VBoxContainer.new()
-	vbox.add_theme_constant_override("separation", 14)
-	vbox.custom_minimum_size = Vector2(PANEL_WIDTH - 62.0, 0)
-	var margin := MarginContainer.new()
-	margin.add_theme_constant_override("margin_left", 20)
-	margin.add_theme_constant_override("margin_right", 14)
-	margin.add_theme_constant_override("margin_top", 20)
-	margin.add_theme_constant_override("margin_bottom", 20)
-
-	settings_scroll = ScrollContainer.new()
-	settings_scroll.focus_mode = Control.FOCUS_NONE
-	settings_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	settings_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_ALWAYS
-	settings_scroll.follow_focus = true
-	settings_scroll.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	settings_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	settings_scroll.add_child(vbox)
-	margin.add_child(settings_scroll)
-	panel.add_child(margin)
-
-	# 标题
-	title_lbl = Label.new()
-	title_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	title_lbl.add_theme_font_size_override("font_size", 24)
-	vbox.add_child(title_lbl)
-
-	# --- 语言设置行 ---
-	var lang_hbox := HBoxContainer.new()
-	lang_lbl = Label.new()
-	lang_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	lang_hbox.add_child(lang_lbl)
-
-	option_btn = OptionButton.new()
-	option_btn.focus_mode = Control.FOCUS_ALL
-	option_btn.add_item("English", 0)
-	option_btn.add_item("\u4E2D\u6587", 1)
-	option_btn.add_item("\u65E5\u672C\u8A9E", 2)
-
-	# 初始化语言选择状态
-	var current_loc := TranslationServer.get_locale().to_lower()
-	if current_loc.begins_with("zh"):
-		option_btn.selected = 1
-	elif current_loc.begins_with("ja"):
-		option_btn.selected = 2
-	else:
-		option_btn.selected = 0
-
-	option_btn.item_selected.connect(_on_language_selected)
-	lang_hbox.add_child(option_btn)
-	vbox.add_child(lang_hbox)
-
-	# --- 分辨率设置行 ---
-	var resolution_hbox := HBoxContainer.new()
-	resolution_lbl = Label.new()
-	resolution_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	resolution_hbox.add_child(resolution_lbl)
-
-	resolution_option_btn = OptionButton.new()
-	resolution_option_btn.focus_mode = Control.FOCUS_ALL
-	for option in RESOLUTION_OPTIONS:
-		resolution_option_btn.add_item(str(option.get("label", "")))
-	resolution_option_btn.selected = _get_selected_resolution_index(config)
-	resolution_option_btn.item_selected.connect(_on_resolution_selected)
-	resolution_hbox.add_child(resolution_option_btn)
-	vbox.add_child(resolution_hbox)
-
-	# --- 全屏开关行 ---
-	var fullscreen_hbox := HBoxContainer.new()
-	fullscreen_lbl = Label.new()
-	fullscreen_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	fullscreen_hbox.add_child(fullscreen_lbl)
-
-	fullscreen_checkbox = Button.new()
-	fullscreen_checkbox.focus_mode = Control.FOCUS_ALL
-	fullscreen_checkbox.toggle_mode = true
-	fullscreen_checkbox.button_pressed = _is_fullscreen_saved(config)
-	fullscreen_checkbox.custom_minimum_size = Vector2(42, 42)
-	fullscreen_checkbox.size_flags_horizontal = Control.SIZE_SHRINK_END
-	fullscreen_checkbox.tooltip_text = tr("TXT_FULLSCREEN")
-	fullscreen_checkbox.alignment = HORIZONTAL_ALIGNMENT_CENTER
-	# 设置多种状态下的复选框样式
-	fullscreen_checkbox.add_theme_stylebox_override("normal", _make_checkbox_style(Color(0.13, 0.15, 0.22, 0.95), Color(0.62, 0.68, 0.9, 0.95)))
-	fullscreen_checkbox.add_theme_stylebox_override("hover", _make_checkbox_style(Color(0.16, 0.18, 0.27, 0.98), Color(0.74, 0.8, 0.98, 1.0)))
-	fullscreen_checkbox.add_theme_stylebox_override("pressed", _make_checkbox_style(Color(0.13, 0.15, 0.22, 0.95), Color(0.9, 0.93, 0.98, 1.0)))
-	fullscreen_checkbox.add_theme_stylebox_override("hover_pressed", _make_checkbox_style(Color(0.16, 0.18, 0.27, 0.98), Color(0.95, 0.97, 1.0, 1.0)))
-	fullscreen_checkbox.add_theme_stylebox_override("focus", _make_checkbox_style(Color(0.13, 0.15, 0.22, 0.95), Color(0.9, 0.93, 0.98, 1.0)))
-	fullscreen_checkbox.add_theme_stylebox_override("disabled", _make_checkbox_style(Color(0.09, 0.11, 0.17, 0.65), Color(0.42, 0.46, 0.58, 0.7)))
-
-	# 状态指示器
-	var indicator_center := CenterContainer.new()
-	indicator_center.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	indicator_center.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	fullscreen_checkbox.add_child(indicator_center)
-
-	fullscreen_indicator = Panel.new()
-	fullscreen_indicator.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	fullscreen_indicator.custom_minimum_size = Vector2(24, 24)
-	fullscreen_indicator.add_theme_stylebox_override("panel", _make_fullscreen_indicator_style())
-	indicator_center.add_child(fullscreen_indicator)
-
-	_update_fullscreen_checkbox_visual()
-	fullscreen_checkbox.toggled.connect(_on_fullscreen_toggled)
-	fullscreen_hbox.add_child(fullscreen_checkbox)
-	vbox.add_child(fullscreen_hbox)
-
-	# --- 总体音量设置行 ---
-	var volume_hbox := HBoxContainer.new()
-	volume_hbox.add_theme_constant_override("separation", 12)
-	volume_lbl = Label.new()
-	volume_lbl.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	volume_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	volume_hbox.add_child(volume_lbl)
-
-	volume_slider = HSlider.new()
-	volume_slider.focus_mode = Control.FOCUS_ALL
-	volume_slider.min_value = 0.0
-	volume_slider.max_value = 100.0
-	volume_slider.step = 1.0
-	volume_slider.value = _get_saved_master_volume_percent(config)
-	volume_slider.custom_minimum_size = Vector2(260, 32)
-	volume_slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	volume_slider.add_theme_stylebox_override("slider", _make_slider_track_style(false))
-	volume_slider.add_theme_stylebox_override("grabber_area", _make_slider_track_style(true))
-	volume_slider.add_theme_stylebox_override("grabber_area_highlight", _make_slider_track_style(true))
-	volume_slider.add_theme_stylebox_override("grabber", _make_slider_grabber_style(false))
-	volume_slider.add_theme_stylebox_override("grabber_highlight", _make_slider_grabber_style(true))
-	volume_slider.add_theme_stylebox_override("grabber_pressed", _make_slider_grabber_style(true))
-	volume_slider.value_changed.connect(_on_master_volume_changed)
-	volume_hbox.add_child(volume_slider)
-
-	volume_value_lbl = Label.new()
-	volume_value_lbl.custom_minimum_size = Vector2(56, 32)
-	volume_value_lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	volume_value_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	volume_value_lbl.add_theme_color_override("font_color", Color(0.88, 0.93, 1.0, 1.0))
-	volume_hbox.add_child(volume_value_lbl)
-	vbox.add_child(volume_hbox)
-	_update_volume_value_label()
-
-	var separator := HSeparator.new()
-	vbox.add_child(separator)
-
-	# --- 按键绑定部分 ---
-	keybind_title_lbl = Label.new()
-	keybind_title_lbl.add_theme_font_size_override("font_size", 19)
-	vbox.add_child(keybind_title_lbl)
-
-	var keybind_box := VBoxContainer.new()
-	keybind_box.add_theme_constant_override("separation", 8)
-	keybind_box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	vbox.add_child(keybind_box)
-
-	# 为每个操作生成绑定行
-	for action in ACTIONS:
-		var row := HBoxContainer.new()
-		row.add_theme_constant_override("separation", 8)
-		keybind_box.add_child(row)
-
-		var action_lbl := Label.new()
-		action_lbl.custom_minimum_size = Vector2(150, 32)
-		action_lbl.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		row.add_child(action_lbl)
-		_action_name_labels[action] = action_lbl
-
-		var slot_buttons: Array[Button] = []
-		for slot_idx in range(MAX_BINDINGS_PER_ACTION):
-			var slot_btn := Button.new()
-			slot_btn.focus_mode = Control.FOCUS_ALL
-			slot_btn.custom_minimum_size = Vector2(150, 32)
-			slot_btn.pressed.connect(_on_bind_slot_pressed.bind(action, slot_idx))
-			row.add_child(slot_btn)
-			slot_buttons.append(slot_btn)
-		_action_slot_buttons[action] = slot_buttons
-
-		var reset_btn := Button.new()
-		reset_btn.focus_mode = Control.FOCUS_ALL
-		reset_btn.custom_minimum_size = Vector2(92, 32)
-		reset_btn.pressed.connect(_on_reset_action_pressed.bind(action))
-		row.add_child(reset_btn)
-		_action_reset_buttons[action] = reset_btn
-
-	# 操作提示
-	keybind_hint_lbl = Label.new()
-	keybind_hint_lbl.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	keybind_hint_lbl.add_theme_color_override("font_color", Color(0.8, 0.86, 1.0, 1.0))
-	keybind_box.add_child(keybind_hint_lbl)
-
-	# 重置所有按键按钮
-	reset_all_btn = Button.new()
-	reset_all_btn.focus_mode = Control.FOCUS_ALL
-	reset_all_btn.custom_minimum_size = Vector2(0, 38)
-	reset_all_btn.pressed.connect(_on_reset_all_pressed)
-	vbox.add_child(reset_all_btn)
-
-	# 退出按钮
-	close_btn = Button.new()
-	close_btn.focus_mode = Control.FOCUS_ALL
-	close_btn.text = tr("TXT_OK")
-	close_btn.custom_minimum_size = Vector2(0, 40)
-	close_btn.pressed.connect(_on_close_pressed)
-	vbox.add_child(close_btn)
-
-	# 最终装配
-	canvas_layer.add_child(panel)
-	add_child(canvas_layer)
-
-	canvas_layer.hide()
-	pressed.connect(_on_gear_pressed) # 点击主界面的设置图标
-	
-	# 初始更新 UI 文本
+	remove_from_group(UITheme.GROUP_ICON_TINT)
+	self_modulate = Color.WHITE
+	mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	_bind_scene_controls(config)
+	pressed.connect(_on_gear_pressed)
+	UITheme.theme_changed.connect(_on_theme_changed)
 	_update_texts()
 	_update_resolution_interactability()
 	_refresh_binding_ui()
-	call_deferred("_style_settings_scrollbar")
 	call_deferred("_recenter_panel")
 
 
+func _bind_scene_controls(config: ConfigFile) -> void:
+	canvas_layer = %MenuLayer
+	panel = %SettingsPanel
+	backdrop = %Backdrop
+	settings_scroll = %KeybindScroll
+	option_btn = %LanguageOption
+	resolution_option_btn = %ResolutionOption
+	fullscreen_checkbox = %FullscreenSwitch
+	theme_switch = %ThemeSwitch
+	volume_slider = %VolumeSlider
+	volume_value_lbl = %VolumeValue
+	close_btn = %ConfirmButton
+	reset_all_btn = %ResetAllButton
+	title_lbl = %SettingsTitle
+	lang_lbl = %LanguageLabel
+	theme_lbl = %ThemeLabel
+	resolution_lbl = %ResolutionLabel
+	fullscreen_lbl = %FullscreenLabel
+	volume_lbl = %VolumeLabel
+	keybind_title_lbl = %KeybindTitle
+	keybind_hint_lbl = %KeybindHint
+	handling_title_lbl = %HandlingTitle
+	backdrop.gui_input.connect(_on_backdrop_input)
+	%CloseIcon.pressed.connect(_on_close_pressed)
+	close_btn.pressed.connect(_on_close_pressed)
+	reset_all_btn.pressed.connect(_on_reset_all_pressed)
+	%HandlingReset.pressed.connect(_on_handling_reset_pressed)
+
+	for language in ["English", "中文", "日本語"]:
+		option_btn.add_item(language)
+	var locale := TranslationServer.get_locale().to_lower()
+	option_btn.selected = 1 if locale.begins_with("zh") else (2 if locale.begins_with("ja") else 0)
+	option_btn.item_selected.connect(_on_language_selected)
+	fullscreen_checkbox.set_pressed_no_signal(_is_fullscreen_saved(config))
+	fullscreen_checkbox.toggled.connect(_on_fullscreen_toggled)
+	for option in RESOLUTION_OPTIONS:
+		resolution_option_btn.add_item(option["label"])
+	resolution_option_btn.selected = _get_selected_resolution_index(config)
+	resolution_option_btn.item_selected.connect(_on_resolution_selected)
+	volume_slider.value = _get_saved_master_volume_percent(config)
+	volume_slider.value_changed.connect(_on_master_volume_changed)
+	_update_volume_value_label()
+
+	for key in Handling.RANGES:
+		var cell: VBoxContainer = %HandlingRow.get_node(key)
+		var slider: HSlider = cell.get_node("Slider")
+		var limits: Array = Handling.RANGES[key]
+		slider.min_value = limits[0]
+		slider.max_value = limits[1]
+		slider.step = limits[2]
+		slider.value = Handling.get_value(key)
+		slider.value_changed.connect(_on_handling_changed.bind(key))
+		_handling_sliders[key] = slider
+		_handling_values[key] = cell.get_node("Header/Value")
+	_refresh_handling_labels()
+
+	for action in ACTIONS:
+		var row: HBoxContainer = %KeybindRows.get_node(action)
+		_action_name_labels[action] = row.get_node("ActionName")
+		var slots: Array[Button] = []
+		for slot in MAX_BINDINGS_PER_ACTION:
+			var button: Button = row.get_node("Slot%d" % slot)
+			button.pressed.connect(_on_bind_slot_pressed.bind(action, slot))
+			slots.append(button)
+		_action_slot_buttons[action] = slots
+		var reset: Button = row.get_node("Reset")
+		reset.pressed.connect(_on_reset_action_pressed.bind(action))
+		_action_reset_buttons[action] = reset
+	UITheme.confine_focus(panel)
+
+
+func _on_theme_changed(_mode: String) -> void:
+	backdrop.color = Color(UITheme.color("ink"), 0.62 if UITheme.is_dark() else 0.38)
+	queue_redraw()
+
+
+var _icon_anim: float = 0.0
+
+
+func _process(delta: float) -> void:
+	var target := 1.0 if (_icon_hovered or is_menu_open()) else 0.0
+	if not is_equal_approx(_icon_anim, target):
+		_icon_anim = move_toward(_icon_anim, target, delta * 4.0)
+		queue_redraw()
+
+
 func _draw() -> void:
-	if not has_focus() and not _icon_hovered and not is_menu_open():
-		return
-	draw_rect(Rect2(Vector2.ZERO, size), Color(0.40, 0.86, 1.0, 0.85), false, 2.0)
+	var e := ease(_icon_anim, -2.0)
+	UIIcon.draw_chrome(self, Rect2(Vector2.ZERO, size), e, has_focus())
+	UIIcon.draw(self, "gear", size * 0.5, minf(size.x, size.y) * 0.58, UIIcon.tint(e), e)
 
 # --- 信号处理与逻辑 ---
 
@@ -480,7 +241,12 @@ func show_menu() -> void:
 	if vp:
 		_last_focus_owner = vp.gui_get_focus_owner()
 	canvas_layer.show()
+	backdrop.color = Color(UITheme.color("ink"), 0.62 if UITheme.is_dark() else 0.38)
+	backdrop.modulate.a = 0.0
+	backdrop.create_tween().tween_property(backdrop, "modulate:a", 1.0, 0.2)
+	UITheme.pop_in(panel, 0.92)
 	_refresh_binding_ui()
+	call_deferred("_recenter_panel")
 	call_deferred("_focus_menu_default")
 	queue_redraw()
 
@@ -490,6 +256,11 @@ func hide_menu() -> void:
 	canvas_layer.hide()
 	call_deferred("_restore_focus_after_hide")
 	queue_redraw()
+
+
+func _on_backdrop_input(event: InputEvent) -> void:
+	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT and not _capture_active:
+		hide_menu()
 
 
 func is_menu_open() -> bool:
@@ -529,10 +300,15 @@ func _notification(what: int) -> void:
 ## 更新界面上的所有本地化文本
 func _update_texts() -> void:
 	tooltip_text = tr("TXT_SETTINGS")
+	if option_btn:
+		var locale := TranslationServer.get_locale().to_lower()
+		option_btn.select(1 if locale.begins_with("zh") else (2 if locale.begins_with("ja") else 0))
 	if title_lbl:
 		title_lbl.text = tr("TXT_SETTINGS")
 	if lang_lbl:
 		lang_lbl.text = tr("TXT_LANGUAGE")
+	if theme_lbl:
+		theme_lbl.text = tr("TXT_THEME")
 	if resolution_lbl:
 		var localized_resolution := tr("TXT_RESOLUTION")
 		resolution_lbl.text = localized_resolution if localized_resolution != "TXT_RESOLUTION" else "RESOLUTION"
@@ -541,7 +317,6 @@ func _update_texts() -> void:
 		fullscreen_lbl.text = localized_fullscreen if localized_fullscreen != "TXT_FULLSCREEN" else "FULLSCREEN"
 	if fullscreen_checkbox:
 		fullscreen_checkbox.tooltip_text = tr("TXT_FULLSCREEN")
-	_update_fullscreen_checkbox_visual()
 	if volume_lbl:
 		var localized_volume := tr("TXT_MASTER_VOLUME")
 		volume_lbl.text = localized_volume if localized_volume != "TXT_MASTER_VOLUME" else "MASTER VOLUME"
@@ -549,12 +324,18 @@ func _update_texts() -> void:
 		volume_slider.tooltip_text = tr("TXT_MASTER_VOLUME")
 	if keybind_title_lbl:
 		keybind_title_lbl.text = tr("TXT_KEYBINDINGS")
+	if handling_title_lbl:
+		handling_title_lbl.text = tr("TXT_HANDLING")
+		handling_title_lbl.tooltip_text = tr("TXT_HANDLING_HINT")
 	if keybind_hint_lbl and not _capture_active:
 		keybind_hint_lbl.text = tr("TXT_BIND_TIP")
 	if reset_all_btn:
 		reset_all_btn.text = tr("TXT_BIND_RESET_DEFAULT")
 	if close_btn:
 		close_btn.text = tr("TXT_OK")
+	if panel:
+		%CloseIcon.tooltip_text = tr("TXT_CLOSE")
+		%HandlingReset.tooltip_text = tr("TXT_BIND_RESET_ACTION")
 
 ## 切换语言逻辑
 func _on_language_selected(idx: int) -> void:
@@ -571,9 +352,14 @@ func _on_language_selected(idx: int) -> void:
 
 	# 保存语言设置到本地文件
 	var config := ConfigFile.new()
-	config.load(_get_settings_path())
+	var storage_load_error := config.load(_get_settings_path())
+	if storage_load_error != OK and storage_load_error != ERR_FILE_NOT_FOUND:
+		StorageBudget.report_error("Settings could not be read; the existing file was retained: " + error_string(storage_load_error))
+		return
 	config.set_value(SECTION_SETTINGS, "locale", loc)
-	config.save(_get_settings_path())
+	var storage_save_error := config.save(_get_settings_path())
+	if storage_save_error != OK:
+		StorageBudget.report_error("Settings could not be saved: " + error_string(storage_save_error))
 
 ## 切换分辨率逻辑
 func _on_resolution_selected(idx: int) -> void:
@@ -595,14 +381,10 @@ func _on_fullscreen_toggled(enabled: bool) -> void:
 		# 进入全屏模式
 		window.mode = Window.MODE_EXCLUSIVE_FULLSCREEN
 	else:
-		# 退出全屏，恢复到默认分辨率窗口
 		window.mode = Window.MODE_WINDOWED
-		var default_idx := _get_default_resolution_index()
-		_apply_resolution_by_index(default_idx)
-		_save_selected_resolution(default_idx)
+		_apply_resolution_by_index(_get_selected_resolution_index(ConfigFile.new()))
 
 	_save_fullscreen(enabled)
-	_update_fullscreen_checkbox_visual()
 	_update_resolution_interactability()
 
 func _on_master_volume_changed(value: float) -> void:
@@ -627,8 +409,29 @@ func _recenter_panel() -> void:
 		minf(PANEL_MAX_HEIGHT, maxf(420.0, viewport_size.y - PANEL_SCREEN_MARGIN))
 	)
 	panel.custom_minimum_size = panel_size
+	panel.reset_size()
 	panel.size = panel_size
 	panel.position = (viewport_size - panel_size) * 0.5
+
+func _on_handling_changed(value: float, key: String) -> void:
+	Handling.set_value(key, value)
+	Handling.save()
+	_refresh_handling_labels()
+
+
+func _on_handling_reset_pressed() -> void:
+	for key in Handling.DEFAULTS:
+		Handling.set_value(key, Handling.DEFAULTS[key])
+		if _handling_sliders.has(key):
+			_handling_sliders[key].set_value_no_signal(Handling.DEFAULTS[key])
+	Handling.save()
+	_refresh_handling_labels()
+
+
+func _refresh_handling_labels() -> void:
+	for key in _handling_values:
+		_handling_values[key].text = Handling.format_value(key, Handling.get_value(key))
+
 
 ## 获取配置文件路径（编辑器与导出版本路径不同）
 func _get_settings_path() -> String:
@@ -655,11 +458,12 @@ func _apply_saved_display_settings(config: ConfigFile) -> void:
 		if fullscreen_checkbox:
 			fullscreen_checkbox.button_pressed = true
 	else:
-		_apply_resolution_by_index(_get_selected_resolution_index(config))
+		# Command-line resolution overrides are used by the editor and isolated visual probes.
+		if not "--resolution" in OS.get_cmdline_args():
+			_apply_resolution_by_index(_get_selected_resolution_index(config))
 		if fullscreen_checkbox:
 			fullscreen_checkbox.button_pressed = false
 
-	_update_fullscreen_checkbox_visual()
 	_update_resolution_interactability()
 
 func _apply_saved_audio_settings(config: ConfigFile) -> void:
@@ -672,9 +476,14 @@ func _get_saved_master_volume_percent(config: ConfigFile) -> float:
 
 func _save_master_volume_percent(percent: float) -> void:
 	var config := ConfigFile.new()
-	config.load(_get_settings_path())
+	var storage_load_error := config.load(_get_settings_path())
+	if storage_load_error != OK and storage_load_error != ERR_FILE_NOT_FOUND:
+		StorageBudget.report_error("Settings could not be read; the existing file was retained: " + error_string(storage_load_error))
+		return
 	config.set_value(SECTION_AUDIO, "master_volume", clampf(percent, 0.0, 100.0))
-	config.save(_get_settings_path())
+	var storage_save_error := config.save(_get_settings_path())
+	if storage_save_error != OK:
+		StorageBudget.report_error("Settings could not be saved: " + error_string(storage_save_error))
 
 func _apply_master_volume_percent(percent: float) -> void:
 	var clamped := clampf(percent, 0.0, 100.0)
@@ -728,17 +537,27 @@ func _save_selected_resolution(idx: int) -> void:
 		return
 
 	var config := ConfigFile.new()
-	config.load(_get_settings_path())
+	var storage_load_error := config.load(_get_settings_path())
+	if storage_load_error != OK and storage_load_error != ERR_FILE_NOT_FOUND:
+		StorageBudget.report_error("Settings could not be read; the existing file was retained: " + error_string(storage_load_error))
+		return
 	var option := RESOLUTION_OPTIONS[idx]
 	config.set_value(SECTION_RESOLUTION, "id", str(option.get("id", DEFAULT_RESOLUTION_ID)))
-	config.save(_get_settings_path())
+	var storage_save_error := config.save(_get_settings_path())
+	if storage_save_error != OK:
+		StorageBudget.report_error("Settings could not be saved: " + error_string(storage_save_error))
 
 ## 保存全屏设置
 func _save_fullscreen(enabled: bool) -> void:
 	var config := ConfigFile.new()
-	config.load(_get_settings_path())
+	var storage_load_error := config.load(_get_settings_path())
+	if storage_load_error != OK and storage_load_error != ERR_FILE_NOT_FOUND:
+		StorageBudget.report_error("Settings could not be read; the existing file was retained: " + error_string(storage_load_error))
+		return
 	config.set_value(SECTION_DISPLAY, "fullscreen", enabled)
-	config.save(_get_settings_path())
+	var storage_save_error := config.save(_get_settings_path())
+	if storage_save_error != OK:
+		StorageBudget.report_error("Settings could not be saved: " + error_string(storage_save_error))
 
 ## 当全屏模式打开时，禁用分辨率选择
 func _update_resolution_interactability() -> void:
@@ -760,13 +579,6 @@ func _apply_resolution_by_index(idx: int) -> void:
 
 	window.size = Vector2i(width, height)
 	
-	# 如果在编辑器中运行，手动同步根窗口的拉伸设置
-	if OS.has_feature("editor"):
-		var root_window := get_tree().root
-		if root_window != null:
-			root_window.content_scale_mode = Window.CONTENT_SCALE_MODE_CANVAS_ITEMS
-			root_window.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_EXPAND
-			root_window.content_scale_size = Vector2i(width, height)
 
 	if resolution_option_btn:
 		resolution_option_btn.selected = idx
@@ -816,7 +628,10 @@ func _apply_saved_bindings() -> void:
 ## 将当前的 InputMap 状态永久保存到设置文件
 func _save_bindings() -> void:
 	var config := ConfigFile.new()
-	config.load(_get_settings_path())
+	var storage_load_error := config.load(_get_settings_path())
+	if storage_load_error != OK and storage_load_error != ERR_FILE_NOT_FOUND:
+		StorageBudget.report_error("Settings could not be read; the existing file was retained: " + error_string(storage_load_error))
+		return
 
 	for action in ACTIONS:
 		var serialized_events: Array[String] = []
@@ -824,7 +639,9 @@ func _save_bindings() -> void:
 			serialized_events.append(var_to_str(ev))
 		config.set_value(SECTION_BINDINGS, action, serialized_events)
 
-	config.save(_get_settings_path())
+	var storage_save_error := config.save(_get_settings_path())
+	if storage_save_error != OK:
+		StorageBudget.report_error("Settings could not be saved: " + error_string(storage_save_error))
 
 ## 点击特定绑定槽位：开始按键捕获模式
 func _on_bind_slot_pressed(action: String, slot_idx: int) -> void:
@@ -868,6 +685,8 @@ func _refresh_binding_ui() -> void:
 		var action_lbl: Label = _action_name_labels.get(action)
 		if action_lbl:
 			action_lbl.text = _get_action_display_name(action)
+			action_lbl.tooltip_text = action_lbl.text
+			action_lbl.mouse_filter = Control.MOUSE_FILTER_PASS
 
 		var slot_buttons: Array = _action_slot_buttons.get(action, [])
 		var events := _get_supported_events(action)
@@ -892,12 +711,12 @@ func _refresh_binding_ui() -> void:
 			else:
 				slot_btn.text = tr("TXT_BIND_EMPTY")
 
-			slot_btn.tooltip_text = tr("TXT_BIND_SLOT_TIP")
+			slot_btn.tooltip_text = "%s\n%s" % [slot_btn.text, tr("TXT_BIND_SLOT_TIP")]
 
 		# 更新单行重置按钮的文本
 		var action_reset_btn: Button = _action_reset_buttons.get(action)
 		if action_reset_btn:
-			action_reset_btn.text = tr("TXT_BIND_RESET_ACTION")
+			action_reset_btn.tooltip_text = tr("TXT_BIND_RESET_ACTION")
 
 ## 启动捕获模式
 func _start_capture(action: String, slot_idx: int) -> void:
@@ -912,6 +731,8 @@ func _stop_capture() -> void:
 	_capture_active = false
 	_capture_action = ""
 	_capture_slot = -1
+	if keybind_hint_lbl:
+		keybind_hint_lbl.text = tr("TXT_BIND_TIP")
 
 ## 从 InputEvent 中提炼核心按键信息（去除重复触发和无用元数据）
 func _extract_binding_event(event: InputEvent) -> InputEvent:
@@ -922,7 +743,7 @@ func _extract_binding_event(event: InputEvent) -> InputEvent:
 			return null
 		var output_key := InputEventKey.new()
 		output_key.physical_keycode = key_ev.physical_keycode
-		output_key.keycode = key_ev.keycode
+		output_key.keycode = key_ev.keycode if key_ev.physical_keycode == 0 else 0
 		output_key.shift_pressed = key_ev.shift_pressed
 		output_key.ctrl_pressed = key_ev.ctrl_pressed
 		output_key.alt_pressed = key_ev.alt_pressed
@@ -1020,8 +841,8 @@ func _event_to_display_text(event: InputEvent) -> String:
 	if event is InputEventKey:
 		var key_event := event as InputEventKey
 		if key_event.physical_keycode != 0:
-			return OS.get_keycode_string(key_event.physical_keycode)
-		return OS.get_keycode_string(key_event.keycode)
+			return OS.get_keycode_string(key_event.get_physical_keycode_with_modifiers())
+		return OS.get_keycode_string(key_event.get_keycode_with_modifiers())
 
 	if event is InputEventJoypadButton:
 		var joy_event := event as InputEventJoypadButton
@@ -1037,7 +858,7 @@ func _events_equal(a: InputEvent, b: InputEvent) -> bool:
 	if a is InputEventKey and b is InputEventKey:
 		var ka := a as InputEventKey
 		var kb := b as InputEventKey
-		return ka.physical_keycode == kb.physical_keycode and ka.keycode == kb.keycode and ka.shift_pressed == kb.shift_pressed and ka.ctrl_pressed == kb.ctrl_pressed and ka.alt_pressed == kb.alt_pressed and ka.meta_pressed == kb.meta_pressed
+		return (ka.physical_keycode == kb.physical_keycode if ka.physical_keycode != 0 and kb.physical_keycode != 0 else ka.keycode == kb.keycode and ka.physical_keycode == kb.physical_keycode) and ka.shift_pressed == kb.shift_pressed and ka.ctrl_pressed == kb.ctrl_pressed and ka.alt_pressed == kb.alt_pressed and ka.meta_pressed == kb.meta_pressed
 
 	if a is InputEventJoypadButton and b is InputEventJoypadButton:
 		var ja := a as InputEventJoypadButton

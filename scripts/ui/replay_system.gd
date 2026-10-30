@@ -4,7 +4,7 @@ extends Control
 ## 对局复盘系统
 ## 加载历史 session JSON，逐步回放棋盘状态，展示 AI 评分。
 
-const ReplayTimelineGraphScene := preload("res://scripts/ui/replay_timeline_graph.gd")
+const TimelineRowScene := preload("res://scenes/ui/replay_timeline_row.tscn")
 
 const BOARD_ROWS: int = 20
 const BOARD_COLS: int = 10
@@ -45,11 +45,6 @@ const MINI_SHAPES: Dictionary = {
 const MINI_CELL: int = 18  # 预览方块格子大小
 const TIMELINE_PIECE_CELL: int = 6
 const TIMELINE_PIECE_ROW_H: int = 18
-const TIMELINE_STEP_W: int = 48
-const TIMELINE_NAME_W: int = 14
-const TIMELINE_AI_W: int = 48
-const TIMELINE_TIME_W: int = 48
-const TIMELINE_TAG_W: int = 58
 
 # cold-clear 兼容形状表（visible 坐标系，y 向下）
 # 从 libtetris gen_cells! 宏精确转换：North=(x,-y), East=(-y,-x), South=(-x,y), West=(y,x)
@@ -62,9 +57,9 @@ const CC_SHAPES: Dictionary = {
 	},
 	"O": {
 		0: [Vector2(0, 0), Vector2(1, 0), Vector2(0, -1), Vector2(1, -1)],
-		1: [Vector2(0, 0), Vector2(0, -1), Vector2(-1, 0), Vector2(-1, -1)],
+		1: [Vector2(0, 0), Vector2(0, 1), Vector2(1, 0), Vector2(1, 1)],
 		2: [Vector2(0, 0), Vector2(-1, 0), Vector2(0, 1), Vector2(-1, 1)],
-		3: [Vector2(0, 0), Vector2(0, 1), Vector2(1, 0), Vector2(1, 1)]
+		3: [Vector2(0, 0), Vector2(0, -1), Vector2(-1, 0), Vector2(-1, -1)]
 	},
 	"T": {
 		0: [Vector2(-1, 0), Vector2(0, 0), Vector2(1, 0), Vector2(0, -1)],
@@ -109,7 +104,7 @@ const CC_SHAPES: Dictionary = {
 @onready var btn_last: Button = %BtnLast
 @onready var step_slider: HSlider = %StepSlider
 @onready var step_nav: HBoxContainer = %StepNav
-@onready var replay_board: Node2D = %ReplayBoard
+@onready var replay_board: ReplayBoardSurface = %ReplayBoard
 @onready var timeline_list: VBoxContainer = %TimelineList
 @onready var session_list_popup: PanelContainer = %SessionListPopup
 @onready var session_list: VBoxContainer = %SessionList
@@ -127,6 +122,7 @@ const CC_SHAPES: Dictionary = {
 @onready var bumpiness_label: Label = %BumpinessLabel
 @onready var height_label: Label = %HeightLabel
 @onready var ai_score_label: Label = %AiScoreLabel
+@onready var assistant_panel: AyaoAssistantPanel = %AyaoAssistant
 
 # 当前数据
 var _session_data: Dictionary = {}
@@ -139,13 +135,15 @@ var _showing_ai_plan: bool = false
 var _ai_plan_reveal_count: int = 0
 var _ai_plan_simulated_board: Array = []
 var _ai_plan_board_history: Array = []  # 每步锁定前的棋盘快照，用于回退
+const MAX_ANALYSIS_BYTES: int = 64_000_000
+const MAX_ANALYSIS_MSEC: int = 120_000
+var _analysis_reservation: String = ""
+var _analysis_staging_path: String = ""
 var _analysis_active: bool = false
 var _analysis_pid: int = -1
 var _analysis_session_file_name: String = ""
 var _analysis_output_path: String = ""
-var _analysis_progress_path: String = ""
 var _analysis_started_msec: int = 0
-var _analysis_last_worker_current: int = 0
 var _analysis_overlay: Control = null
 var _analysis_progress_bar: ProgressBar = null
 var _analysis_status_label: Label = null
@@ -158,6 +156,8 @@ var _metric_tooltip_controls: Dictionary = {}
 
 
 func _ready() -> void:
+	UITheme.theme_changed.connect(_on_ui_theme_changed)
+	assistant_panel.plan_requested.connect(func(): _toggle_ai_plan(_current_step))
 	btn_back.pressed.connect(_on_back_pressed)
 	btn_first.pressed.connect(func(): _go_to_step(0))
 	btn_prev.pressed.connect(func(): _go_to_step(_current_step - 1))
@@ -165,11 +165,13 @@ func _ready() -> void:
 	btn_last.pressed.connect(func(): _go_to_step(_snapshots.size() - 1))
 	_style_step_nav()
 	step_label.custom_minimum_size = Vector2(104, 0)
+	%BoardContainer.resized.connect(_center_board)
+	_style_layout_panels()
 	step_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
 	step_slider.value_changed.connect(func(val): _go_to_step(int(val)))
 	_setup_timeline_graph()
-	ai_score_label.custom_minimum_size = Vector2(0, 48)
-	ai_score_label.add_theme_font_size_override("font_size", 40)
+	ai_score_label.custom_minimum_size = Vector2(0, 34)
+	ai_score_label.add_theme_font_size_override("font_size", 24)
 	set_process(false)
 
 	_update_texts()
@@ -182,22 +184,20 @@ func _ready() -> void:
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_TRANSLATION_CHANGED and is_node_ready():
 		_update_texts()
+		_update_session_info()
 		_update_analysis_overlay_text()
 		if _current_step >= 0:
 			_update_step_label()
 			_update_data_panel(_current_step)
+			_refresh_assistant()
+		for index in timeline_list.get_child_count():
+			var row: PanelContainer = timeline_list.get_child(index)
+			(row.get_node("Content/Fields/Score") as Label).text = _timeline_ai_text(index)
 
 
 func _setup_timeline_graph() -> void:
-	if _timeline_graph != null:
-		return
-	_timeline_graph = ReplayTimelineGraphScene.new()
-	_timeline_graph.name = "StepTimelineGraph"
-	_timeline_graph.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	_timeline_graph = %StepTimelineGraph
 	_timeline_graph.step_selected.connect(_go_to_step)
-	step_nav.add_child(_timeline_graph)
-	step_nav.move_child(_timeline_graph, step_slider.get_index())
-	step_slider.visible = false
 
 
 func _style_step_nav() -> void:
@@ -207,34 +207,13 @@ func _style_step_nav() -> void:
 		_style_step_nav_button(button)
 
 
-func _make_step_nav_style(active: bool = false) -> StyleBoxFlat:
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color(0.08, 0.10, 0.15, 0.96) if active else Color(0.055, 0.065, 0.095, 0.95)
-	sb.border_color = Color(0.0, 0.83, 1.0, 0.72) if active else Color(0.13, 0.24, 0.38, 0.95)
-	sb.border_width_left = 1
-	sb.border_width_top = 1
-	sb.border_width_right = 1
-	sb.border_width_bottom = 1
-	sb.corner_radius_top_left = 4
-	sb.corner_radius_top_right = 4
-	sb.corner_radius_bottom_left = 4
-	sb.corner_radius_bottom_right = 4
-	return sb
-
-
 func _style_step_nav_button(button: Button) -> void:
 	if button == null:
 		return
-	button.custom_minimum_size = Vector2(26, 34)
+	button.custom_minimum_size = Vector2(34, 34)
 	button.flat = false
+	button.theme_type_variation = &"GhostButton"
 	button.add_theme_font_size_override("font_size", 14)
-	button.add_theme_color_override("font_color", Color(0.0, 0.83, 1.0, 1.0))
-	button.add_theme_color_override("font_hover_color", Color(0.72, 0.95, 1.0, 1.0))
-	button.add_theme_color_override("font_focus_color", Color(0.72, 0.95, 1.0, 1.0))
-	button.add_theme_stylebox_override("normal", _make_step_nav_style(false))
-	button.add_theme_stylebox_override("hover", _make_step_nav_style(true))
-	button.add_theme_stylebox_override("pressed", _make_step_nav_style(true))
-	button.add_theme_stylebox_override("focus", _make_step_nav_style(true))
 
 
 func _refresh_timeline_graph() -> void:
@@ -265,12 +244,17 @@ func _process(_delta: float) -> void:
 	if not _analysis_active:
 		return
 	_update_analysis_progress_overlay()
-	if _analysis_pid > 0 and not OS.is_process_running(_analysis_pid):
+	if Time.get_ticks_msec() - _analysis_started_msec >= MAX_ANALYSIS_MSEC:
+		_cancel_ai_analysis()
+		_show_ai_analysis_failed("Analysis exceeded the 120-second time limit. The original replay was retained.")
+	elif _analysis_pid > 0 and not OS.is_process_running(_analysis_pid):
 		_finish_ai_analysis_process()
 
 
 func _update_texts() -> void:
 	btn_back.text = "◀ " + tr("TXT_BACK")
+	if _session_data.is_empty():
+		session_info_label.text = tr("TXT_SELECT_SESSION")
 	
 	var title_lbl = get_node_or_null("%TitleLabel")
 	if title_lbl:
@@ -278,19 +262,19 @@ func _update_texts() -> void:
 		
 	var pinfo_lbl = data_vbox.get_node_or_null("PieceInfoTitle")
 	if pinfo_lbl:
-		pinfo_lbl.text = "▸ " + tr("TXT_PIECE_INFO")
+		pinfo_lbl.text = "•  " + tr("TXT_PIECE_INFO")
 		
 	var ter_lbl = data_vbox.get_node_or_null("TerrainTitle")
 	if ter_lbl:
-		ter_lbl.text = "▸ " + tr("TXT_TERRAIN_METRICS")
+		ter_lbl.text = "•  " + tr("TXT_TERRAIN_METRICS")
 		
-	var ai_lbl = data_vbox.get_node_or_null("AiTitle")
+	var ai_lbl = get_node_or_null("%AiTitle")
 	if ai_lbl:
-		ai_lbl.text = "▸ " + tr("TXT_AI_CURRENT_STEP")
+		ai_lbl.text = "•  " + tr("TXT_AI_CURRENT_STEP")
 		
 	var tl_lbl = get_node_or_null("%TimelineTitle")
 	if tl_lbl:
-		tl_lbl.text = "▸ " + tr("TXT_TIMELINE")
+		tl_lbl.text = "•  " + tr("TXT_TIMELINE")
 		
 	var pop_lbl = get_node_or_null("%PopupTitle")
 	if pop_lbl:
@@ -304,86 +288,26 @@ func _update_texts() -> void:
 func _ensure_session_overview_panel() -> void:
 	if _session_overview_panel != null:
 		return
-
 	_hide_legacy_step_stats()
-
-	var root := VBoxContainer.new()
-	root.name = "SessionOverview"
-	root.add_theme_constant_override("separation", 7)
-	data_vbox.add_child(root)
-	data_vbox.move_child(root, 0)
-	_session_overview_panel = root
-
-	var title := Label.new()
-	title.name = "OverviewTitle"
-	title.add_theme_font_size_override("font_size", 18)
-	title.add_theme_color_override("font_color", Color(0.38, 0.92, 1.0))
-	root.add_child(title)
-
-	var radar_wrap := CenterContainer.new()
-	root.add_child(radar_wrap)
-
-	var radar := RadarChart.new()
-	radar.auto_minimum_size = false
-	radar.custom_minimum_size = Vector2(184, 168)
-	radar.chart_radius = 54.0
-	radar.grid_color = Color(0.23, 0.30, 0.42, 0.42)
-	radar.axis_color = Color(0.45, 0.55, 0.72, 0.55)
-	radar.fill_color = Color(0.0, 0.78, 1.0, 0.20)
-	radar.outline_color = Color(0.1, 0.9, 1.0, 0.92)
-	radar.outline_width = 2.0
-	radar.vertex_dot_radius = 2.8
-	radar.label_font_size = 13
-	radar.label_offset = 22.0
-	radar.label_color = Color(0.70, 0.77, 0.88, 0.95)
-	radar.show_value_labels = false
-	radar.grid_levels = 3
-	radar.animation_duration = 0.45
-	radar_wrap.add_child(radar)
-	_session_radar_chart = radar
-
-	var core_grid := GridContainer.new()
-	core_grid.name = "CoreMetrics"
-	core_grid.columns = 2
-	core_grid.add_theme_constant_override("h_separation", 10)
-	core_grid.add_theme_constant_override("v_separation", 7)
-	root.add_child(core_grid)
-	for metric in [
-		["pps", "PPS", Color(0.10, 0.84, 1.0)],
-		["apm", "APM", Color(1.0, 0.46, 0.34)],
-		["app", "APP", Color(0.50, 0.90, 0.42)],
-		["kpp", "KPP", Color(1.0, 0.82, 0.30)],
-	]:
-		core_grid.add_child(_create_metric_block(metric[0], metric[1], metric[2]))
-
-	var line := HSeparator.new()
-	root.add_child(line)
-
-	var stat_grid := GridContainer.new()
-	stat_grid.name = "SessionStats"
-	stat_grid.columns = 2
-	stat_grid.add_theme_constant_override("h_separation", 10)
-	stat_grid.add_theme_constant_override("v_separation", 5)
-	root.add_child(stat_grid)
-	for stat in [
-		["score", "TXT_SCORE"],
-		["duration", "TXT_DURATION"],
-		["pieces", "TXT_PIECES"],
-		["lines", "TXT_LINES"],
-		["damage", "TXT_DAMAGE"],
-		["keys", "TXT_KEYS"],
-		["quads", "TXT_REPLAY_QUADS"],
-		["tspins", "TXT_REPLAY_TSPINS"],
-		["combo", "TXT_MAX_COMBO"],
-		["b2b", "TXT_MAX_B2B"],
-		["clears", "TXT_REPLAY_CLEAR_MIX"],
-		["ai_score", "TXT_REPLAY_AI_SCORE"],
-	]:
-		stat_grid.add_child(_create_stat_row(stat[0], stat[1]))
-
-	var separator := HSeparator.new()
-	root.add_child(separator)
-
+	_session_overview_panel = data_vbox.get_node("SessionOverview")
+	_session_radar_chart = _session_overview_panel.get_node("HeroRow/RadarChart")
+	_apply_radar_palette(_session_radar_chart)
+	for metric in [["pps", "cyan"], ["apm", "accent2"], ["app", "accent"], ["kpp", "amber"]]:
+		var tile: PanelContainer = _session_overview_panel.get_node("HeroRow/CoreMetrics/" + metric[0])
+		var style: StyleBoxFlat = tile.get_theme_stylebox("panel").duplicate()
+		style.bg_color = UITheme.soft(metric[1], 0.14)
+		tile.add_theme_stylebox_override("panel", style)
+		var value: Label = tile.get_node("Content/Value")
+		var label: Label = tile.get_node("Content/Label")
+		value.add_theme_color_override("font_color", _metric_color(metric[1]))
+		_summary_value_labels[metric[0]] = value
+		_metric_tiles.append([style, metric[0], metric[1]])
+		_metric_tooltip_controls[metric[0]] = [value, label]
+	for key in ["score", "duration", "pieces", "lines", "damage", "keys", "quads", "tspins", "combo", "b2b", "clears", "ai_score"]:
+		var path: String = "SessionStats/" + key if key not in ["clears", "ai_score"] else key
+		var stat: PanelContainer = _session_overview_panel.get_node(path)
+		_summary_value_labels[key] = stat.get_node("Content/Value")
+		_summary_value_labels["title_" + key] = stat.get_node("Content/Title")
 	_update_session_overview_texts()
 
 
@@ -409,69 +333,62 @@ func _hide_legacy_step_stats() -> void:
 			(node as CanvasItem).visible = false
 
 
-func _create_metric_block(key: String, title: String, accent: Color) -> VBoxContainer:
-	var box := VBoxContainer.new()
-	box.custom_minimum_size = Vector2(0, 56)
-	box.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	box.add_theme_constant_override("separation", 0)
-
-	var value_wrap := CenterContainer.new()
-	value_wrap.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	box.add_child(value_wrap)
-
-	var value := Label.new()
-	value.name = "Value"
-	value.mouse_filter = Control.MOUSE_FILTER_STOP
-	value.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	value.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	value.add_theme_font_size_override("font_size", 26)
-	value.add_theme_color_override("font_color", accent)
-	value_wrap.add_child(value)
-	_summary_value_labels[key] = value
-
-	var label_wrap := CenterContainer.new()
-	label_wrap.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	box.add_child(label_wrap)
-
-	var label := Label.new()
-	label.name = "Label"
-	label.mouse_filter = Control.MOUSE_FILTER_STOP
-	label.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	label.text = title
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.add_theme_font_size_override("font_size", 13)
-	label.add_theme_color_override("font_color", Color(0.56, 0.63, 0.75))
-	label_wrap.add_child(label)
-	_metric_tooltip_controls[key] = [value, label]
-	_apply_metric_tooltip(key)
-
-	return box
+var _metric_tiles: Array = []
 
 
-func _create_stat_row(key: String, title_key: String) -> HBoxContainer:
-	var row := HBoxContainer.new()
-	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_theme_constant_override("separation", 4)
+## 切换主题时刷新代码生成的配色
+func _style_layout_panels() -> void:
+	for panel: PanelContainer in [%LeftPanel, %CenterPanel, %RightPanel, %PlaybackPanel]:
+		var style: StyleBoxFlat = panel.get_theme_stylebox("panel")
+		style.bg_color = UITheme.color("surface")
+	var overview: Control = data_vbox.get_node("SessionOverview")
+	var stats: Array[Node] = overview.get_node("SessionStats").get_children()
+	stats.append(overview.get_node("clears"))
+	stats.append(overview.get_node("ai_score"))
+	for panel: PanelContainer in stats:
+		var style: StyleBoxFlat = panel.get_theme_stylebox("panel")
+		style.bg_color = UITheme.color("surface2")
 
-	var title := Label.new()
-	title.name = "Title"
-	title.text = tr(title_key)
-	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	title.add_theme_font_size_override("font_size", 13)
-	title.add_theme_color_override("font_color", Color(0.56, 0.63, 0.75))
-	row.add_child(title)
 
-	var value := Label.new()
-	value.name = "Value"
-	value.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	value.add_theme_font_size_override("font_size", 14)
-	value.add_theme_color_override("font_color", Color(0.90, 0.94, 1.0))
-	row.add_child(value)
-	_summary_value_labels[key] = value
-	_summary_value_labels["title_%s" % key] = title
+func _on_ui_theme_changed(_mode: String) -> void:
+	_style_layout_panels()
+	if _session_radar_chart:
+		_apply_radar_palette(_session_radar_chart)
+		_session_radar_chart.queue_redraw()
+	for entry in _metric_tiles:
+		(entry[0] as StyleBoxFlat).bg_color = UITheme.color("surface").lerp(UITheme.color(entry[2]), 0.14 if UITheme.is_dark() else 0.16)
+		var value := _summary_value_labels.get(entry[1], null) as Label
+		if value:
+			value.add_theme_color_override("font_color", _metric_color(entry[2]))
+	if _timeline_graph:
+		_timeline_graph.queue_redraw()
+	for i in range(timeline_list.get_child_count()):
+		var row: PanelContainer = timeline_list.get_child(i)
+		var row_color := _timeline_row_color(i)
+		_set_timeline_row_style(row, row_color, i == _current_step)
+		for key in ["Step", "Piece", "Score", "Time"]:
+			(row.get_node("Content/Fields/" + key) as Label).add_theme_color_override("font_color", row_color)
+		var tag: Label = row.get_node("Content/Tag")
+		tag.add_theme_color_override("font_color", _timeline_special_clear_color(tag.text))
+	if _current_step >= 0:
+		_update_data_panel(_current_step)
 
-	return row
+
+## 雷达图配色跟随主题
+func _apply_radar_palette(radar: RadarChart) -> void:
+	radar.grid_color = Color(UITheme.color("border"), 0.9)
+	radar.axis_color = Color(UITheme.color("border"), 0.7)
+	radar.fill_color = Color(UITheme.color("accent"), 0.22)
+	radar.outline_color = UITheme.color("accent")
+	radar.vertex_dot_color = UITheme.color("accent")
+	radar.label_color = UITheme.color("text")
+	radar.value_label_color = UITheme.color("muted")
+
+
+## 指标数值色：浅色主题下加深以保证对比度
+func _metric_color(hue: String) -> Color:
+	var c := UITheme.color(hue)
+	return c if UITheme.is_dark() else c.darkened(0.22)
 
 
 func _update_session_overview_texts() -> void:
@@ -479,7 +396,7 @@ func _update_session_overview_texts() -> void:
 		return
 	var title := _session_overview_panel.get_node_or_null("OverviewTitle") as Label
 	if title != null:
-		title.text = "▸ " + tr("TXT_REPLAY_SESSION_OVERVIEW")
+		title.text = "•  " + tr("TXT_REPLAY_SESSION_OVERVIEW")
 	var title_keys := {
 		"score": "TXT_SCORE",
 		"duration": "TXT_DURATION",
@@ -717,7 +634,7 @@ func _average_ai_loss() -> float:
 	for item in _ai_details:
 		if item is Dictionary:
 			var detail := item as Dictionary
-			if detail.has("score_loss") and detail["score_loss"] != null:
+			if _has_ai_loss(detail):
 				total_loss += maxf(0.0, float(detail["score_loss"]))
 				count += 1
 	if count <= 0:
@@ -745,7 +662,7 @@ func _show_session_list() -> void:
 	if files.is_empty():
 		var lbl := Label.new()
 		lbl.text = tr("TXT_NO_SESSIONS_FOUND")
-		lbl.add_theme_color_override("font_color", Color(0.4, 0.5, 0.67))
+		lbl.theme_type_variation = &"MutedLabel"
 		session_list.add_child(lbl)
 		session_list_popup.visible = true
 		call_deferred("_focus_default_control")
@@ -769,8 +686,6 @@ func _show_session_list() -> void:
 		btn.text = display_name
 		btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
 		btn.focus_mode = Control.FOCUS_ALL
-		btn.add_theme_color_override("font_color", Color(0.88, 0.91, 0.94))
-		btn.add_theme_color_override("font_hover_color", Color(0, 0.83, 1))
 		_style_session_button(btn)
 		btn.pressed.connect(_on_session_selected.bind(fname))
 		session_list.add_child(btn)
@@ -778,27 +693,10 @@ func _show_session_list() -> void:
 	session_list_popup.visible = true
 	call_deferred("_focus_default_control")
 
-func _make_session_button_style(active: bool = false) -> StyleBoxFlat:
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color(0.18, 0.19, 0.22, 0.78) if active else Color(0.08, 0.085, 0.11, 0.62)
-	sb.border_width_left = 2
-	sb.border_width_top = 2
-	sb.border_width_right = 2
-	sb.border_width_bottom = 2
-	sb.border_color = Color(0.92, 0.95, 1.0, 0.95) if active else Color(0.0, 0.0, 0.0, 0.0)
-	sb.content_margin_left = 8
-	sb.content_margin_right = 8
-	sb.content_margin_top = 4
-	sb.content_margin_bottom = 4
-	return sb
-
 func _style_session_button(button: Button) -> void:
-	button.custom_minimum_size = Vector2(0, 34)
+	button.custom_minimum_size = Vector2(0, 36)
 	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	button.add_theme_stylebox_override("normal", _make_session_button_style(false))
-	button.add_theme_stylebox_override("hover", _make_session_button_style(true))
-	button.add_theme_stylebox_override("pressed", _make_session_button_style(true))
-	button.add_theme_stylebox_override("focus", _make_session_button_style(true))
+	button.theme_type_variation = &"GhostButton"
 
 
 func _focus_default_control() -> void:
@@ -822,29 +720,46 @@ func _on_session_selected(file_name: String) -> void:
 # ==============================================================================
 
 func _load_session(file_name: String) -> void:
+	if file_name != file_name.get_file() or not file_name.ends_with(".json"):
+		return
 	var path: String = PlayerDataStore.get_sessions_dir().path_join(file_name)
-	var file := FileAccess.open(path, FileAccess.READ)
-	if file == null:
-		push_error("[ReplaySystem] 无法打开 session 文件: %s" % path)
+	var loaded := StorageBudget.read_bounded(path, PlayerDataStore.MAX_SESSION_BYTES)
+	if loaded.error != OK:
 		return
-
-	var json := JSON.new()
-	if json.parse(file.get_as_text()) != OK:
-		push_error("[ReplaySystem] 解析 session JSON 失败: %s" % path)
+	var parsed = JSON.parse_string((loaded.data as PackedByteArray).get_string_from_utf8())
+	if not (parsed is Dictionary) or not (parsed.get("snapshots") is Array):
+		StorageBudget.report_error("Replay has an invalid session schema; its original file was retained.")
 		return
+	var snapshots: Array = parsed.snapshots
+	if snapshots.size() > PlayerDataCollector.MAX_SNAPSHOTS:
+		StorageBudget.report_error("Replay exceeds the supported 10,000-snapshot limit; its original file was retained.")
+		return
+	for snapshot in snapshots:
+		if not (snapshot is Dictionary) or not _valid_snapshot_boards(snapshot):
+			StorageBudget.report_error("Replay contains an invalid snapshot; its original file was retained.")
+			return
+	_cancel_ai_analysis()
+	if _analysis_active or not _analysis_reservation.is_empty():
+		return
+	_current_step = -1
+	assistant_panel.clear_review()
+	_showing_ai_plan = false
+	_ai_plan_reveal_count = 0
+	_ai_plan_simulated_board.clear()
+	_ai_plan_board_history.clear()
+	_session_data = parsed
+	_snapshots = snapshots
 
-	_session_data = json.data as Dictionary
-	_snapshots = _session_data.get("snapshots", [])
-
-	# 更新顶部信息
-	var session_id: String = str(_session_data.get("session_id", "unknown"))
-	var pieces: int = int(_session_data.get("pieces_placed", 0))
-	var score: int = int(_session_data.get("final_score", 0))
-	session_info_label.text = "%s  |  %d pieces  |  Score: %d" % [session_id, pieces, score]
+	_update_session_info()
 	_update_session_overview()
 
 	# 尝试加载 AI 分析结果
-	_load_ai_scores(file_name)
+	if not _snapshots.is_empty():
+		_load_ai_scores(file_name)
+	else:
+		_ai_scores.clear()
+		_ai_details.clear()
+		_ai_recommendations.clear()
 	_update_session_overview()
 	_refresh_timeline_graph()
 
@@ -856,9 +771,44 @@ func _load_session(file_name: String) -> void:
 		_go_to_step(0)
 	else:
 		step_label.text = tr("TXT_STEP_FORMAT") % [0, 0]
+		step_slider.set_value_no_signal(0)
+		step_slider.max_value = 0
+		_clear_board_overlays()
+		replay_board.set_board([], [])
+		for label in [piece_type_label, position_label, clear_type_label, lines_label,
+			damage_label, combo_label, time_label, holes_label, bumpiness_label,
+			height_label, ai_score_label]:
+			label.text = "—"
+		_set_replay_controls_enabled(false)
 
 	# 生成时间线
 	_build_timeline()
+
+
+func _valid_snapshot_boards(snapshot: Dictionary) -> bool:
+	for key in ["board_state", "board_state_after_drop", "board_state_after_clear"]:
+		if not snapshot.has(key):
+			continue
+		var cells = snapshot[key]
+		if not (cells is Array) or (not cells.is_empty() and cells.size() != BOARD_ROWS):
+			return false
+		for row in cells:
+			if not (row is Array) or row.size() != BOARD_COLS:
+				return false
+			for value in row:
+				if not (value is int or value is float) or value != int(value) or value < 0 or value >= CELL_COLORS.size():
+					return false
+	return not snapshot.has("next_pieces") or snapshot.next_pieces is Array
+
+
+func _update_session_info() -> void:
+	if _session_data.is_empty():
+		return
+	var session_id: String = str(_session_data.get("session_id", "unknown"))
+	var pieces: int = int(_session_data.get("pieces_placed", 0))
+	var score: int = int(_session_data.get("final_score", 0))
+	session_info_label.text = "%s  ·  %s: %d  ·  %s: %s" % [session_id.split("_")[0].replace("T", " "), tr("TXT_PIECES"), pieces, tr("TXT_SCORE"), _format_number(score)]
+	session_info_label.tooltip_text = session_id
 
 
 func _load_ai_scores(session_file_name: String) -> void:
@@ -878,45 +828,34 @@ func _load_ai_scores(session_file_name: String) -> void:
 
 
 func _run_ai_analysis(session_file_name: String) -> void:
-	var session_path: String = ProjectSettings.globalize_path(
-		PlayerDataStore.get_sessions_dir().path_join(session_file_name)
-	)
-	var output_path: String = session_path.replace(".json", "_analyzed.json")
-	var progress_path: String = output_path + ".progress"
-
-	var analyzer_path: String = _find_replay_ai_analyzer()
-	var executable_path: String = analyzer_path
-	var args: PackedStringArray = []
-	if not analyzer_path.is_empty():
-		print("[ReplaySystem] Analyzer path: %s" % analyzer_path)
-		args = [session_path, output_path, "--progress-file", progress_path]
-	else:
-		print("[ReplaySystem] Analyzer executable not found; trying cargo fallback")
-		executable_path = "cargo"
-		args = _make_replay_ai_cargo_args(session_path, output_path, progress_path)
-
-	if args.is_empty():
-		_show_ai_analysis_failed("Analyzer executable and Cargo fallback are unavailable.")
+	_cancel_ai_analysis()
+	if _analysis_active or not _analysis_reservation.is_empty():
 		return
-
-	_prepare_analysis_progress_file(progress_path)
+	var analyzer_path := _find_replay_ai_analyzer()
+	if analyzer_path.is_empty():
+		_show_ai_analysis_failed(StorageBudget.last_error())
+		return
+	var session_path := ProjectSettings.globalize_path(PlayerDataStore.get_sessions_dir().path_join(session_file_name))
+	_analysis_output_path = session_path.replace(".json", "_analyzed.json")
+	_analysis_staging_path = _analysis_output_path + ".pending." + Crypto.new().generate_random_bytes(16).hex_encode()
+	var reservation := StorageBudget.reserve_output(_analysis_staging_path, MAX_ANALYSIS_BYTES)
+	if reservation.error != OK:
+		_show_ai_analysis_failed(StorageBudget.last_error())
+		return
+	_analysis_reservation = reservation.token
 	_analysis_session_file_name = session_file_name
-	_analysis_output_path = output_path
-	_analysis_progress_path = progress_path
 	_analysis_started_msec = Time.get_ticks_msec()
-	_analysis_last_worker_current = 0
-	_show_analysis_overlay()
-	var pid: int = OS.create_process(executable_path, args, false)
-	if pid <= 0:
-		_hide_analysis_overlay()
-		_analysis_session_file_name = ""
-		_analysis_output_path = ""
-		_analysis_progress_path = ""
-		_show_ai_analysis_failed("Failed to start analyzer process: %s" % executable_path)
+	var args: PackedStringArray = [session_path, _analysis_staging_path,
+		"--budget-root", StorageBudget.data_root(), "--reservation", _analysis_reservation,
+		"--parent-pid", str(OS.get_process_id())]
+	_analysis_pid = OS.create_process(analyzer_path, args, false)
+	if _analysis_pid <= 0:
+		StorageBudget.release_reservation(_analysis_reservation)
+		_analysis_reservation = ""
+		_show_ai_analysis_failed("Failed to start the bounded replay analyzer.")
 		return
-
 	_analysis_active = true
-	_analysis_pid = pid
+	_show_analysis_overlay()
 	_set_replay_controls_enabled(false)
 	set_process(true)
 
@@ -925,51 +864,27 @@ func _find_replay_ai_analyzer() -> String:
 	return ReplayAiEnvironment.ensure_analyzer_available()
 
 
-func _make_replay_ai_cargo_args(session_path: String, output_path: String, progress_path: String) -> PackedStringArray:
-	var manifest_path: String = ProjectSettings.globalize_path("res://replay-ai-core/Cargo.toml")
-	if not FileAccess.file_exists(manifest_path):
-		push_warning("[ReplaySystem] replay-ai-core Cargo.toml is missing: %s" % manifest_path)
-		return PackedStringArray()
-
-	return [
-		"run",
-		"--manifest-path", manifest_path,
-		"-p", "replay-analysis",
-		"--bin", "analyze_session",
-		"--",
-		session_path,
-		output_path,
-		"--progress-file", progress_path
-	]
-
-
 func _try_load_ai_scores_from_path(path: String) -> bool:
 	if not FileAccess.file_exists(path):
 		return false
-
-	var file := FileAccess.open(path, FileAccess.READ)
-	if file == null:
+	var loaded := StorageBudget.read_bounded(path, MAX_ANALYSIS_BYTES)
+	if loaded.error != OK:
 		return false
-
-	var json := JSON.new()
-	if json.parse(file.get_as_text()) != OK:
+	var parsed = JSON.parse_string((loaded.data as PackedByteArray).get_string_from_utf8())
+	if not (parsed is Dictionary):
 		return false
-
-	var data: Dictionary = json.data as Dictionary
-	if str(data.get("ai_model_used", "")) != "cold-clear-standard" or not data.has("ai_details"):
+	var data: Dictionary = parsed
+	if int(data.get("storage_protocol", 0)) != 1 or int(data.get("analysis_revision", 0)) != 2 or str(data.get("ai_model_used", "")) != "cold-clear-standard":
 		return false
-
-	_ai_scores = data.get("ai_scores", [])
-	_ai_details = data.get("ai_details", [])
-	_ai_recommendations = data.get("recommendations", [])
+	if str(data.get("session_id", "")) != str(_session_data.get("session_id", "")):
+		return false
+	for key in ["ai_scores", "ai_details", "recommendations"]:
+		if not (data.get(key) is Array) or data[key].size() != _snapshots.size():
+			return false
+	_ai_scores = data.ai_scores
+	_ai_details = data.ai_details
+	_ai_recommendations = data.recommendations
 	return true
-
-
-func _prepare_analysis_progress_file(progress_path: String) -> void:
-	var file := FileAccess.open(progress_path, FileAccess.WRITE)
-	if file == null:
-		return
-	file.store_string("0,%d" % _snapshots.size())
 
 
 func _finish_ai_analysis_process() -> void:
@@ -977,23 +892,47 @@ func _finish_ai_analysis_process() -> void:
 	_analysis_active = false
 	set_process(false)
 	_set_replay_controls_enabled(true)
-
-	var output_path := _analysis_output_path
-	var progress_path := _analysis_progress_path
 	_hide_analysis_overlay()
-
-	if _try_load_ai_scores_from_path(output_path):
-		print("[ReplaySystem] Replay AI analysis complete: %d steps" % _ai_scores.size())
-		_refresh_replay_after_ai_analysis()
+	if _try_load_ai_scores_from_path(_analysis_staging_path):
+		var err := StorageBudget.commit_reserved(_analysis_reservation, _analysis_output_path)
+		if err == OK:
+			_analysis_reservation = ""
+			_refresh_replay_after_ai_analysis()
+		else:
+			_show_ai_analysis_failed(StorageBudget.last_error())
 	else:
-		_show_ai_analysis_failed("Analyzer finished but did not produce a valid analysis JSON.")
+		_show_ai_analysis_failed("Analyzer stopped without a valid bounded result; the original replay was retained.")
+	_cleanup_analysis_output()
 
-	if not progress_path.is_empty() and FileAccess.file_exists(progress_path):
-		DirAccess.remove_absolute(progress_path)
+func _cancel_ai_analysis() -> void:
+	if _analysis_pid > 0 and OS.is_process_running(_analysis_pid):
+		OS.kill(_analysis_pid)
+		var deadline := Time.get_ticks_msec() + 2000
+		while OS.is_process_running(_analysis_pid) and Time.get_ticks_msec() < deadline:
+			OS.delay_msec(10)
+		if OS.is_process_running(_analysis_pid):
+			StorageBudget.report_error("Analysis cancellation has not completed; its output reservation was retained.")
+			return
+	_analysis_pid = -1
+	_analysis_active = false
+	set_process(false)
+	_cleanup_analysis_output()
+	if is_node_ready():
+		_set_replay_controls_enabled(true)
+		_hide_analysis_overlay()
 
+func _cleanup_analysis_output() -> void:
+	# Only this process's reserved staging file is removed under the write lock.
+	if not _analysis_reservation.is_empty():
+		if StorageBudget.discard_reserved(_analysis_reservation) != OK:
+			return
+	_analysis_reservation = ""
+	_analysis_staging_path = ""
 	_analysis_session_file_name = ""
 	_analysis_output_path = ""
-	_analysis_progress_path = ""
+
+func _exit_tree() -> void:
+	_cancel_ai_analysis()
 
 
 func _refresh_replay_after_ai_analysis() -> void:
@@ -1003,13 +942,14 @@ func _refresh_replay_after_ai_analysis() -> void:
 	_refresh_timeline_graph()
 	_render_step(_current_step)
 	_update_data_panel(_current_step)
+	_refresh_assistant()
 	_build_timeline()
 	_highlight_timeline_item(_current_step)
 	call_deferred("_focus_current_timeline_row")
 
 
 func _show_ai_analysis_failed(message: String) -> void:
-	push_warning("[ReplaySystem] Replay AI analysis failed: %s" % message)
+	StorageBudget.report_error("Replay AI analysis failed: " + message)
 	ai_score_label.text = tr("TXT_AI_ANALYSIS_FAILED")
 	ai_score_label.add_theme_color_override("font_color", Color(1.0, 0.35, 0.25))
 
@@ -1038,7 +978,7 @@ func _ensure_analysis_overlay() -> void:
 	overlay.anchor_bottom = 1.0
 	overlay.visible = false
 	var overlay_style := StyleBoxFlat.new()
-	overlay_style.bg_color = Color(0.015, 0.016, 0.024, 0.82)
+	overlay_style.bg_color = Color(UITheme.color("bg"), 0.82)
 	overlay.add_theme_stylebox_override("panel", overlay_style)
 	add_child(overlay)
 	_analysis_overlay = overlay
@@ -1050,18 +990,7 @@ func _ensure_analysis_overlay() -> void:
 
 	var panel := PanelContainer.new()
 	panel.custom_minimum_size = Vector2(440, 156)
-	var panel_style := StyleBoxFlat.new()
-	panel_style.bg_color = Color(0.055, 0.058, 0.09, 0.96)
-	panel_style.border_width_left = 1
-	panel_style.border_width_top = 1
-	panel_style.border_width_right = 1
-	panel_style.border_width_bottom = 1
-	panel_style.border_color = Color(0.0, 0.83, 1.0, 0.55)
-	panel_style.corner_radius_top_left = 8
-	panel_style.corner_radius_top_right = 8
-	panel_style.corner_radius_bottom_left = 8
-	panel_style.corner_radius_bottom_right = 8
-	panel.add_theme_stylebox_override("panel", panel_style)
+	panel.theme_type_variation = &"CardPanel"
 	center.add_child(panel)
 
 	var margin := MarginContainer.new()
@@ -1078,7 +1007,6 @@ func _ensure_analysis_overlay() -> void:
 	var status := Label.new()
 	status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	status.add_theme_font_size_override("font_size", 20)
-	status.add_theme_color_override("font_color", Color(0.88, 0.93, 1.0))
 	vbox.add_child(status)
 	_analysis_status_label = status
 
@@ -1095,7 +1023,7 @@ func _ensure_analysis_overlay() -> void:
 	detail.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	detail.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	detail.add_theme_font_size_override("font_size", 13)
-	detail.add_theme_color_override("font_color", Color(0.55, 0.65, 0.82))
+	detail.theme_type_variation = &"MutedLabel"
 	vbox.add_child(detail)
 	_analysis_detail_label = detail
 
@@ -1110,30 +1038,11 @@ func _update_analysis_overlay_text() -> void:
 func _update_analysis_progress_overlay() -> void:
 	if _analysis_progress_bar == null:
 		return
-
-	var total := maxi(1, _snapshots.size())
-	var current := 0
-	if not _analysis_progress_path.is_empty() and FileAccess.file_exists(_analysis_progress_path):
-		var file := FileAccess.open(_analysis_progress_path, FileAccess.READ)
-		if file != null:
-			var parts := file.get_as_text().strip_edges().split(",")
-			if parts.size() >= 2:
-				current = maxi(0, int(parts[0]))
-				total = maxi(1, int(parts[1]))
-
-	if current > _analysis_last_worker_current:
-		_analysis_last_worker_current = current
-
-	var elapsed_msec := Time.get_ticks_msec() - _analysis_started_msec
-	if _analysis_last_worker_current == 0 and current == 0 and elapsed_msec > 800:
-		var elapsed_sec := float(elapsed_msec) / 1000.0
-		current = mini(total - 1, int(float(total) * clampf(elapsed_sec / 16.0, 0.0, 0.90)))
-
-	_analysis_progress_bar.max_value = total
-	_analysis_progress_bar.value = clampi(current, 0, total)
+	_analysis_progress_bar.max_value = 1
+	_analysis_progress_bar.value = 0
+	_analysis_progress_bar.show_percentage = false
 	if _analysis_detail_label != null:
-		var progress_text := tr("TXT_AI_ANALYSIS_PROGRESS") % [current, total]
-		_analysis_detail_label.text = "%s  |  %s" % [progress_text, _format_analysis_elapsed(elapsed_msec)]
+		_analysis_detail_label.text = "%s  |  %s / 120s  |  Esc: cancel" % [tr("TXT_AI_ANALYSIS_WAIT"), _format_analysis_elapsed(Time.get_ticks_msec() - _analysis_started_msec)]
 
 
 func _format_analysis_elapsed(elapsed_msec: int) -> String:
@@ -1144,7 +1053,7 @@ func _format_analysis_elapsed(elapsed_msec: int) -> String:
 
 
 func _set_replay_controls_enabled(enabled: bool) -> void:
-	btn_back.disabled = not enabled
+	btn_back.disabled = false
 	btn_first.disabled = not enabled
 	btn_prev.disabled = not enabled
 	btn_next.disabled = not enabled
@@ -1177,13 +1086,33 @@ func _go_to_step(index: int) -> void:
 
 	_render_step(index)
 	_update_data_panel(index)
+	_refresh_assistant()
 	_highlight_timeline_item(index)
+
+
+func _refresh_assistant() -> void:
+	if _current_step < 0 or _snapshots.is_empty():
+		assistant_panel.clear_review()
+		return
+	var previous: Dictionary = _snapshots[_current_step - 1] if _current_step > 0 else {}
+	var recommendation := _get_recommendation(_current_step)
+	var review := AyaoCoach.analyze_step(_snapshots[_current_step], previous,
+		_get_ai_detail(_current_step), recommendation)
+	assistant_panel.present_review(_current_step, _snapshots.size(), review, not recommendation.is_empty())
+	assistant_panel.set_plan_preview(_showing_ai_plan)
+
 
 func _update_step_label() -> void:
 	if _snapshots.is_empty():
 		step_label.text = tr("TXT_STEP_FORMAT") % [0, 0]
 	else:
 		step_label.text = tr("TXT_STEP_FORMAT") % [_current_step + 1, _snapshots.size()]
+
+
+func _clear_board_overlays() -> void:
+	for child in replay_board.get_children():
+		replay_board.remove_child(child)
+		child.queue_free()
 
 
 func _render_step(index: int) -> void:
@@ -1194,41 +1123,8 @@ func _render_step(index: int) -> void:
 	if board_data.is_empty():
 		board_data = snap.get("board_state_after_clear", [])
 
-	# 清除旧绘制
-	for child in replay_board.get_children():
-		child.queue_free()
-
-	# 绘制棋盘格
-	for r in range(mini(board_data.size(), BOARD_ROWS)):
-		var row: Array = board_data[r]
-		for c in range(mini(row.size(), BOARD_COLS)):
-			var cell_val: int = int(row[c])
-			var rect := ColorRect.new()
-			rect.size = Vector2(CELL_SIZE - 1, CELL_SIZE - 1)
-			rect.position = Vector2(c * CELL_SIZE, r * CELL_SIZE)
-			if cell_val > 0 and cell_val < CELL_COLORS.size():
-				rect.color = CELL_COLORS[cell_val]
-			elif cell_val > 0:
-				# 兼容未知非空编码（例如未来新增块类型）
-				rect.color = CELL_COLORS[8]
-			else:
-				rect.color = CELL_COLORS[0]
-			replay_board.add_child(rect)
-
-	# 绘制网格线
-	var grid_color := Color(0.15, 0.15, 0.22, 0.5)
-	for r in range(BOARD_ROWS + 1):
-		var line := ColorRect.new()
-		line.size = Vector2(BOARD_COLS * CELL_SIZE, 1)
-		line.position = Vector2(0, r * CELL_SIZE)
-		line.color = grid_color
-		replay_board.add_child(line)
-	for c in range(BOARD_COLS + 1):
-		var line := ColorRect.new()
-		line.size = Vector2(1, BOARD_ROWS * CELL_SIZE)
-		line.position = Vector2(c * CELL_SIZE, 0)
-		line.color = grid_color
-		replay_board.add_child(line)
+	_clear_board_overlays()
+	replay_board.set_board(board_data, CELL_COLORS)
 
 	# 高亮本步新落下的方块（锁定时的 piece_type/rotation/col/row）
 	_draw_locked_piece_highlight(snap, index)
@@ -1236,30 +1132,12 @@ func _render_step(index: int) -> void:
 	# 在高亮方块旁添加 "?" 按钮（仅当有 AI 推荐数据时）
 	_draw_ai_plan_button(snap, index)
 
-	# 棋盘外框（4条薄线，不再用填充矩形）
-	var bw: float = BOARD_COLS * CELL_SIZE
-	var bh: float = BOARD_ROWS * CELL_SIZE
-	var bc := Color(0, 0.83, 1, 0.4)
-	for edge in [
-		[Vector2(-1, -1), Vector2(bw + 2, 1)],       # 上
-		[Vector2(-1, bh), Vector2(bw + 2, 1)],        # 下
-		[Vector2(-1, -1), Vector2(1, bh + 2)],        # 左
-		[Vector2(bw, -1), Vector2(1, bh + 2)],        # 右
-	]:
-		var e := ColorRect.new()
-		e.position = edge[0]
-		e.size = edge[1]
-		e.color = bc
-		e.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		replay_board.add_child(e)
-
 	# 居中棋盘
 	_center_board()
 
 	# 绘制 Hold 和 Next 预览
 	_draw_hold_piece(snap)
 	_draw_next_pieces(snap)
-
 
 
 func _update_data_panel(index: int) -> void:
@@ -1300,12 +1178,12 @@ func _update_data_panel(index: int) -> void:
 		var detail: Dictionary = _get_ai_detail(index)
 		var loss: int = _timeline_score_loss(index)
 		# 左下主大数字改为：-loss 或 AI BEST（不再显示复杂度总分）
-		var primary_text: String = "-%d" % loss if loss > 0 else "AI BEST"
+		var primary_text: String = tr("TXT_NA") if loss < 0 else ("-%d" % loss if loss > 0 else "AI BEST")
 		ai_score_label.text = primary_text
 		ai_score_label.add_theme_color_override("font_color", _ai_detail_color(detail, score_val))
 	else:
 		ai_score_label.text = tr("TXT_NA")
-		ai_score_label.add_theme_color_override("font_color", Color(0.4, 0.5, 0.67))
+		ai_score_label.add_theme_color_override("font_color", UITheme.color("muted"))
 
 
 func _lines_name(count: int) -> String:
@@ -1330,7 +1208,9 @@ func _get_ai_detail(index: int) -> Dictionary:
 
 
 func _ai_detail_color(detail: Dictionary, score_val: float) -> Color:
-	if detail.has("score_loss") and detail["score_loss"] != null:
+	if str(detail.get("quality", "")) == "unknown":
+		return UITheme.color("muted")
+	if _has_ai_loss(detail):
 		return _timeline_loss_color(maxi(0, int(detail["score_loss"])))
 	return _ai_score_color(score_val)
 
@@ -1353,55 +1233,50 @@ func _format_best_move(detail: Dictionary) -> String:
 
 func _timeline_score_loss(index: int) -> int:
 	var detail: Dictionary = _get_ai_detail(index)
-	if detail.has("score_loss") and detail["score_loss"] != null:
+	if _has_ai_loss(detail):
 		return maxi(0, int(detail["score_loss"]))
-	return 0
+	return -1
+
+
+func _has_ai_loss(detail: Dictionary) -> bool:
+	return str(detail.get("quality", "")) != "unknown" and detail.has("score_loss") and detail["score_loss"] != null
+
+
+func _readable_replay_color(color: Color) -> Color:
+	return color if UITheme.is_dark() else color.darkened(0.5)
 
 
 func _timeline_loss_color(loss: int) -> Color:
+	if loss < 0:
+		return UITheme.color("muted")
 	if loss <= 0:
-		return Color(0.0, 1.0, 0.32)
+		return _readable_replay_color(Color(0.0, 1.0, 0.32))
 	if loss <= 80:
-		return Color(0.18, 1.0, 0.46)
+		return _readable_replay_color(Color(0.18, 1.0, 0.46))
 	if loss <= 180:
-		return Color(0.42, 0.96, 0.48)
+		return _readable_replay_color(Color(0.42, 0.96, 0.48))
 	if loss <= 300:
-		return Color(0.70, 0.95, 0.56)
+		return _readable_replay_color(Color(0.70, 0.95, 0.56))
 	if loss <= 600:
-		return Color(1.0, 0.88, 0.26)
+		return _readable_replay_color(Color(1.0, 0.88, 0.26))
 	if loss <= 800:
-		return Color(1.0, 0.55, 0.18)
-	return Color(1.0, 0.20, 0.18)
+		return _readable_replay_color(Color(1.0, 0.55, 0.18))
+	return _readable_replay_color(Color(1.0, 0.20, 0.18))
 
 
 func _timeline_row_color(index: int) -> Color:
 	if index >= 0 and index < _ai_scores.size():
 		return _timeline_loss_color(_timeline_score_loss(index))
-	return Color(0.6, 0.65, 0.75)
-
-
-func _set_timeline_button_border(btn: Button, border_color: Color, selected: bool) -> void:
-	var sb := StyleBoxFlat.new()
-	sb.bg_color = Color(0, 0, 0, 0)
-	if selected:
-		sb.border_width_left = 2
-		sb.border_width_top = 2
-		sb.border_width_right = 2
-		sb.border_width_bottom = 2
-		sb.border_color = border_color
-		sb.corner_radius_top_left = 3
-		sb.corner_radius_top_right = 3
-		sb.corner_radius_bottom_left = 3
-		sb.corner_radius_bottom_right = 3
-	btn.add_theme_stylebox_override("normal", sb)
-	btn.add_theme_stylebox_override("hover", sb)
-	btn.add_theme_stylebox_override("pressed", sb)
-	btn.add_theme_stylebox_override("focus", sb)
+	return UITheme.color("muted")
 
 
 func _set_timeline_row_style(row: PanelContainer, border_color: Color, selected: bool) -> void:
 	var sb := StyleBoxFlat.new()
 	sb.bg_color = Color(0, 0, 0, 0)
+	sb.content_margin_left = 4
+	sb.content_margin_right = 4
+	sb.content_margin_top = 3
+	sb.content_margin_bottom = 3
 	if selected:
 		sb.bg_color = Color(border_color.r, border_color.g, border_color.b, 0.06)
 		sb.border_width_left = 2
@@ -1422,116 +1297,42 @@ func _set_timeline_row_style(row: PanelContainer, border_color: Color, selected:
 
 func _build_timeline() -> void:
 	for child in timeline_list.get_children():
+		timeline_list.remove_child(child)
 		child.queue_free()
-
 	for i in range(_snapshots.size()):
 		var snap: Dictionary = _snapshots[i]
-		var piece_name: String = str(snap.get("piece_type", "?"))
-		var elapsed_ms: int = int(snap.get("elapsed_since_last_piece_ms", 0))
-		timeline_list.add_child(_create_timeline_row(i, snap, piece_name, elapsed_ms))
-		continue
-
-		# 行容器
-		var hbox := HBoxContainer.new()
-		hbox.custom_minimum_size.y = 26
-		hbox.add_theme_constant_override("separation", 4)
-
-		# 方块颜色指示条
-		var cidx: int = PIECE_NAME_COLOR.get(piece_name, 0)
-		var indicator := ColorRect.new()
-		indicator.custom_minimum_size = Vector2(4, 20)
-		if cidx > 0 and cidx < CELL_COLORS.size():
-			indicator.color = CELL_COLORS[cidx]
-		else:
-			indicator.color = Color(0.3, 0.3, 0.4)
-		hbox.add_child(indicator)
-		hbox.add_child(_create_timeline_piece_icon(piece_name))
-
-		# 按钮（点击跳转）
-		var btn := Button.new()
-		btn.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-		btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		btn.add_theme_font_size_override("font_size", 11)
-		var row_color: Color = _timeline_row_color(i)
-		btn.add_theme_color_override("font_color", row_color)
-		_set_timeline_button_border(btn, row_color, i == _current_step)
-
-		# AI 表现：始终占位显示（AI BEST 或 -loss）
-		var ai_text: String = _timeline_ai_text(i)
-
-		# 用时
-		var time_text: String = _timeline_time_text(elapsed_ms)
-
-		btn.text = "#%04d  %s  %-6s  %-6s" % [mini(i + 1, 9999), piece_name, ai_text, time_text]
-		btn.pressed.connect(_go_to_step.bind(i))
-		hbox.add_child(btn)
-
-		var special_text := _timeline_special_clear_text(snap)
-		var tag := _create_timeline_tag_label(special_text)
-		tag.add_theme_color_override("font_color", _timeline_special_clear_color(special_text))
-		hbox.add_child(tag)
-
-		timeline_list.add_child(hbox)
+		timeline_list.add_child(_create_timeline_row(i, snap, str(snap.get("piece_type", "?")), int(snap.get("elapsed_since_last_piece_ms", 0))))
 
 
 func _highlight_timeline_item(index: int) -> void:
 	for i in range(timeline_list.get_child_count()):
-		var row: PanelContainer = timeline_list.get_child(i) as PanelContainer
-		if row != null:
-			_set_timeline_row_style(row, _timeline_row_color(i), i == index)
-			continue
-		var hbox: HBoxContainer = timeline_list.get_child(i) as HBoxContainer
-		if hbox == null or hbox.get_child_count() < 2:
-			continue
-		var btn: Button = hbox.get_child(hbox.get_child_count() - 2) as Button
-		if btn == null:
-			continue
-		var row_color: Color = _timeline_row_color(i)
-		btn.add_theme_color_override("font_color", row_color)
-		_set_timeline_button_border(btn, row_color, i == index)
-
-	# 自动滚动到当前步
-	var scroll: ScrollContainer = timeline_list.get_parent() as ScrollContainer
-	if scroll and index < timeline_list.get_child_count():
-		var target_btn: Control = timeline_list.get_child(index)
-		scroll.ensure_control_visible(target_btn)
+		_set_timeline_row_style(timeline_list.get_child(i), _timeline_row_color(i), i == index)
+	var scroll: ScrollContainer = timeline_list.get_parent()
+	if index >= 0 and index < timeline_list.get_child_count():
+		scroll.ensure_control_visible(timeline_list.get_child(index))
 
 
 func _create_timeline_row(index: int, snap: Dictionary, piece_name: String, elapsed_ms: int) -> PanelContainer:
-	var row := PanelContainer.new()
-	row.custom_minimum_size.y = 26
-	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.mouse_filter = Control.MOUSE_FILTER_STOP
-	row.focus_mode = Control.FOCUS_ALL
+	var row: PanelContainer = TimelineRowScene.instantiate()
 	row.gui_input.connect(_on_timeline_row_gui_input.bind(index))
-
 	var row_color := _timeline_row_color(index)
 	_set_timeline_row_style(row, row_color, index == _current_step)
-
-	var hbox := HBoxContainer.new()
-	hbox.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	hbox.add_theme_constant_override("separation", 4)
-	hbox.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	row.add_child(hbox)
-
+	var fields: HBoxContainer = row.get_node("Content/Fields")
+	var icon := _create_timeline_piece_icon(piece_name)
+	fields.add_child(icon)
+	fields.move_child(icon, 1)
 	var cidx: int = PIECE_NAME_COLOR.get(piece_name, 0)
-	var indicator := ColorRect.new()
-	indicator.custom_minimum_size = Vector2(4, 20)
-	indicator.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	indicator.color = CELL_COLORS[cidx] if cidx > 0 and cidx < CELL_COLORS.size() else Color(0.3, 0.3, 0.4)
-	hbox.add_child(indicator)
-	hbox.add_child(_create_timeline_piece_icon(piece_name))
-
-	hbox.add_child(_create_timeline_text_label("#%04d" % mini(index + 1, 9999), TIMELINE_STEP_W, row_color))
-	hbox.add_child(_create_timeline_text_label(piece_name, TIMELINE_NAME_W, row_color))
-	hbox.add_child(_create_timeline_text_label(_timeline_ai_text(index), TIMELINE_AI_W, row_color))
-	hbox.add_child(_create_timeline_text_label(_timeline_time_text(elapsed_ms), TIMELINE_TIME_W, row_color))
-
-	var special_text := _timeline_special_clear_text(snap)
-	var tag := _create_timeline_tag_label(special_text)
-	tag.add_theme_color_override("font_color", _timeline_special_clear_color(special_text))
-	hbox.add_child(tag)
-
+	(fields.get_node("Indicator") as ColorRect).color = CELL_COLORS[cidx]
+	var texts := {"Step": "#%04d" % (index + 1), "Piece": piece_name, "Score": _timeline_ai_text(index), "Time": _timeline_time_text(elapsed_ms)}
+	for key in texts:
+		var label: Label = fields.get_node(key)
+		label.text = texts[key]
+		label.add_theme_color_override("font_color", row_color)
+	var special := _timeline_special_clear_text(snap)
+	var tag: Label = row.get_node("Content/Tag")
+	tag.text = special
+	tag.visible = not special.is_empty()
+	tag.add_theme_color_override("font_color", _timeline_special_clear_color(special))
 	return row
 
 
@@ -1558,38 +1359,13 @@ func _focus_current_timeline_row() -> void:
 		row.grab_focus()
 
 
-func _create_timeline_text_label(text: String, width: float, color: Color) -> Label:
-	var label := Label.new()
-	label.text = text
-	label.custom_minimum_size = Vector2(width, 0)
-	label.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	label.clip_text = true
-	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	label.add_theme_font_size_override("font_size", 11)
-	label.add_theme_color_override("font_color", color)
-	return label
-
-
-func _create_timeline_tag_label(text: String) -> Label:
-	var label := Label.new()
-	label.text = text
-	label.custom_minimum_size = Vector2(TIMELINE_TAG_W, 0)
-	label.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
-	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	label.clip_text = true
-	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	label.add_theme_font_size_override("font_size", 10)
-	return label
-
-
 func _timeline_ai_text(index: int) -> String:
 	if index >= _ai_scores.size():
 		return "-"
 	var loss: int = _timeline_score_loss(index)
-	if loss <= 0:
+	if loss < 0:
+		return tr("TXT_NA")
+	if loss == 0:
 		return "BEST"
 	return "-%d" % mini(loss, 99999)
 
@@ -1614,11 +1390,11 @@ func _timeline_special_clear_text(snap: Dictionary) -> String:
 func _timeline_special_clear_color(text: String) -> Color:
 	match text:
 		"T-SPIN":
-			return Color(1.0, 0.45, 1.0)
+			return _readable_replay_color(Color(1.0, 0.45, 1.0))
 		"TETRIS":
-			return Color(0.0, 0.86, 1.0)
+			return _readable_replay_color(Color(0.0, 0.86, 1.0))
 		_:
-			return Color(0.42, 0.48, 0.58)
+			return _readable_replay_color(Color(0.42, 0.48, 0.58))
 
 
 # ==============================================================================
@@ -1626,13 +1402,16 @@ func _timeline_special_clear_color(text: String) -> Color:
 # ==============================================================================
 
 func _on_back_pressed() -> void:
-	get_tree().change_scene_to_file("res://scenes/ui/main.tscn")
+	_cancel_ai_analysis()
+	UITheme.goto_scene("res://scenes/ui/main.tscn")
 
 
 func _unhandled_input(event: InputEvent) -> void:
 	if _is_settings_menu_open():
 		return
 	if _analysis_active:
+		if event.is_action_pressed("ui_cancel"):
+			_cancel_ai_analysis()
 		_mark_input_handled()
 		return
 	if event.is_action_pressed("ui_cancel"):
@@ -1664,13 +1443,13 @@ func _mark_input_handled() -> void:
 # ==============================================================================
 
 func _center_board() -> void:
+	# Include Hold/Next previews and the badges above the top row in the fit.
 	var container: Control = replay_board.get_parent()
-	if container == null:
-		return
-	var bw: float = BOARD_COLS * CELL_SIZE
-	var bh: float = BOARD_ROWS * CELL_SIZE
-	replay_board.position.x = (container.size.x - bw) / 2.0
-	replay_board.position.y = (container.size.y - bh) / 2.0
+	var drawing_bounds := Rect2(-105, -36, 510, 646)
+	var available := container.size - Vector2(8, 8)
+	var fit := maxf(0.05, minf(available.x / drawing_bounds.size.x, available.y / drawing_bounds.size.y))
+	replay_board.scale = Vector2.ONE * fit
+	replay_board.position = (container.size - drawing_bounds.size * fit) * 0.5 - drawing_bounds.position * fit
 
 
 func _draw_hold_piece(snap: Dictionary) -> void:
@@ -1681,7 +1460,7 @@ func _draw_hold_piece(snap: Dictionary) -> void:
 	# "HOLD" 标签
 	var lbl := Label.new()
 	lbl.text = tr("TXT_HOLD")
-	lbl.add_theme_color_override("font_color", Color(0, 0.83, 1, 0.8))
+	lbl.add_theme_color_override("font_color", UITheme.color("accent"))
 	lbl.add_theme_font_size_override("font_size", 12)
 	lbl.position = Vector2(hold_x, y_offset - 5)
 	replay_board.add_child(lbl)
@@ -1692,7 +1471,7 @@ func _draw_hold_piece(snap: Dictionary) -> void:
 	else:
 		var dash := Label.new()
 		dash.text = "—"
-		dash.add_theme_color_override("font_color", Color(0.3, 0.3, 0.45))
+		dash.add_theme_color_override("font_color", UITheme.color("faint"))
 		dash.position = Vector2(hold_x + 10, y_offset)
 		replay_board.add_child(dash)
 
@@ -1705,7 +1484,7 @@ func _draw_next_pieces(snap: Dictionary) -> void:
 	# "NEXT" 标签
 	var lbl := Label.new()
 	lbl.text = tr("TXT_NEXT")
-	lbl.add_theme_color_override("font_color", Color(0, 0.83, 1, 0.8))
+	lbl.add_theme_color_override("font_color", UITheme.color("accent"))
 	lbl.add_theme_font_size_override("font_size", 12)
 	lbl.position = Vector2(board_right_x, y_offset - 5)
 	replay_board.add_child(lbl)
@@ -1722,15 +1501,7 @@ func _draw_mini_piece(piece_name: String, origin: Vector2) -> void:
 	var cidx: int = PIECE_NAME_COLOR.get(piece_name, 0)
 	var col: Color = CELL_COLORS[cidx] if cidx < CELL_COLORS.size() else Color.WHITE
 
-	for r in range(shape.size()):
-		var row_data: Array = shape[r]
-		for c in range(row_data.size()):
-			if int(row_data[c]) != 0:
-				var rect := ColorRect.new()
-				rect.size = Vector2(MINI_CELL - 1, MINI_CELL - 1)
-				rect.position = origin + Vector2(c * MINI_CELL, r * MINI_CELL)
-				rect.color = col
-				replay_board.add_child(rect)
+	replay_board.add_preview(shape, origin, col)
 
 
 func _create_timeline_piece_icon(piece_name: String) -> Control:
@@ -1779,7 +1550,8 @@ func _draw_locked_piece_highlight(snap: Dictionary, step_index: int) -> void:
 	if center_col < -100 or center_row_raw < -100:
 		return
 
-	var center_row: int = center_row_raw - BOARD_ROWS if center_row_raw >= BOARD_ROWS else center_row_raw
+	# Collector 与分析器都使用含顶部 20 缓冲行的棋盘坐标；缓冲区不能误映射到底部。
+	var center_row: int = center_row_raw - BOARD_ROWS
 	var row_color: Color = _timeline_row_color(step_index)
 	var cidx: int = PIECE_NAME_COLOR.get(piece_name, 0)
 	var piece_glow_col: Color = CELL_COLORS[cidx] if cidx < CELL_COLORS.size() else Color(1, 1, 1, 1)
@@ -1889,6 +1661,13 @@ func _add_glow_strip(pos: Vector2, strip_size: Vector2, glow_col: Color, alpha: 
 func _get_recommendation(step_index: int) -> Dictionary:
 	for rec in _ai_recommendations:
 		if rec is Dictionary and int(rec.get("step", -1)) == step_index:
+			# A scored move can legitimately have no multi-step plan.
+			var plan: Variant = rec.get("plan")
+			if not (plan is Dictionary):
+				return {}
+			var steps: Variant = plan.get("steps")
+			if not (steps is Array) or steps.is_empty():
+				return {}
 			return rec
 	return {}
 
@@ -1903,7 +1682,7 @@ func _draw_ai_plan_button(snap: Dictionary, step_index: int) -> void:
 	var rot: int = posmod(int(snap.get("rotation", 0)), 4)
 	var center_col: int = int(snap.get("col", 0))
 	var center_row_raw: int = int(snap.get("row", 0))
-	var center_row: int = center_row_raw - BOARD_ROWS if center_row_raw >= BOARD_ROWS else center_row_raw
+	var center_row: int = center_row_raw - BOARD_ROWS
 	var shape: Array = PieceData.SHAPES[piece_type][rot]
 	var min_y: int = 999
 	var max_x: int = -999
@@ -1955,11 +1734,14 @@ func _toggle_ai_plan(step_index: int) -> void:
 		_render_step(_current_step)
 		_update_data_panel(_current_step)
 	else:
+		if _get_recommendation(step_index).is_empty():
+			return
 		_showing_ai_plan = true
 		_ai_plan_reveal_count = 1
 		_ai_plan_board_history.clear()
 		_init_ai_plan_board(step_index)
 		_render_ai_plan_progressive(step_index)
+	assistant_panel.set_plan_preview(_showing_ai_plan)
 
 func _advance_ai_plan(step_index: int) -> void:
 	var rec: Dictionary = _get_recommendation(step_index)
@@ -2070,54 +1852,8 @@ func _render_ai_plan_progressive(step_index: int) -> void:
 	var plan: Dictionary = rec.get("plan", {}) as Dictionary
 	var steps: Array = plan.get("steps", [])
 	var max_steps: int = mini(steps.size(), 5)
-	for child in replay_board.get_children():
-		child.queue_free()
-	for r in range(mini(_ai_plan_simulated_board.size(), BOARD_ROWS)):
-		var row: Array = _ai_plan_simulated_board[r]
-		for c in range(mini(row.size(), BOARD_COLS)):
-			var cell_val: int = int(row[c])
-			var rect := ColorRect.new()
-			rect.size = Vector2(CELL_SIZE - 1, CELL_SIZE - 1)
-			rect.position = Vector2(c * CELL_SIZE, r * CELL_SIZE)
-			if cell_val > 0 and cell_val < CELL_COLORS.size():
-				var col: Color = CELL_COLORS[cell_val]
-				rect.color = Color(col.r * 0.65, col.g * 0.65, col.b * 0.65, 1.0)
-			elif cell_val > 0:
-				rect.color = Color(0.3, 0.3, 0.3, 1)
-			else:
-				rect.color = CELL_COLORS[0]
-			rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			replay_board.add_child(rect)
-	var grid_color := Color(0.15, 0.15, 0.22, 0.5)
-	for r in range(BOARD_ROWS + 1):
-		var line := ColorRect.new()
-		line.size = Vector2(BOARD_COLS * CELL_SIZE, 1)
-		line.position = Vector2(0, r * CELL_SIZE)
-		line.color = grid_color
-		line.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		replay_board.add_child(line)
-	for c in range(BOARD_COLS + 1):
-		var line := ColorRect.new()
-		line.size = Vector2(1, BOARD_ROWS * CELL_SIZE)
-		line.position = Vector2(c * CELL_SIZE, 0)
-		line.color = grid_color
-		line.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		replay_board.add_child(line)
-	var bw: float = BOARD_COLS * CELL_SIZE
-	var bh: float = BOARD_ROWS * CELL_SIZE
-	var bc := Color(0.8, 0.5, 0, 0.5)
-	for edge in [
-		[Vector2(-1, -1), Vector2(bw + 2, 2)],
-		[Vector2(-1, bh - 1), Vector2(bw + 2, 2)],
-		[Vector2(-1, -1), Vector2(2, bh + 2)],
-		[Vector2(bw - 1, -1), Vector2(2, bh + 2)],
-	]:
-		var e := ColorRect.new()
-		e.position = edge[0]
-		e.size = edge[1]
-		e.color = bc
-		e.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		replay_board.add_child(e)
+	_clear_board_overlays()
+	replay_board.set_board(_ai_plan_simulated_board, CELL_COLORS, true)
 	var ghost_max_x: int = -1
 	var ghost_min_x: int = BOARD_COLS
 	var ghost_min_y: int = BOARD_ROWS

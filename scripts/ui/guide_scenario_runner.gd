@@ -65,11 +65,7 @@ func try_rotate(direction: int) -> bool:
 	else:
 		new_rot = (rot + 3) % 4
 
-	var kicks: Array
-	if direction == 2:
-		kicks = [Vector2(0, 0), Vector2(0, 1), Vector2(1, 0), Vector2(-1, 0), Vector2(0, -1)]
-	else:
-		kicks = PieceData.get_wall_kicks(piece_type, rot, new_rot)
+	var kicks: Array = PieceData.get_wall_kicks(piece_type, rot, new_rot)
 
 	for kick in kicks:
 		var test_col := col + int(kick.x)
@@ -107,10 +103,11 @@ func hard_drop() -> int:
 
 
 func lock_piece() -> Dictionary:
+	# 和实战一样在写入活动块之前判定，避免把方块自身当作障碍。
+	var spin := last_was_rotation and _is_spin_position()
 	for pos in piece_cells(piece_type, rot, col, row):
 		if pos.y >= 0 and pos.y < ROWS and pos.x >= 0 and pos.x < COLS:
 			grid[pos.y][pos.x] = piece_type + 1
-	var spin := last_was_rotation and _is_spin_position()
 	var cleared_rows := _full_rows()
 	_clear_rows(cleared_rows)
 	return {
@@ -307,6 +304,17 @@ func _clear_rows(rows_to_clear: Array) -> void:
 
 
 func _is_spin_position() -> bool:
+	if piece_type == PieceData.Type.O:
+		return false
+	if piece_type == PieceData.Type.T:
+		var corners := 0
+		for offset in [Vector2i(-1, -1), Vector2i(1, -1), Vector2i(1, 1), Vector2i(-1, 1)]:
+			var c: int = col + offset.x
+			var r: int = row + offset.y
+			if c < 0 or c >= COLS or r >= ROWS or (r >= 0 and int(grid[r][c]) != EMPTY):
+				corners += 1
+		if corners >= 3:
+			return true
 	var blocked := 0
 	if not is_valid(piece_type, rot, col - 1, row):
 		blocked += 1
@@ -316,4 +324,4 @@ func _is_spin_position() -> bool:
 		blocked += 1
 	if not is_valid(piece_type, rot, col, row + 1):
 		blocked += 1
-	return blocked >= 3
+	return blocked == 4

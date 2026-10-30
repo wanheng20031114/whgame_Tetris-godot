@@ -1,5 +1,5 @@
 """
-WIDE TETRIS session analysis script.
+TETRIS session analysis script.
 
 Reads each snapshot from a Godot session JSON file, evaluates board features
 with the selected MLP model, and writes an analyzed JSON file containing
@@ -84,7 +84,7 @@ def analyze_session(session_data: dict, model: PolicyNetwork) -> list:
 def main():
     # Keep console-facing text ASCII. Some Windows consoles use cp932/cp936,
     # and non-ASCII output can raise UnicodeEncodeError.
-    parser = argparse.ArgumentParser(description="WIDE TETRIS Session Analyzer")
+    parser = argparse.ArgumentParser(description="TETRIS Session Analyzer")
     parser.add_argument("session_json", help="Input session JSON file path")
     parser.add_argument("output_json", help="Output analyzed JSON file path")
     parser.add_argument("--model", default="dqn", choices=list(MODEL_CONFIGS.keys()),

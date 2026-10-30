@@ -1,0 +1,29 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/icon_button.gd" id="1"]
+
+[node name="RoomRow" type="HBoxContainer"]
+custom_minimum_size = Vector2(0, 50)
+size_flags_horizontal = 3
+theme_override_constants/separation = 8
+
+[node name="RoomButton" type="Button" parent="."]
+custom_minimum_size = Vector2(0, 50)
+layout_mode = 2
+size_flags_horizontal = 3
+alignment = 0
+clip_text = true
+text_overrun_behavior = 3
+
+[node name="StartButton" type="Button" parent="."]
+visible = false
+custom_minimum_size = Vector2(138, 50)
+layout_mode = 2
+theme_type_variation = &"AccentButton"
+
+[node name="LeaveButton" type="Button" parent="."]
+visible = false
+custom_minimum_size = Vector2(50, 50)
+layout_mode = 2
+script = ExtResource("1")
+icon_name = "close"

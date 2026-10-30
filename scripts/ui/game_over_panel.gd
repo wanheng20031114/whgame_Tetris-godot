@@ -14,11 +14,6 @@
 @onready var opponent_name_label: Label = %OpponentNameLabel
 @onready var opponent_indicator: Label = %OpponentIndicator
 
-# 状态颜色
-const COLOR_READY := Color(0.18, 0.80, 0.34, 1.0)
-const COLOR_WAITING := Color(0.90, 0.78, 0.20, 1.0)
-const COLOR_DECLINED := Color(0.85, 0.20, 0.20, 1.0)
-
 # 状态符号
 const SYMBOL_WAITING := "\u25A1" # 中空方块
 const SYMBOL_READY := "\u25CB" # 中空圆圈
@@ -27,6 +22,7 @@ const SYMBOL_DECLINED := "X" # 叉号
 var _local_status: String = "none"
 var _opponent_status: String = "none"
 var _opponent_display_name: String = ""
+var _result_key: String = ""
 
 func _enter_tree() -> void:
 	# 编辑器中保持可见, 运行时自动隐藏
@@ -46,6 +42,7 @@ func _ready() -> void:
 	NetworkManager.rematch_status_received.connect(_on_rematch_status_received)
 	NetworkManager.game_started.connect(_on_game_restarted)
 	NetworkManager.opponent_left.connect(_on_opponent_left)
+	UITheme.theme_changed.connect(func(_mode): _update_indicators())
 
 	_update_button_texts()
 	_update_player_labels()
@@ -55,8 +52,11 @@ func _notification(what: int) -> void:
 	if what == NOTIFICATION_TRANSLATION_CHANGED and is_inside_tree() and is_node_ready():
 		_update_button_texts()
 		_update_player_labels()
+		if not _result_key.is_empty():
+			result_label.text = tr(_result_key)
 
 func show_result(msg_key: String, opponent_name: String) -> void:
+	_result_key = msg_key
 	_opponent_display_name = opponent_name
 	_local_status = "none"
 	# 对手离开时必须保持 declined，避免被初始化流程覆盖导致红色 X 不显示。
@@ -70,8 +70,9 @@ func show_result(msg_key: String, opponent_name: String) -> void:
 	_update_player_labels()
 	_update_indicators()
 
-	btn_rematch.disabled = false
+	btn_rematch.disabled = _opponent_status == "declined"
 	visible = true
+	UITheme.pop_in(get_node("PanelContainer") as Control)
 	call_deferred("_focus_default_button")
 
 func hide_panel() -> void:
@@ -80,6 +81,8 @@ func hide_panel() -> void:
 func _focus_default_button() -> void:
 	if visible and btn_rematch and not btn_rematch.disabled:
 		btn_rematch.grab_focus()
+	elif visible:
+		btn_lobby.grab_focus()
 
 func _update_button_texts() -> void:
 	if btn_rematch:
@@ -102,27 +105,29 @@ func _update_indicators() -> void:
 		local_indicator.text = local_visual["symbol"]
 		local_indicator.add_theme_color_override("font_color", local_visual["color"])
 		local_indicator.add_theme_color_override("font_outline_color", local_visual["color"])
-		local_indicator.add_theme_constant_override("outline_size", 5)
-		local_indicator.add_theme_font_size_override("font_size", 50)
+		local_indicator.add_theme_constant_override("outline_size", 2)
+		local_indicator.add_theme_font_size_override("font_size", 30)
 
 	if opponent_indicator:
 		var opponent_visual := _status_to_visual(_opponent_status)
 		opponent_indicator.text = opponent_visual["symbol"]
 		opponent_indicator.add_theme_color_override("font_color", opponent_visual["color"])
 		opponent_indicator.add_theme_color_override("font_outline_color", opponent_visual["color"])
-		opponent_indicator.add_theme_constant_override("outline_size", 5)
-		opponent_indicator.add_theme_font_size_override("font_size", 50)
+		opponent_indicator.add_theme_constant_override("outline_size", 2)
+		opponent_indicator.add_theme_font_size_override("font_size", 30)
 
 func _status_to_visual(status: String) -> Dictionary:
 	match status:
 		"ready":
-			return {"symbol": SYMBOL_READY, "color": COLOR_READY}
+			return {"symbol": SYMBOL_READY, "color": UITheme.color("success")}
 		"declined":
-			return {"symbol": SYMBOL_DECLINED, "color": COLOR_DECLINED}
+			return {"symbol": SYMBOL_DECLINED, "color": UITheme.color("danger")}
 		_:
-			return {"symbol": SYMBOL_WAITING, "color": COLOR_WAITING}
+			return {"symbol": SYMBOL_WAITING, "color": UITheme.color("warning")}
 
 func _on_rematch_pressed() -> void:
+	if _opponent_status == "declined" or _local_status == "ready":
+		return
 	# 点击再来一局后, 本地状态先显示为准备好
 	_local_status = "ready"
 	_update_indicators()
@@ -132,7 +137,7 @@ func _on_rematch_pressed() -> void:
 func _on_lobby_pressed() -> void:
 	# 返回大厅视为取消重开
 	NetworkManager.decline_rematch()
-	get_tree().change_scene_to_file("res://scenes/ui/multiplayer_lobby.tscn")
+	UITheme.goto_scene("res://scenes/ui/multiplayer_lobby.tscn")
 
 func _on_rematch_status_received(my_status: String, opponent_status: String) -> void:
 	_local_status = my_status

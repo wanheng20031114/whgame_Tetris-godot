@@ -1,57 +1,23 @@
 [gd_scene format=3]
 
 [ext_resource type="Script" path="res://scripts/ui/main_lobby.gd" id="1_lobby"]
-
-[ext_resource type="Texture2D" path="res://assets/images/bg_lobby.jpg" id="2_g5nql"]
-[ext_resource type="Texture2D" path="res://assets/ui/icon_userdata.png" id="3_qkqkv"]
+[ext_resource type="PackedScene" path="res://scenes/ui/ui_background.tscn" id="2_bg"]
+[ext_resource type="Script" path="res://scripts/ui/icon_button.gd" id="3_iconbtn"]
 [ext_resource type="PackedScene" path="res://scenes/ui/settings_menu.tscn" id="3_stngs"]
-[ext_resource type="Texture2D" path="res://assets/ui/icon_settings.png" id="4_b0wn2"]
 [ext_resource type="PackedScene" path="res://scenes/ui/block_style_menu.tscn" id="5_blockstyle"]
+[ext_resource type="Script" path="res://scripts/ui/brand_mark.gd" id="6_mark"]
+[ext_resource type="Script" path="res://scripts/ui/mode_glyph.gd" id="7_glyph"]
+[ext_resource type="Script" path="res://scripts/ui/mode_card.gd" id="8_card"]
+[ext_resource type="Script" path="res://scripts/ui/hero_title.gd" id="9_hero"]
+[ext_resource type="Script" path="res://scripts/ui/key_hints.gd" id="10_keys"]
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_navbar"]
-bg_color = Color(0.08, 0.08, 0.11, 1)
-border_width_bottom = 2
-border_color = Color(0.2, 0.2, 0.3, 1)
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_nav"]
+content_margin_left = 40.0
+content_margin_top = 18.0
+content_margin_right = 32.0
+content_margin_bottom = 6.0
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_card_normal"]
-bg_color = Color(0.12, 0.12, 0.16, 1)
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
-border_color = Color(0.2, 0.2, 0.28, 1)
-corner_radius_top_left = 12
-corner_radius_top_right = 12
-corner_radius_bottom_right = 12
-corner_radius_bottom_left = 12
-shadow_color = Color(0, 0, 0, 0.3)
-shadow_size = 10
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn_stats"]
-bg_color = Color(0.12, 0.12, 0.16, 1)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(0.25, 0.25, 0.35, 1)
-corner_radius_top_left = 6
-corner_radius_top_right = 6
-corner_radius_bottom_right = 6
-corner_radius_bottom_left = 6
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn_stats_hover"]
-bg_color = Color(0.18, 0.18, 0.24, 1)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(0.35, 0.65, 1, 0.8)
-corner_radius_top_left = 6
-corner_radius_top_right = 6
-corner_radius_bottom_right = 6
-corner_radius_bottom_left = 6
-
-[node name="MainLobby" type="Control" unique_id=2071081088]
+[node name="MainLobby" type="Control"]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -60,238 +26,246 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_lobby")
 
-[node name="CustomBackground" type="TextureRect" parent="." unique_id=941520579]
-layout_mode = 0
-offset_left = 2.0
-offset_top = -120.0
-offset_right = 1282.0
-offset_bottom = 1160.0
-scale = Vector2(0.9955037, 0.8422277)
-texture = ExtResource("2_g5nql")
+[node name="CustomBackground" parent="." instance=ExtResource("2_bg")]
+layout_mode = 1
 
-[node name="VBoxContainer" type="VBoxContainer" parent="." unique_id=1781422997]
+[node name="VBoxContainer" type="VBoxContainer" parent="."]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+theme_override_constants/separation = 0
 
-[node name="NavBar" type="Panel" parent="VBoxContainer" unique_id=1561092697]
-custom_minimum_size = Vector2(0, 70)
+[node name="NavBar" type="PanelContainer" parent="VBoxContainer"]
 layout_mode = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_navbar")
+theme_override_styles/panel = SubResource("StyleBoxEmpty_nav")
 
-[node name="MarginContainer" type="MarginContainer" parent="VBoxContainer/NavBar" unique_id=56289741]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_right = -1.0
-grow_horizontal = 2
-grow_vertical = 2
-theme_override_constants/margin_left = 30
-theme_override_constants/margin_right = 30
-
-[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/NavBar/MarginContainer" unique_id=1688648158]
+[node name="HBoxContainer" type="HBoxContainer" parent="VBoxContainer/NavBar"]
 layout_mode = 2
+theme_override_constants/separation = 10
 
-[node name="LogoLabel" type="Label" parent="VBoxContainer/NavBar/MarginContainer/HBoxContainer" unique_id=108006944]
+[node name="BrandMark" type="Control" parent="VBoxContainer/NavBar/HBoxContainer"]
+custom_minimum_size = Vector2(44, 44)
 layout_mode = 2
-theme_override_font_sizes/font_size = 28
-theme_override_colors/font_color = Color(0.9, 0.9, 1, 1)
-text = "WIDE TETRIS"
+script = ExtResource("6_mark")
+cell_size = 12.0
+gap = 2.0
 
-[node name="Spacer" type="Control" parent="VBoxContainer/NavBar/MarginContainer/HBoxContainer" unique_id=1412057732]
+[node name="Spacer" type="Control" parent="VBoxContainer/NavBar/HBoxContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
 
-[node name="MainContent" type="CenterContainer" parent="VBoxContainer" unique_id=1236022515]
+[node name="PlayerChip" type="PanelContainer" parent="VBoxContainer/NavBar/HBoxContainer"]
+layout_mode = 2
+size_flags_vertical = 4
+theme_type_variation = &"ChipPanel"
+
+[node name="PlayerNameLabel" type="Label" parent="VBoxContainer/NavBar/HBoxContainer/PlayerChip"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 26)
+layout_mode = 2
+theme_type_variation = &"EyebrowLabel"
+theme_override_font_sizes/font_size = 14
+text = "PLAYER"
+vertical_alignment = 1
+
+[node name="Gap" type="Control" parent="VBoxContainer/NavBar/HBoxContainer"]
+custom_minimum_size = Vector2(8, 0)
+layout_mode = 2
+
+[node name="BtnStats" type="Button" parent="VBoxContainer/NavBar/HBoxContainer"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(44, 44)
+layout_mode = 2
+size_flags_vertical = 4
+tooltip_text = "Player Stats"
+script = ExtResource("3_iconbtn")
+icon_name = "chart"
+
+[node name="BtnBlockStyle" parent="VBoxContainer/NavBar/HBoxContainer" instance=ExtResource("5_blockstyle")]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(44, 44)
+layout_mode = 2
+size_flags_vertical = 4
+
+[node name="BtnSettings" parent="VBoxContainer/NavBar/HBoxContainer" instance=ExtResource("3_stngs")]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(44, 44)
+layout_mode = 2
+size_flags_vertical = 4
+
+[node name="MainContent" type="MarginContainer" parent="VBoxContainer"]
 layout_mode = 2
 size_flags_vertical = 3
+theme_override_constants/margin_left = 64
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 64
+theme_override_constants/margin_bottom = 44
 
-[node name="CardsHBox" type="HBoxContainer" parent="VBoxContainer/MainContent" unique_id=152610251]
+[node name="Split" type="HBoxContainer" parent="VBoxContainer/MainContent"]
 layout_mode = 2
-theme_override_constants/separation = 24
+theme_override_constants/separation = 56
 
-[node name="CardMarathon" type="PanelContainer" parent="VBoxContainer/MainContent/CardsHBox" unique_id=1147748879]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(240, 360)
+[node name="Hero" type="VBoxContainer" parent="VBoxContainer/MainContent/Split"]
 layout_mode = 2
-focus_mode = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_card_normal")
-
-[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MainContent/CardsHBox/CardMarathon" unique_id=553669273]
-layout_mode = 2
+size_flags_horizontal = 3
+size_flags_stretch_ratio = 0.72
+mouse_filter = 2
+theme_override_constants/separation = 26
 alignment = 1
-theme_override_constants/separation = 8
 
-[node name="Title" type="Label" parent="VBoxContainer/MainContent/CardsHBox/CardMarathon/VBoxContainer" unique_id=1266518568]
+[node name="HeroTitle" type="Control" parent="VBoxContainer/MainContent/Split/Hero"]
+custom_minimum_size = Vector2(0, 160)
 layout_mode = 2
-custom_minimum_size = Vector2(220, 56)
-theme_override_font_sizes/font_size = 32
-theme_override_colors/font_color = Color(0.9, 0.9, 1, 1)
+mouse_filter = 2
+script = ExtResource("9_hero")
+
+[node name="KeyHints" type="Control" parent="VBoxContainer/MainContent/Split/Hero"]
+layout_mode = 2
+size_flags_horizontal = 0
+mouse_filter = 2
+script = ExtResource("10_keys")
+
+[node name="Grid" type="GridContainer" parent="VBoxContainer/MainContent/Split"]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+theme_override_constants/h_separation = 22
+theme_override_constants/v_separation = 22
+columns = 2
+
+[node name="CardMarathon" type="PanelContainer" parent="VBoxContainer/MainContent/Split/Grid"]
+unique_name_in_owner = true
+custom_minimum_size = Vector2(0, 262)
+layout_mode = 2
+size_flags_horizontal = 3
+focus_mode = 2
+mouse_default_cursor_shape = 2
+script = ExtResource("8_card")
+hue = "cyan"
+
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MainContent/Split/Grid/CardMarathon"]
+layout_mode = 2
+mouse_filter = 2
+theme_override_constants/separation = 10
+
+[node name="Glyph" type="Control" parent="VBoxContainer/MainContent/Split/Grid/CardMarathon/VBoxContainer"]
+custom_minimum_size = Vector2(0, 120)
+layout_mode = 2
+size_flags_vertical = 3
+mouse_filter = 2
+script = ExtResource("7_glyph")
+hue = "cyan"
+
+[node name="Title" type="Label" parent="VBoxContainer/MainContent/Split/Grid/CardMarathon/VBoxContainer"]
+custom_minimum_size = Vector2(0, 36)
+layout_mode = 2
+theme_type_variation = &"HeaderLabel"
+theme_override_font_sizes/font_size = 22
 text = "MARATHON"
-horizontal_alignment = 1
 vertical_alignment = 1
-autowrap_mode = 3
+text_overrun_behavior = 3
 
-[node name="Desc" type="Label" parent="VBoxContainer/MainContent/CardsHBox/CardMarathon/VBoxContainer" unique_id=1506513589]
-layout_mode = 2
-custom_minimum_size = Vector2(220, 80)
-theme_override_colors/font_color = Color(0.6, 0.6, 0.7, 1)
-text = "ENDLESS SURVIVAL
-CLEAR LIVES TO
-INCREASE SPEED."
-horizontal_alignment = 1
-vertical_alignment = 1
-autowrap_mode = 3
-
-[node name="CardGuide" type="PanelContainer" parent="VBoxContainer/MainContent/CardsHBox" unique_id=2000000010]
+[node name="CardGuide" type="PanelContainer" parent="VBoxContainer/MainContent/Split/Grid"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(240, 360)
+custom_minimum_size = Vector2(0, 262)
 layout_mode = 2
+size_flags_horizontal = 3
 focus_mode = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_card_normal")
+mouse_default_cursor_shape = 2
+script = ExtResource("8_card")
+hue = "amber"
+index = 2
 
-[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MainContent/CardsHBox/CardGuide" unique_id=2000000011]
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MainContent/Split/Grid/CardGuide"]
 layout_mode = 2
-alignment = 1
-theme_override_constants/separation = 8
+mouse_filter = 2
+theme_override_constants/separation = 10
 
-[node name="Title" type="Label" parent="VBoxContainer/MainContent/CardsHBox/CardGuide/VBoxContainer" unique_id=2000000012]
+[node name="Glyph" type="Control" parent="VBoxContainer/MainContent/Split/Grid/CardGuide/VBoxContainer"]
+custom_minimum_size = Vector2(0, 120)
 layout_mode = 2
-custom_minimum_size = Vector2(220, 56)
-theme_override_font_sizes/font_size = 32
-theme_override_colors/font_color = Color(0.9, 0.9, 1, 1)
+size_flags_vertical = 3
+mouse_filter = 2
+script = ExtResource("7_glyph")
+kind = 1
+hue = "amber"
+
+[node name="Title" type="Label" parent="VBoxContainer/MainContent/Split/Grid/CardGuide/VBoxContainer"]
+custom_minimum_size = Vector2(0, 36)
+layout_mode = 2
+theme_type_variation = &"HeaderLabel"
+theme_override_font_sizes/font_size = 22
 text = "GUIDE"
-horizontal_alignment = 1
 vertical_alignment = 1
-autowrap_mode = 3
+text_overrun_behavior = 3
 
-[node name="Desc" type="Label" parent="VBoxContainer/MainContent/CardsHBox/CardGuide/VBoxContainer" unique_id=2000000013]
-layout_mode = 2
-custom_minimum_size = Vector2(220, 80)
-theme_override_colors/font_color = Color(0.6, 0.6, 0.7, 1)
-text = "LEARN ATTACK
-SPINS AND
-AI FEEDBACK."
-horizontal_alignment = 1
-vertical_alignment = 1
-autowrap_mode = 3
-
-[node name="CardMultiplayer" type="PanelContainer" parent="VBoxContainer/MainContent/CardsHBox" unique_id=779226]
+[node name="CardMultiplayer" type="PanelContainer" parent="VBoxContainer/MainContent/Split/Grid"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(240, 360)
+custom_minimum_size = Vector2(0, 262)
 layout_mode = 2
+size_flags_horizontal = 3
 focus_mode = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_card_normal")
+mouse_default_cursor_shape = 2
+script = ExtResource("8_card")
+hue = "pink"
+index = 3
 
-[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MainContent/CardsHBox/CardMultiplayer" unique_id=1310079491]
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MainContent/Split/Grid/CardMultiplayer"]
 layout_mode = 2
-alignment = 1
-theme_override_constants/separation = 8
+mouse_filter = 2
+theme_override_constants/separation = 10
 
-[node name="Title" type="Label" parent="VBoxContainer/MainContent/CardsHBox/CardMultiplayer/VBoxContainer" unique_id=1845887401]
+[node name="Glyph" type="Control" parent="VBoxContainer/MainContent/Split/Grid/CardMultiplayer/VBoxContainer"]
+custom_minimum_size = Vector2(0, 120)
 layout_mode = 2
-custom_minimum_size = Vector2(220, 56)
-theme_override_font_sizes/font_size = 32
-theme_override_colors/font_color = Color(0.9, 0.9, 1, 1)
+size_flags_vertical = 3
+mouse_filter = 2
+script = ExtResource("7_glyph")
+kind = 2
+hue = "pink"
+
+[node name="Title" type="Label" parent="VBoxContainer/MainContent/Split/Grid/CardMultiplayer/VBoxContainer"]
+custom_minimum_size = Vector2(0, 36)
+layout_mode = 2
+theme_type_variation = &"HeaderLabel"
+theme_override_font_sizes/font_size = 22
 text = "MULTIPLAYER"
-horizontal_alignment = 1
 vertical_alignment = 1
-autowrap_mode = 3
+text_overrun_behavior = 3
 
-[node name="Desc" type="Label" parent="VBoxContainer/MainContent/CardsHBox/CardMultiplayer/VBoxContainer" unique_id=1736134039]
-layout_mode = 2
-custom_minimum_size = Vector2(220, 80)
-theme_override_colors/font_color = Color(0.6, 0.6, 0.7, 1)
-text = "BATTLE OTHERS
-ONLINE VIA
-STEAM RELAY."
-horizontal_alignment = 1
-vertical_alignment = 1
-autowrap_mode = 3
-
-[node name="CardReplay" type="PanelContainer" parent="VBoxContainer/MainContent/CardsHBox" unique_id=2000000001]
+[node name="CardReplay" type="PanelContainer" parent="VBoxContainer/MainContent/Split/Grid"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(240, 360)
+custom_minimum_size = Vector2(0, 262)
 layout_mode = 2
+size_flags_horizontal = 3
 focus_mode = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_card_normal")
+mouse_default_cursor_shape = 2
+script = ExtResource("8_card")
+hue = "violet"
+index = 4
 
-[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MainContent/CardsHBox/CardReplay" unique_id=2000000002]
+[node name="VBoxContainer" type="VBoxContainer" parent="VBoxContainer/MainContent/Split/Grid/CardReplay"]
 layout_mode = 2
-alignment = 1
-theme_override_constants/separation = 8
+mouse_filter = 2
+theme_override_constants/separation = 10
 
-[node name="Title" type="Label" parent="VBoxContainer/MainContent/CardsHBox/CardReplay/VBoxContainer" unique_id=2000000003]
+[node name="Glyph" type="Control" parent="VBoxContainer/MainContent/Split/Grid/CardReplay/VBoxContainer"]
+custom_minimum_size = Vector2(0, 120)
 layout_mode = 2
-custom_minimum_size = Vector2(220, 56)
-theme_override_colors/font_color = Color(0.9, 0.9, 1, 1)
-theme_override_font_sizes/font_size = 32
+size_flags_vertical = 3
+mouse_filter = 2
+script = ExtResource("7_glyph")
+kind = 3
+hue = "violet"
+
+[node name="Title" type="Label" parent="VBoxContainer/MainContent/Split/Grid/CardReplay/VBoxContainer"]
+custom_minimum_size = Vector2(0, 36)
+layout_mode = 2
+theme_type_variation = &"HeaderLabel"
+theme_override_font_sizes/font_size = 22
 text = "REPLAY"
-horizontal_alignment = 1
 vertical_alignment = 1
-autowrap_mode = 3
-
-[node name="Desc" type="Label" parent="VBoxContainer/MainContent/CardsHBox/CardReplay/VBoxContainer" unique_id=2000000004]
-layout_mode = 2
-custom_minimum_size = Vector2(220, 80)
-theme_override_colors/font_color = Color(0.6, 0.6, 0.7, 1)
-text = "REVIEW YOUR
-GAMES WITH
-AI ANALYSIS."
-horizontal_alignment = 1
-vertical_alignment = 1
-autowrap_mode = 3
-
-
-[node name="PlayerNameLabel" type="Label" parent="." unique_id=149902058]
-unique_name_in_owner = true
-layout_mode = 0
-offset_left = 360.0
-offset_top = 18.0
-offset_right = 1106.0
-offset_bottom = 52.0
-theme_override_font_sizes/font_size = 24
-theme_override_colors/font_color = Color(0.6, 0.8, 1, 1)
-text = "WELCOME, PLAYER"
-horizontal_alignment = 2
-clip_text = true
-
-[node name="BtnBlockStyle" parent="." unique_id=566778899 instance=ExtResource("5_blockstyle")]
-unique_name_in_owner = true
-layout_mode = 0
-offset_left = 1120.0
-offset_top = 15.0
-offset_right = 1160.0
-offset_bottom = 55.0
-
-[node name="BtnStats" type="Button" parent="." unique_id=888777666]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(40, 40)
-layout_mode = 0
-offset_left = 1173.0
-offset_top = 15.0
-offset_right = 1213.0
-offset_bottom = 55.0
-tooltip_text = "Player Stats"
-theme_override_styles/normal = SubResource("StyleBoxFlat_btn_stats")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_btn_stats_hover")
-theme_override_styles/hover = SubResource("StyleBoxFlat_btn_stats_hover")
-theme_override_styles/focus = SubResource("StyleBoxFlat_btn_stats_hover")
-icon = ExtResource("3_qkqkv")
-expand_icon = true
-
-[node name="BtnSettings" type="TextureButton" parent="." unique_id=1127632104 instance=ExtResource("3_stngs")]
-unique_name_in_owner = true
-custom_minimum_size = Vector2(40, 40)
-layout_mode = 0
-offset_left = 1230.0
-offset_top = 15.0
-offset_right = 1270.0
-offset_bottom = 55.0
-texture_normal = ExtResource("4_b0wn2")
-ignore_texture_size = true
-stretch_mode = 5
+text_overrun_behavior = 3

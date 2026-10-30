@@ -1,6 +1,6 @@
-# WIDE TETRIS — 场景与代码架构 (Architecture)
+# TETRIS — 场景与代码架构 (Architecture)
 
-本文档专注于记录 WIDE TETRIS 的技术堆栈、节点关系、引擎结构规范以及持久化与通讯管理模式。
+本文档专注于记录 TETRIS 的技术堆栈、节点关系、引擎结构规范以及持久化与通讯管理模式。
 
 ---
 

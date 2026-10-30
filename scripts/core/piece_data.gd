@@ -1,7 +1,7 @@
 class_name PieceData
 extends RefCounted
 
-## 现代俄罗斯方块 (WIDE TETRIS) 核心数据常量库
+## 现代俄罗斯方块 (TETRIS) 核心数据常量库
 ##
 ## 本文件记录了所有 7 种标准方块的几何形状数据、现代高级渐变颜色、
 ## 以及 SRS (Super Rotation System) 对应的四方向顺/逆时针墙踢 (Wall Kick) 偏移表。
@@ -118,16 +118,31 @@ const WALL_KICK_NORMAL: Dictionary = {
 	"0->3": [Vector2(0, 0), Vector2(1, 0), Vector2(1, -1), Vector2(0, 2), Vector2(1, 2)]
 }
 
-## I 块专门的踢墙表（特别且复杂，因为它是 4 格宽度导致旋转偏差大）
+## I 块踢墙表：TETR.IO 的 SRS+ 版本，左右对称（标准 SRS 的 I 块不对称）
 const WALL_KICK_I: Dictionary = {
-	"0->1": [Vector2(0, 0), Vector2(-2, 0), Vector2(1, 0), Vector2(-2, 1), Vector2(1, -2)],
-	"1->0": [Vector2(0, 0), Vector2(2, 0), Vector2(-1, 0), Vector2(2, -1), Vector2(-1, 2)],
+	"0->1": [Vector2(0, 0), Vector2(1, 0), Vector2(-2, 0), Vector2(-2, 1), Vector2(1, -2)],
+	"1->0": [Vector2(0, 0), Vector2(-1, 0), Vector2(2, 0), Vector2(-1, 2), Vector2(2, -1)],
 	"1->2": [Vector2(0, 0), Vector2(-1, 0), Vector2(2, 0), Vector2(-1, -2), Vector2(2, 1)],
-	"2->1": [Vector2(0, 0), Vector2(1, 0), Vector2(-2, 0), Vector2(1, 2), Vector2(-2, -1)],
+	"2->1": [Vector2(0, 0), Vector2(-2, 0), Vector2(1, 0), Vector2(-2, -1), Vector2(1, 2)],
 	"2->3": [Vector2(0, 0), Vector2(2, 0), Vector2(-1, 0), Vector2(2, -1), Vector2(-1, 2)],
-	"3->2": [Vector2(0, 0), Vector2(-2, 0), Vector2(1, 0), Vector2(-2, 1), Vector2(1, -2)],
+	"3->2": [Vector2(0, 0), Vector2(1, 0), Vector2(-2, 0), Vector2(1, -2), Vector2(-2, 1)],
 	"3->0": [Vector2(0, 0), Vector2(1, 0), Vector2(-2, 0), Vector2(1, 2), Vector2(-2, -1)],
-	"0->3": [Vector2(0, 0), Vector2(-1, 0), Vector2(2, 0), Vector2(-1, -2), Vector2(2, 1)]
+	"0->3": [Vector2(0, 0), Vector2(-1, 0), Vector2(2, 0), Vector2(2, 1), Vector2(-1, -2)]
+}
+
+## 180° 踢墙表（TETR.IO SRS+）
+const WALL_KICK_180: Dictionary = {
+	"0->2": [Vector2(0, 0), Vector2(0, -1), Vector2(1, -1), Vector2(-1, -1), Vector2(1, 0), Vector2(-1, 0)],
+	"1->3": [Vector2(0, 0), Vector2(1, 0), Vector2(1, -2), Vector2(1, -1), Vector2(0, -2), Vector2(0, -1)],
+	"2->0": [Vector2(0, 0), Vector2(0, 1), Vector2(-1, 1), Vector2(1, 1), Vector2(-1, 0), Vector2(1, 0)],
+	"3->1": [Vector2(0, 0), Vector2(-1, 0), Vector2(-1, -2), Vector2(-1, -1), Vector2(0, -2), Vector2(0, -1)]
+}
+
+const WALL_KICK_I_180: Dictionary = {
+	"0->2": [Vector2(0, 0), Vector2(0, -1)],
+	"1->3": [Vector2(0, 0), Vector2(1, 0)],
+	"2->0": [Vector2(0, 0), Vector2(0, 1)],
+	"3->1": [Vector2(0, 0), Vector2(-1, 0)]
 }
 
 ## 获取踢墙检测序列参数封装
@@ -136,7 +151,7 @@ static func get_wall_kicks(type: Type, from_state: RotationState, to_state: Rota
 	if type == Type.O:
 		# O 方块不涉及踢墙，原位碰撞通过即可
 		return [Vector2(0, 0)]
-	elif type == Type.I:
-		return WALL_KICK_I.get(key, [Vector2(0, 0)])
-	else:
-		return WALL_KICK_NORMAL.get(key, [Vector2(0, 0)])
+	var is_180: bool = (int(from_state) + 2) % 4 == int(to_state)
+	if type == Type.I:
+		return (WALL_KICK_I_180 if is_180 else WALL_KICK_I).get(key, [Vector2(0, 0)])
+	return (WALL_KICK_180 if is_180 else WALL_KICK_NORMAL).get(key, [Vector2(0, 0)])

@@ -26,6 +26,10 @@ const README_FILE_NAME: String = "DATA_README.md"
 const DOCS_README_PATH: String = "res://docs/DATA_README.md"
 # 最大允许保存的历史对局记录数目，防止存储无限膨胀
 const MAX_HISTORY_ENTRIES: int = 500
+const MAX_SESSION_BYTES: int = StorageBudget.SESSION_BYTES
+const MAX_STATS_BYTES: int = 4_000_000
+const MAX_PENDING_SESSIONS: int = 2
+static var _pending_saves: Array[Dictionary] = []
 
 
 # ==========================================
@@ -38,10 +42,7 @@ const MAX_HISTORY_ENTRIES: int = 500
 # 返回：一个用于存储数据的绝对或者引擎内表示的根目录字符串路径。
 # ==========================================
 static func get_data_dir() -> String:
-	if OS.has_feature("editor"):
-		return "res://userdata"
-	var exe_dir: String = OS.get_executable_path().get_base_dir()
-	return exe_dir.path_join(USERDATA_DIR_NAME)
+	return StorageBudget.data_root()
 
 
 # ==========================================
@@ -85,7 +86,7 @@ static func _ensure_dir(dir_path: String) -> void:
 	if not DirAccess.dir_exists_absolute(dir_path):
 		var err: Error = DirAccess.make_dir_recursive_absolute(dir_path)
 		if err != OK:
-			push_error("[PlayerDataStore] Failed to create dir: %s (%s)" % [dir_path, error_string(err)])
+			StorageBudget.report_error("Cannot create save directory: %s (%s)" % [dir_path, error_string(err)])
 
 
 # ==========================================
@@ -100,25 +101,58 @@ static func _ensure_dir(dir_path: String) -> void:
 # 3. 将单局对局整个字典序列化成带格式（缩进）的 JSON 字符串并写入该路径中。
 # 4. 最后附带检查和生成 README 说明文件。
 # ==========================================
-static func save_session(session_data: Dictionary) -> void:
+static func save_session(session_data: Dictionary) -> Error:
 	var sessions_dir: String = get_sessions_dir()
 	_ensure_dir(sessions_dir)
 
 	var session_id: String = str(session_data.get("session_id", "unknown"))
 	var safe_id: String = session_id.replace(":", "-")
+	if safe_id.validate_filename() != safe_id:
+		StorageBudget.report_error("Invalid session identifier; save was retained in memory.")
+		return ERR_INVALID_PARAMETER
 	var file_path: String = sessions_dir.path_join("session_%s.json" % safe_id)
-
-	var file := FileAccess.open(file_path, FileAccess.WRITE)
-	if file == null:
-		push_error("[PlayerDataStore] Failed to write session: %s (%s)" % [
-			file_path, error_string(FileAccess.get_open_error())
-		])
-		return
 	var pretty_json: String = JSON.stringify(session_data, "\t")
-	file.store_string(_compact_numeric_arrays(pretty_json))
-	file.close()
+	var bytes := _compact_numeric_arrays(pretty_json).to_utf8_buffer()
+	if FileAccess.file_exists(file_path):
+		var previous := StorageBudget.read_bounded(file_path, MAX_SESSION_BYTES)
+		if previous.error == OK and previous.data == bytes:
+			return OK # Retry after a statistics failure; never count twice.
+		StorageBudget.report_error("An existing session with this identifier was retained: " + file_path)
+		return ERR_ALREADY_EXISTS
+	return StorageBudget.write_atomic(file_path, bytes, MAX_SESSION_BYTES, false)
 
-	_ensure_readme()
+static func can_start_session() -> bool:
+	if _pending_saves.size() >= MAX_PENDING_SESSIONS:
+		StorageBudget.report_error("Two unsaved sessions are retained in memory. Recording new sessions is suspended until saving succeeds; gameplay remains available.")
+		return false
+	return true
+
+static func persist_session(session: Dictionary, history: Dictionary, radar: Dictionary) -> Error:
+	# New results wait behind older pending results so history and the radar EMA
+	# retain play order when storage becomes writable again.
+	var err := ERR_BUSY if not _pending_saves.is_empty() else _persist_session_files(session, history, radar)
+	if err != OK:
+		var found := false
+		for entry in _pending_saves:
+			if entry.session.get("session_id") == session.get("session_id"):
+				found = true
+		if not found and _pending_saves.size() < MAX_PENDING_SESSIONS:
+			_pending_saves.append({"session": session, "history": history, "radar": radar})
+	return err
+
+static func _persist_session_files(session: Dictionary, history: Dictionary, radar: Dictionary) -> Error:
+	var err := save_session(session)
+	if err == OK:
+		err = update_stats(str(session.get("player_name", "")), history, radar)
+	return err
+
+static func retry_pending_saves() -> int:
+	while not _pending_saves.is_empty():
+		var entry := _pending_saves[0]
+		if _persist_session_files(entry.session, entry.history, entry.radar) != OK:
+			break
+		_pending_saves.pop_front()
+	return _pending_saves.size()
 
 
 # ==========================================
@@ -135,15 +169,14 @@ static func load_stats() -> Dictionary:
 	if not FileAccess.file_exists(path):
 		return _default_stats()
 
-	var file := FileAccess.open(path, FileAccess.READ)
-	if file == null:
+	var loaded := StorageBudget.read_bounded(path, MAX_STATS_BYTES)
+	if loaded.error != OK:
 		return _default_stats()
-
-	var content: String = file.get_as_text()
-	file.close()
+	var content: String = (loaded.data as PackedByteArray).get_string_from_utf8()
 
 	var json := JSON.new()
 	if json.parse(content) != OK:
+		StorageBudget.report_error("Statistics are damaged; the existing file and backups were retained.")
 		return _default_stats()
 	if not (json.data is Dictionary):
 		return _default_stats()
@@ -173,9 +206,28 @@ static func load_stats() -> Dictionary:
 # 4. 追加 history_entry 数据进历史记录列项，并且实施队列限流出队控制 (超 500 条弹走最旧)。
 # 5. 最后安全写入物理 JSON 文件持久化改动。
 # ==========================================
-static func update_stats(player_name: String, history_entry: Dictionary, radar_scores: Dictionary) -> void:
-	var stats: Dictionary = load_stats()
-	_ensure_dir(get_data_dir())
+static func update_stats(player_name: String, history_entry: Dictionary, radar_scores: Dictionary) -> Error:
+	return StorageBudget.update_json_atomic(get_stats_path(), MAX_STATS_BYTES, _merge_stats.bind(player_name, history_entry, radar_scores))
+
+static func _merge_stats(current: Dictionary, player_name: String, history_entry: Dictionary, radar_scores: Dictionary) -> Variant:
+	var stats: Dictionary = current if not current.is_empty() else _default_stats()
+	# Returning null rejects corrupt data while the storage transaction owns its
+	# mutex. Do not call StorageBudget from this callback (that would re-enter it).
+	if stats.has("history") and not (stats.history is Array):
+		return null
+	if stats.has("radar_scores") and not (stats.radar_scores is Dictionary):
+		return null
+	for key in ["total_games", "total_play_time_seconds", "total_pieces_placed", "total_lines_cleared", "best_score", "best_lines", "best_pps", "best_apm"]:
+		if stats.has(key) and not (stats[key] is int or stats[key] is float):
+			return null
+	for value in stats.get("radar_scores", {}).values():
+		if not (value is int or value is float):
+			return null
+	for existing in stats.get("history", []):
+		if not (existing is Dictionary):
+			return null
+		if existing is Dictionary and existing.get("session_id") == history_entry.get("session_id"):
+			return stats
 
 	stats["player_name"] = player_name
 	stats["total_games"] = int(stats.get("total_games", 0)) + 1
@@ -224,12 +276,7 @@ static func update_stats(player_name: String, history_entry: Dictionary, radar_s
 		history.pop_front()
 	stats["history"] = history
 
-	var file := FileAccess.open(get_stats_path(), FileAccess.WRITE)
-	if file == null:
-		push_error("[PlayerDataStore] Failed to write stats: %s" % get_stats_path())
-		return
-	file.store_string(JSON.stringify(stats, "\t"))
-	file.close()
+	return stats
 
 
 # ==========================================
@@ -300,11 +347,7 @@ static func _ensure_readme() -> void:
 	if FileAccess.file_exists(readme_path):
 		return
 
-	var file := FileAccess.open(readme_path, FileAccess.WRITE)
-	if file == null:
-		return
-	file.store_string(_build_readme_content())
-	file.close()
+	StorageBudget.write_atomic(readme_path, _build_readme_content().to_utf8_buffer(), 128_000, false)
 
 
 # ==========================================
@@ -324,7 +367,7 @@ static func _build_readme_content() -> String:
 				return content
 
 	# 兜底文本：仅在 docs 丢失或读取失败时使用。
-	return """# WIDE TETRIS - Player Data
+	return """# TETRIS - Player Data
 
 This directory stores local player statistics and per-session snapshots.
 See docs/DATA_README.md for the full schema and scoring reference.

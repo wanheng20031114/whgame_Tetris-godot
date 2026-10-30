@@ -1,6 +1,6 @@
-# WIDE TETRIS — 游戏设计与机制文档 (Game Design & Mechanics)
+# TETRIS — 游戏设计与机制文档 (Game Design & Mechanics)
 
-本文档专注于记录 WIDE TETRIS 的游戏规则、手感机制、数据图表以及多人对战框架的策划设定。技术实现细节请参考 `ARCHITECTURE.md`。
+本文档专注于记录 TETRIS 的游戏规则、手感机制、数据图表以及多人对战框架的策划设定。技术实现细节请参考 `ARCHITECTURE.md`。
 
 ---
 

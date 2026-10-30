@@ -10,19 +10,26 @@ config_version=5
 
 [application]
 
-config/name="WIDE TETRIS"
+config/name="TETRIS"
 run/main_scene="res://scenes/ui/main.tscn"
-config/features=PackedStringArray("4.6", "Forward Plus")
+config/features=PackedStringArray("4.6", "GL Compatibility")
 run/low_processor_mode_sleep_usec=0
 config/icon="res://icon.svg"
 
 [autoload]
 
+Diagnostics="*res://scenes/core/diagnostics.tscn"
+UITheme="*res://scenes/ui/ui_theme.tscn"
 SettingsMenu="*res://scripts/ui/settings_menu.gd"
 ButtonSfx="*res://scripts/ui/button_sfx.gd"
 GameState="*res://scripts/core/game_state.gd"
 NetworkManager="*res://scripts/core/network_manager.gd"
 BlockStyleManager="*res://scripts/core/block_style_manager.gd"
+
+[debug]
+
+file_logging/enable_file_logging.pc=false
+file_logging/max_log_files=1
 
 [display]
 
@@ -33,12 +40,12 @@ window/stretch/aspect="expand"
 
 [dotnet]
 
-project/assembly_name="WIDE TETRIS"
+project/assembly_name="TETRIS"
 
 [gui]
 
 timers/tooltip_delay_sec=0.18
-theme/custom="res://assets/ui/global_theme.tres"
+theme/custom="res://assets/ui/theme_dark.tres"
 
 [input]
 
@@ -116,5 +123,53 @@ locale/translations_pot_files=PackedStringArray("res://lang/translations.csv")
 
 [rendering]
 
-rendering_device/driver.windows="d3d12"
+renderer/rendering_method="gl_compatibility"
+renderer/rendering_method.mobile="gl_compatibility"
 textures/vram_compression/import_etc2_astc=true
+
+[shader_globals]
+
+ui_bg={
+"type": "color",
+"value": Color(0.043, 0.035, 0.075, 1)
+}
+ui_surface={
+"type": "color",
+"value": Color(0.086, 0.071, 0.122, 1)
+}
+ui_accent={
+"type": "color",
+"value": Color(0.776, 1, 0.302, 1)
+}
+ui_border={
+"type": "color",
+"value": Color(0.208, 0.173, 0.322, 1)
+}
+ui_accent2={
+"type": "color",
+"value": Color(0.549, 0.42, 1, 1)
+}
+ui_cyan={
+"type": "color",
+"value": Color(0.239, 0.863, 1, 1)
+}
+ui_amber={
+"type": "color",
+"value": Color(1, 0.71, 0.278, 1)
+}
+ui_pink={
+"type": "color",
+"value": Color(1, 0.361, 0.604, 1)
+}
+ui_violet={
+"type": "color",
+"value": Color(0.549, 0.42, 1, 1)
+}
+ui_ink={
+"type": "color",
+"value": Color(0.024, 0.016, 0.043, 1)
+}
+ui_dark={
+"type": "float",
+"value": 1.0
+}

@@ -1,5 +1,7 @@
 [gd_scene format=3]
 
+[ext_resource type="Script" path="res://scripts/ui/mode_card.gd" id="1_card"]
+
 [node name="GuideOverviewPage" type="ScrollContainer"]
 layout_mode = 2
 size_flags_horizontal = 3
@@ -8,7 +10,10 @@ size_flags_vertical = 3
 [node name="PageMargin" type="MarginContainer" parent="."]
 layout_mode = 2
 size_flags_horizontal = 3
-theme_override_constants/margin_right = 14
+theme_override_constants/margin_left = 4
+theme_override_constants/margin_top = 4
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 20
 
 [node name="Page" type="VBoxContainer" parent="PageMargin"]
 layout_mode = 2
@@ -17,6 +22,10 @@ theme_override_constants/separation = 18
 
 [node name="HeroPanel" type="PanelContainer" parent="PageMargin/Page"]
 layout_mode = 2
+script = ExtResource("1_card")
+hue = "violet"
+show_index = false
+show_arrow = false
 
 [node name="HeroMargin" type="MarginContainer" parent="PageMargin/Page/HeroPanel"]
 layout_mode = 2
@@ -32,13 +41,13 @@ theme_override_constants/separation = 10
 [node name="HeroTitle" type="Label" parent="PageMargin/Page/HeroPanel/HeroMargin/HeroBox"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_colors/font_color = Color(0.058824, 0.121569, 0.270588, 1)
-theme_override_font_sizes/font_size = 30
+theme_type_variation = &"TitleLabel"
+theme_override_font_sizes/font_size = 34
 text = "先看收益，再练操作"
 
 [node name="HeroBody" type="Label" parent="PageMargin/Page/HeroPanel/HeroMargin/HeroBox"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.278431, 0.333333, 0.411765, 1)
+theme_type_variation = &"MutedLabel"
 theme_override_font_sizes/font_size = 15
 text = "从基础规则进入固定场景，按真实操作理解每一种技巧。"
 autowrap_mode = 3
@@ -53,10 +62,11 @@ theme_override_constants/margin_top = 16
 theme_override_constants/margin_right = 20
 theme_override_constants/margin_bottom = 16
 
-[node name="PathBox" type="HBoxContainer" parent="PageMargin/Page/PathPanel/PathMargin"]
+[node name="PathBox" type="HFlowContainer" parent="PageMargin/Page/PathPanel/PathMargin"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_constants/separation = 8
+theme_override_constants/h_separation = 8
+theme_override_constants/v_separation = 8
 
 [node name="CardsPanel" type="PanelContainer" parent="PageMargin/Page"]
 layout_mode = 2
@@ -75,7 +85,6 @@ theme_override_constants/separation = 16
 [node name="BasicsTitle" type="Label" parent="PageMargin/Page/CardsPanel/CardsMargin/CardsBox"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_colors/font_color = Color(0.058824, 0.121569, 0.270588, 1)
 theme_override_font_sizes/font_size = 22
 text = "基础知识"
 
@@ -89,7 +98,6 @@ theme_override_constants/v_separation = 14
 [node name="LearningTitle" type="Label" parent="PageMargin/Page/CardsPanel/CardsMargin/CardsBox"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_colors/font_color = Color(0.058824, 0.121569, 0.270588, 1)
 theme_override_font_sizes/font_size = 22
 text = "学习章节"
 

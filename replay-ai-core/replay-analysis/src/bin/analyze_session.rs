@@ -1,6 +1,8 @@
 use std::env;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
+use std::io::{self, Read, Write};
+use std::time::{Duration, Instant};
 
 use cold_clear::evaluation::{Evaluator, Standard};
 use libtetris::{
@@ -11,6 +13,12 @@ use replay_analysis::{
 };
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
+
+const STORAGE_PROTOCOL: &str = "TETRIS_STORAGE_V1";
+const MAX_INPUT_BYTES: u64 = 1_000_000_000;
+const MAX_OUTPUT_BYTES: u64 = 64_000_000;
+const MAX_SNAPSHOTS: usize = 10_000;
+const MAX_SECONDS: u64 = 120;
 
 const VISIBLE_ROWS: usize = 20;
 const BOARD_COLS: usize = 10;
@@ -28,6 +36,8 @@ struct Session {
 
 #[derive(Debug, Serialize)]
 struct Output {
+    storage_protocol: u32,
+    analysis_revision: u32,
     session_id: String,
     ai_model_used: String,
     score_method: String,
@@ -42,6 +52,10 @@ struct Output {
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let args: Vec<String> = env::args().collect();
+    if args.len() == 2 && args[1] == "--storage-protocol" {
+        println!("{}", STORAGE_PROTOCOL);
+        return Ok(());
+    }
     if args.len() < 3 {
         eprintln!("Usage: analyze_session <session_json> <output_json> [--top N]");
         std::process::exit(2);
@@ -49,13 +63,22 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     let session_path = &args[1];
     let output_path = &args[2];
-    let top_moves = parse_top_moves(&args[3..]).unwrap_or(DEFAULT_TOP_MOVES);
-    let progress_path = parse_option_value(&args[3..], "--progress-file");
-
-    let session_text = fs::read_to_string(session_path)?;
-    let session: Session = serde_json::from_str(&session_text)?;
+    let top_moves = parse_top_moves(&args[3..]).unwrap_or(DEFAULT_TOP_MOVES).min(DEFAULT_TOP_MOVES);
+    let budget_root = required_option(&args[3..], "--budget-root")?;
+    let reservation = required_option(&args[3..], "--reservation")?;
+    let parent_pid: u32 = required_option(&args[3..], "--parent-pid")?.parse()?;
+    let output_limit = validate_reservation(&budget_root, &reservation, output_path, parent_pid)?;
+    start_parent_watchdog(parent_pid);
+    let canonical_root = fs::canonicalize(&budget_root)?;
+    if !fs::canonicalize(session_path)?.starts_with(&canonical_root) {
+        return Err("input is outside the reserved game data directory".into());
+    }
+    let session_text = read_limited(Path::new(session_path), MAX_INPUT_BYTES)?;
+    let session: Session = serde_json::from_slice(&session_text)?;
     let total_steps = session.snapshots.len();
-    write_progress(progress_path.as_deref(), 0, total_steps);
+    if total_steps > MAX_SNAPSHOTS {
+        return Err("session exceeds the 10000-snapshot analysis limit".into());
+    }
     let weights = Standard::default();
 
     let mut previous_board: Option<Vec<Vec<bool>>> = None;
@@ -146,10 +169,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         // If the snapshot did not include enough queue information for hold search, keep future
         // steps alive by still moving to the next reconstructed board.
         state.next.clear();
-        write_progress(progress_path.as_deref(), index + 1, total_steps);
+        // No progress sidecar: every file output must have reserved capacity.
     }
 
     let output = Output {
+        storage_protocol: 1,
+        analysis_revision: 2,
         session_id: if session.session_id.is_empty() {
             Path::new(session_path)
                 .file_stem()
@@ -170,8 +195,13 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         total_steps,
     };
 
-    let rendered = serde_json::to_string_pretty(&output)?;
-    fs::write(output_path, rendered)?;
+    // create_new prevents accidental replacement of any existing replay/output.
+    // Count before each write, including buffered output: the cap cannot overshoot.
+    let file = fs::OpenOptions::new().write(true).create_new(true).open(output_path)?;
+    let mut writer = LimitedWriter { inner: io::BufWriter::new(file), written: 0, limit: output_limit };
+    serde_json::to_writer_pretty(&mut writer, &output)?;
+    writer.flush()?;
+    writer.inner.get_ref().sync_all()?;
     println!("Analysis complete: {} steps", output.total_steps);
     println!("Result saved: {}", output_path);
     Ok(())
@@ -189,9 +219,186 @@ fn parse_option_value(args: &[String], option: &str) -> Option<String> {
         .map(|pair| pair[1].clone())
 }
 
-fn write_progress(path: Option<&str>, current: usize, total: usize) {
-    if let Some(path) = path {
-        let _ = fs::write(path, format!("{},{}", current, total));
+fn required_option(args: &[String], name: &str) -> Result<String, io::Error> {
+    parse_option_value(args, name).ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, format!("missing {}", name)))
+}
+
+fn read_limited(path: &Path, limit: u64) -> io::Result<Vec<u8>> {
+    let file = fs::File::open(path)?;
+    if file.metadata()?.len() > limit {
+        return Err(io::Error::new(io::ErrorKind::InvalidData, "input file exceeds its byte limit"));
+    }
+    let mut bytes = Vec::new();
+    file.take(limit + 1).read_to_end(&mut bytes)?;
+    if bytes.len() as u64 > limit {
+        return Err(io::Error::new(io::ErrorKind::InvalidData, "input file grew beyond its byte limit"));
+    }
+    Ok(bytes)
+}
+
+fn canonical_new_path(path: &Path) -> io::Result<PathBuf> {
+    let parent = path.parent().ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "output has no parent"))?;
+    let name = path.file_name().ok_or_else(|| io::Error::new(io::ErrorKind::InvalidInput, "output has no filename"))?;
+    Ok(fs::canonicalize(parent)?.join(name))
+}
+
+fn validate_reservation(root: &str, token: &str, output: &str, parent_pid: u32) -> Result<u64, Box<dyn std::error::Error>> {
+    if token.len() != 32 || !token.bytes().all(|b| b.is_ascii_hexdigit()) || parent_pid == 0 {
+        return Err("invalid storage reservation".into());
+    }
+    let root = fs::canonicalize(root)?;
+    let marker = root.join(".reservations").join(format!("{}.json", token));
+    if !fs::canonicalize(&marker)?.starts_with(&root) {
+        return Err("reservation escapes the data directory".into());
+    }
+    let data: Value = serde_json::from_slice(&read_limited(&marker, 2048)?)?;
+    let reserved_path = data.get("path").and_then(Value::as_str).ok_or("reservation has no path")?;
+    let limit = data.get("max_bytes").and_then(Value::as_u64).ok_or("reservation has no limit")?;
+    let canonical_output = canonical_new_path(Path::new(output))?;
+    if data.get("protocol").and_then(Value::as_u64) != Some(1)
+        || data.get("parent_pid").and_then(Value::as_u64) != Some(parent_pid as u64)
+        || limit == 0 || limit > MAX_OUTPUT_BYTES
+        || canonical_output != canonical_new_path(Path::new(reserved_path))?
+        || !canonical_output.starts_with(&root)
+        || canonical_output.exists()
+    {
+        return Err("output does not match the granted storage reservation".into());
+    }
+    Ok(limit)
+}
+
+struct LimitedWriter<W: Write> { inner: W, written: u64, limit: u64 }
+impl<W: Write> Write for LimitedWriter<W> {
+    fn write(&mut self, bytes: &[u8]) -> io::Result<usize> {
+        if bytes.len() as u64 > self.limit.saturating_sub(self.written) {
+            return Err(io::Error::new(io::ErrorKind::Other, "analysis output byte limit reached"));
+        }
+        let count = self.inner.write(bytes)?;
+        self.written += count as u64;
+        Ok(count)
+    }
+    fn flush(&mut self) -> io::Result<()> { self.inner.flush() }
+}
+
+// The analyzer never creates child processes. If Godot crashes or is killed,
+// this independent watchdog stops analysis even while model code is running.
+fn start_parent_watchdog(parent_pid: u32) {
+    std::thread::spawn(move || {
+        let started = Instant::now();
+        loop {
+            if started.elapsed() >= Duration::from_secs(MAX_SECONDS) || !parent_alive(parent_pid) {
+                std::process::exit(124);
+            }
+            std::thread::sleep(Duration::from_millis(200));
+        }
+    });
+}
+
+#[cfg(windows)]
+fn parent_alive(pid: u32) -> bool {
+    use std::ffi::c_void;
+    #[link(name = "kernel32")]
+    extern "system" {
+        fn OpenProcess(access: u32, inherit: i32, pid: u32) -> *mut c_void;
+        fn WaitForSingleObject(handle: *mut c_void, milliseconds: u32) -> u32;
+        fn CloseHandle(handle: *mut c_void) -> i32;
+    }
+    unsafe {
+        let handle = OpenProcess(0x0010_0000, 0, pid); // SYNCHRONIZE only
+        if handle.is_null() { return false; }
+        let alive = WaitForSingleObject(handle, 0) == 0x0000_0102; // WAIT_TIMEOUT
+        CloseHandle(handle);
+        alive
+    }
+}
+
+#[cfg(unix)]
+fn parent_alive(pid: u32) -> bool {
+    extern "C" { fn kill(pid: i32, signal: i32) -> i32; }
+    unsafe { kill(pid as i32, 0) == 0 }
+}
+
+#[cfg(not(any(windows, unix)))]
+fn parent_alive(_pid: u32) -> bool { false }
+
+#[cfg(test)]
+mod storage_tests {
+    use super::*;
+    #[test]
+    fn input_limit_accepts_exact_size_and_rejects_oversize() {
+        let path = env::temp_dir().join(format!("tetris-input-limit-{}.json", std::process::id()));
+        let mut file = fs::OpenOptions::new().write(true).create_new(true).open(&path).unwrap();
+        file.write_all(b"12345").unwrap();
+        drop(file);
+        let exact = read_limited(&path, 5);
+        let oversized = read_limited(&path, 4);
+        fs::remove_file(&path).unwrap();
+        assert_eq!(exact.unwrap(), b"12345");
+        assert_eq!(oversized.unwrap_err().kind(), io::ErrorKind::InvalidData);
+    }
+    #[test]
+    fn output_limit_rejects_before_writing() {
+        let mut writer = LimitedWriter { inner: Vec::new(), written: 0, limit: 4 };
+        writer.write_all(b"1234").unwrap();
+        assert!(writer.write_all(b"5").is_err());
+        assert_eq!(writer.inner, b"1234");
+    }
+    #[test]
+    fn output_limit_rejects_an_oversized_first_chunk() {
+        let mut writer = LimitedWriter { inner: Vec::new(), written: 0, limit: 4 };
+        assert!(writer.write_all(b"12345").is_err());
+        assert!(writer.inner.is_empty());
+    }
+}
+
+#[cfg(test)]
+mod coordinate_tests {
+    use super::*;
+
+    // Read the production GDScript tables so future shape changes cannot leave
+    // the analyzer or replay preview silently using a second geometry system.
+    const GODOT_SHAPES: &str = include_str!("../../../../scripts/core/piece_data.gd");
+    const REPLAY_SHAPES: &str = include_str!("../../../../scripts/ui/replay_system.gd");
+
+    fn table_cells(source: &str, table: &str, piece: &str, rotation: &str) -> Vec<(i32, i32)> {
+        let table = source.split(table).nth(1).expect("shape table");
+        let piece = table.split(piece).nth(1).expect("piece entry");
+        let line = piece.lines().find(|line| line.trim_start().starts_with(rotation)).expect("rotation entry");
+        line.split("Vector2(").skip(1).map(|cell| {
+            let numbers = cell.split(')').next().unwrap();
+            let mut values = numbers.split(',').map(|value| value.trim().parse::<i32>().unwrap());
+            (values.next().unwrap(), values.next().unwrap())
+        }).collect()
+    }
+
+    #[test]
+    fn every_godot_orientation_preserves_occupied_cells_in_the_analyzer() {
+        for name in ["I", "O", "T", "S", "Z", "J", "L"].iter() {
+            for (rotation, label) in ["SPAWN", "R", "TWO", "L"].iter().enumerate() {
+                let snapshot = json!({"col": 4, "row": 30, "rotation": rotation});
+                let placement = falling_piece_from_snapshot(&snapshot, parse_piece(name).unwrap()).unwrap();
+                let mut actual = placement.cells().iter().map(|&(x, y)| (x, 39 - y)).collect::<Vec<_>>();
+                let mut expected = table_cells(GODOT_SHAPES, "const SHAPES: Dictionary = {",
+                    &format!("Type.{}: {{", name), &format!("RotationState.{}:", label))
+                    .into_iter().map(|(x, y)| (4 + x, 30 + y)).collect::<Vec<_>>();
+                actual.sort(); expected.sort();
+                assert_eq!(actual, expected, "Godot {} rotation {}", name, label);
+            }
+        }
+    }
+
+    #[test]
+    fn every_replay_preview_orientation_matches_libtetris_cells() {
+        for name in ["I", "O", "T", "S", "Z", "J", "L"].iter() {
+            for (index, rotation) in [RotationState::North, RotationState::East, RotationState::South, RotationState::West].iter().enumerate() {
+                let mut expected = PieceState(parse_piece(name).unwrap(), *rotation).cells()
+                    .iter().map(|&(x, y)| (x, -y)).collect::<Vec<_>>();
+                let mut actual = table_cells(REPLAY_SHAPES, "const CC_SHAPES: Dictionary = {",
+                    &format!("\"{}\": {{", name), &format!("{}:", index));
+                actual.sort(); expected.sort();
+                assert_eq!(actual, expected, "replay {} rotation {}", name, index);
+            }
+        }
     }
 }
 
@@ -311,10 +518,22 @@ fn falling_piece_from_snapshot(snap: &Value, piece: Piece) -> Option<FallingPiec
         2 => RotationState::South,
         _ => RotationState::West,
     };
+    // Godot uses fixed bounding-box pivots for I and O. libtetris rotates all
+    // pieces around an integer cell, so these orientations need a translation
+    // in its upward-positive coordinates to preserve the same occupied cells.
+    let (offset_x, offset_y) = match (piece, rotation) {
+        (Piece::I, RotationState::East) => (1, 0),
+        (Piece::I, RotationState::South) => (1, -1),
+        (Piece::I, RotationState::West) => (0, -1),
+        (Piece::O, RotationState::East) => (0, 1),
+        (Piece::O, RotationState::South) => (1, 1),
+        (Piece::O, RotationState::West) => (1, 0),
+        _ => (0, 0),
+    };
     Some(FallingPiece {
         kind: PieceState(piece, rotation),
-        x: col,
-        y: 39 - godot_row,
+        x: col + offset_x,
+        y: 39 - godot_row + offset_y,
         tspin: if snap
             .get("is_t_spin")
             .and_then(Value::as_bool)

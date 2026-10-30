@@ -17,6 +17,7 @@ var piece_type: PieceData.Type
 var current_rotation: PieceData.RotationState = PieceData.RotationState.SPAWN
 ## 当前方块基础颜色 (取自 PieceData)
 var piece_color: Color
+var _initialized: bool = false
 
 ## 单个格子的实际像素大小（通过检查器或场景树设置）
 @export var cell_size: float = 30.0
@@ -38,6 +39,7 @@ func initialize(type: PieceData.Type) -> void:
 	self.piece_type = type
 	self.current_rotation = PieceData.RotationState.SPAWN
 	self.piece_color = PieceData.COLORS[type]
+	_initialized = true
 	queue_redraw()
 
 # ==============================================================================
@@ -47,7 +49,8 @@ func initialize(type: PieceData.Type) -> void:
 ## Godot 内置回调，在帧更新中（或者我们手动调用 queue_redraw()时）被触发。
 ## 这里我们开始进行最爽的 UI 程序化着色！可以随心打光、加内阴影。
 func _draw() -> void:
-	if piece_type == null: return
+	if not _initialized:
+		return
 	
 	# 获取当前在核心字典 SHAPES 里的该朝向的四个小格子的相对坐标
 	var shape_coords: Array = PieceData.SHAPES[piece_type][current_rotation]

@@ -52,6 +52,14 @@ func stop() -> void:
 	direction = 0
 	_das_charged = false
 
+## DCD（DAS Cut Delay）：旋转贴墙后把 DAS 充能回退到 das - dcd，避免旋转后立刻被甩走
+func cut(dcd: float) -> void:
+	if direction == 0 or dcd <= 0.0:
+		return
+	_das_timer = minf(_das_timer, maxf(das_delay - dcd, 0.0))
+	_das_charged = false
+	_arr_timer = 0.0
+
 ## 每帧更新，返回本帧需要执行的移动次数
 ## 返回值：需要朝 direction 方向移动的次数（可能为 0）
 func update(delta: float) -> int:
@@ -59,26 +67,23 @@ func update(delta: float) -> int:
 		return 0
 
 	_das_timer += delta
+	var moves: int = 0
 	# DAS 尚未充满，还在等待初始延迟
 	if not _das_charged:
-		if _das_timer >= das_delay:
-			_das_charged = true
-			_arr_timer = _das_timer - das_delay
-			# DAS 刚充满的瞬间，触发第一次重复移动
-			if arr_interval <= 0.001:
-				# ARR=0 模式：返回一个很大的数，外部会移动到墙边
-				return 99
-			else:
-				return 1
-		return 0
+		if _das_timer < das_delay:
+			return 0
+		_das_charged = true
+		_arr_timer = _das_timer - das_delay
+		# 同一帧内跨过 DAS 与多个 ARR 间隔时，不能把这些移动推迟到下一帧。
+		moves = 1
+	else:
+		_arr_timer += delta
 
 	# DAS 已充满，进入 ARR 重复阶段
 	if arr_interval <= 0.001:
 		# ARR=0：每帧都瞬移到墙（返回大数）
 		return 99
 
-	_arr_timer += delta
-	var moves: int = 0
 	while _arr_timer >= arr_interval:
 		_arr_timer -= arr_interval
 		moves += 1

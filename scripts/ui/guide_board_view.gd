@@ -376,7 +376,11 @@ func _draw_effect_text(board_rect: Rect2) -> void:
 	var font := get_theme_default_font()
 	var font_size := mini(34, maxi(22, int(board_rect.size.x / maxf(1.0, float(effect_text.length())) * 1.55)))
 	var text_size := font.get_string_size(effect_text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size)
-	var pos := board_rect.position + (board_rect.size - text_size) * 0.5
+	# draw_string 的 y 是基线；用字体 ascent/descent 将字形真正居中。
+	var pos := Vector2(
+		board_rect.get_center().x - text_size.x * 0.5,
+		board_rect.get_center().y + (font.get_ascent(font_size) - font.get_descent(font_size)) * 0.5
+	)
 	draw_string_outline(font, pos, effect_text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, 8, Color(0.02, 0.04, 0.08, 0.92))
 	draw_string(font, pos, effect_text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, effect_color)
 

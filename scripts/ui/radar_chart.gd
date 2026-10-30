@@ -72,6 +72,10 @@ func set_data(values: Dictionary, animate: bool = true) -> void:
 	if animate and is_inside_tree():
 		_start_animation()
 	else:
+		if _tween != null:
+			_tween.kill()
+			_tween = null
+		_animating = false
 		for i2 in range(DIMENSION_COUNT):
 			_current_values[i2] = _target_values[i2]
 		queue_redraw()
@@ -147,13 +151,11 @@ func _draw() -> void:
 		data_points.append(point)
 
 	if data_points.size() >= 3:
-		var colors: PackedColorArray = PackedColorArray()
-		for _c in range(data_points.size()):
-			colors.append(fill_color)
-		draw_polygon(data_points, colors)
-
 		for i in range(data_points.size()):
 			var next_i: int = (i + 1) % data_points.size()
+			# 零分维度可重合在中心；只填充有面积的扇形，避免退化多边形三角化失败。
+			if absf((data_points[i] - center).cross(data_points[next_i] - center)) > 0.001:
+				draw_primitive(PackedVector2Array([center, data_points[i], data_points[next_i]]), PackedColorArray([fill_color, fill_color, fill_color]), PackedVector2Array())
 			draw_line(data_points[i], data_points[next_i], outline_color, outline_width, true)
 
 	for i in range(data_points.size()):
@@ -172,7 +174,7 @@ func _draw() -> void:
 		var label_text: String = tr(DIMENSION_LABEL_KEYS[i])
 		var text_size: Vector2 = font.get_string_size(label_text, HORIZONTAL_ALIGNMENT_LEFT, -1, label_font_size)
 		var text_offset: Vector2 = Vector2(-text_size.x / 2.0, text_size.y / 4.0)
-		_label_tooltip_rects.append(_build_label_tooltip_rect(label_anchor, text_size))
+		_label_tooltip_rects.append(_build_text_tooltip_rect(label_anchor + text_offset - Vector2(0.0, font.get_ascent(label_font_size)), text_size))
 		draw_string(font, label_anchor + text_offset, label_text, HORIZONTAL_ALIGNMENT_LEFT, -1, label_font_size, label_color)
 
 		if show_value_labels:
@@ -202,7 +204,7 @@ func _draw() -> void:
 				)
 				_trend_tooltip_rects.append({
 					"key": DIMENSION_KEYS[i],
-					"rect": _build_text_tooltip_rect(trend_pos, trend_size)
+					"rect": _build_text_tooltip_rect(trend_pos - Vector2(0.0, font.get_ascent(trend_font_size)), trend_size)
 				})
 
 
@@ -216,10 +218,6 @@ func _get_tooltip(at_position: Vector2) -> String:
 		if _label_tooltip_rects[i].has_point(at_position):
 			return tr(DIMENSION_TOOLTIP_KEYS[i])
 	return ""
-
-
-func _build_label_tooltip_rect(label_anchor: Vector2, text_size: Vector2) -> Rect2:
-	return _build_text_tooltip_rect(label_anchor - text_size * 0.5, text_size)
 
 
 func _build_text_tooltip_rect(text_position: Vector2, text_size: Vector2) -> Rect2:

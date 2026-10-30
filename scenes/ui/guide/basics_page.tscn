@@ -31,13 +31,12 @@ theme_override_constants/separation = 10
 
 [node name="Title" type="Label" parent="PageMargin/Page/TitlePanel/TitleMargin/TitleBox"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.058824, 0.121569, 0.270588, 1)
 theme_override_font_sizes/font_size = 30
 text = "基础知识"
 
 [node name="Body" type="Label" parent="PageMargin/Page/TitlePanel/TitleMargin/TitleBox"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.278431, 0.333333, 0.411765, 1)
+theme_type_variation = &"MutedLabel"
 theme_override_font_sizes/font_size = 15
 text = "先确认每种消除的收益，再进入具体操作。"
 autowrap_mode = 3

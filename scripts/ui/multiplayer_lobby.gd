@@ -1,5 +1,7 @@
 extends Control
 
+const ROOM_ROW_SCENE := preload("res://scenes/ui/room_row.tscn")
+
 enum LobbyState {
 	IDLE,
 	CREATING_ROOM,
@@ -34,6 +36,7 @@ var _tetris33_max_players: int = 33
 var _is_tetris33_owner: bool = false
 
 func _ready() -> void:
+	NetworkManager.disconnected.connect(_on_server_disconnected)
 	btn_create.pressed.connect(_on_create_pressed)
 	btn_create_tetris33.pressed.connect(_on_create_tetris33_pressed)
 	btn_refresh.pressed.connect(_on_refresh_pressed)
@@ -171,7 +174,7 @@ func _on_create_tetris33_pressed() -> void:
 func _on_back_pressed() -> void:
 	_reset_room_state()
 	NetworkManager.disconnect_from_server()
-	get_tree().change_scene_to_file("res://scenes/ui/main.tscn")
+	UITheme.goto_scene("res://scenes/ui/main.tscn")
 
 func _on_room_list_received(rooms: Array) -> void:
 	_rooms_cache = rooms.duplicate(true)
@@ -189,6 +192,7 @@ func _render_room_list() -> void:
 		return
 
 	for child in room_list_container.get_children():
+		room_list_container.remove_child(child)
 		child.queue_free()
 
 	var sorted_rooms := _rooms_cache.duplicate(true)
@@ -207,42 +211,33 @@ func _room_priority(room: Dictionary) -> int:
 	return 0 if _is_my_room(room) else 1
 
 func _create_room_row(room: Dictionary) -> HBoxContainer:
-	var row := HBoxContainer.new()
-	row.custom_minimum_size = Vector2(0, 50)
-	row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_theme_constant_override("separation", 8)
-
-	var info_button := Button.new()
+	var row := ROOM_ROW_SCENE.instantiate() as HBoxContainer
+	var info_button: Button = row.get_node("RoomButton")
 	info_button.text = _format_room_text(room)
-	info_button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	info_button.custom_minimum_size = Vector2(0, 50)
+	info_button.tooltip_text = info_button.text
 	var is_current_room := _is_current_room(room)
 	info_button.disabled = _lobby_state != LobbyState.IDLE or is_current_room
 	if not info_button.disabled:
 		info_button.pressed.connect(_on_join_room_clicked.bind(str(room.get("id", ""))))
-	row.add_child(info_button)
 
 	if is_current_room:
 		var is_owner := _is_host_room(room)
 		var mode := str(room.get("mode", "versus"))
 		if is_owner and mode == "tetris33":
-			var start_button := Button.new()
+			var start_button: Button = row.get_node("StartButton")
+			start_button.show()
 			start_button.text = tr("TXT_START_TETRIS33")
-			start_button.custom_minimum_size = Vector2(138, 50)
 			start_button.disabled = _lobby_state == LobbyState.STARTING_GAME or _tetris33_player_count < _tetris33_min_players
 			start_button.pressed.connect(_on_start_tetris33_pressed)
-			row.add_child(start_button)
 
-		var close_button := Button.new()
-		close_button.text = "X"
+		var close_button: Button = row.get_node("LeaveButton")
+		close_button.show()
 		close_button.tooltip_text = tr("TXT_CLOSE_ROOM") if is_owner else tr("TXT_LEAVE_ROOM")
-		close_button.custom_minimum_size = Vector2(50, 50)
 		close_button.disabled = _lobby_state == LobbyState.CLOSING_ROOM or _lobby_state == LobbyState.STARTING_GAME
 		if is_owner:
 			close_button.pressed.connect(_on_close_current_room_pressed.bind(str(room.get("id", ""))))
 		else:
 			close_button.pressed.connect(_on_leave_current_room_pressed.bind(str(room.get("id", ""))))
-		row.add_child(close_button)
 
 	return row
 
@@ -332,10 +327,13 @@ func _on_server_error(message: String, _payload: Dictionary) -> void:
 		_set_lobby_state(LobbyState.IDLE)
 
 func _on_game_started(opponent_name: String, _seed: int) -> void:
+	var starting_match := NetworkManager.match_id
 	_set_info_key("TXT_OPPONENT_FOUND_STARTING", [opponent_name])
 	_set_lobby_state(LobbyState.STARTING_GAME)
 	await get_tree().create_timer(1.0).timeout
-	get_tree().change_scene_to_file("res://scenes/multiplayer_game.tscn")
+	if _lobby_state != LobbyState.STARTING_GAME or starting_match.is_empty() or NetworkManager.match_id != starting_match:
+		return
+	UITheme.goto_scene("res://scenes/multiplayer_game.tscn")
 
 func _on_tetris33_lobby_updated(payload: Dictionary) -> void:
 	_my_room_id = str(payload.get("room_id", _my_room_id))
@@ -373,10 +371,13 @@ func _on_leave_current_room_pressed(room_id: String) -> void:
 	_set_lobby_state(LobbyState.CLOSING_ROOM)
 
 func _on_tetris33_game_started(_seed: int, _local_slot: int, _player_count: int, _players: Array) -> void:
+	var starting_match := NetworkManager.match_id
 	_set_tetris33_info(_trf("TXT_TETRIS33_STARTING"))
 	_set_lobby_state(LobbyState.STARTING_GAME)
 	await get_tree().create_timer(0.6).timeout
-	get_tree().change_scene_to_file("res://scenes/tetris33_game.tscn")
+	if _lobby_state != LobbyState.STARTING_GAME or starting_match.is_empty() or NetworkManager.match_id != starting_match:
+		return
+	UITheme.goto_scene("res://scenes/tetris33_game.tscn")
 
 func _get_room_mode(room_id: String) -> String:
 	for room in _rooms_cache:
@@ -414,3 +415,15 @@ func _refresh_room_action_state() -> void:
 		btn_refresh.disabled = _is_transition_state()
 	if btn_start_tetris33:
 		btn_start_tetris33.visible = false
+
+func _on_server_disconnected() -> void:
+	_rooms_cache.clear()
+	_render_room_list()
+	_my_room_id = ""
+	_set_lobby_state(LobbyState.IDLE)
+	_set_info_key("TXT_DISCONNECTED")
+	btn_create.disabled = true
+	btn_create_tetris33.disabled = true
+	btn_refresh.disabled = true
+	if btn_start_tetris33:
+		btn_start_tetris33.disabled = true

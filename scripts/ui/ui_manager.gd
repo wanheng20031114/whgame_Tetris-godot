@@ -52,6 +52,7 @@ func _save_cached_player_name(player_name: String) -> void:
 func _clear_active_screen() -> void:
 	# 切场景前先安全清理旧节点，避免两个 UI 同时存在造成“界面重影/错觉切场景”。
 	if _active_screen and is_instance_valid(_active_screen):
+		remove_child(_active_screen)
 		_active_screen.queue_free()
 
 	_active_screen = null
@@ -129,22 +130,22 @@ func _on_login_successful(player_name: String) -> void:
 
 
 func _start_marathon_mode() -> void:
-	get_tree().change_scene_to_file("res://scenes/game.tscn")
+	UITheme.goto_scene("res://scenes/game.tscn")
 
 
 func _start_multiplayer_mode() -> void:
-	get_tree().change_scene_to_file("res://scenes/ui/multiplayer_setup.tscn")
+	UITheme.goto_scene("res://scenes/ui/multiplayer_setup.tscn")
 
 
 func _open_guide() -> void:
-	get_tree().change_scene_to_file("res://scenes/ui/guide_system.tscn")
+	UITheme.goto_scene("res://scenes/ui/guide_system.tscn")
 
 
 ## 打开玩家数据界面
 func _open_player_stats() -> void:
-	get_tree().change_scene_to_file("res://scenes/ui/player_stats_screen.tscn")
+	UITheme.goto_scene("res://scenes/ui/player_stats_screen.tscn")
 
 
 ## 打开对局复盘界面
 func _open_replay() -> void:
-	get_tree().change_scene_to_file("res://scenes/ui/replay_system.tscn")
+	UITheme.goto_scene("res://scenes/ui/replay_system.tscn")

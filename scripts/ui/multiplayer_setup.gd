@@ -14,13 +14,14 @@ extends Control
 
 const CONNECT_TIMEOUT_SECONDS := 10.0
 const MAX_PLAYER_NAME_LENGTH := 12
-const STATUS_COLOR_NORMAL := Color(0.7, 0.7, 1.0, 1.0)
-const STATUS_COLOR_ERROR := Color(1.0, 0.35, 0.35, 1.0)
 
 var _status_key: String = "TXT_READY"
 var _status_args: Array = []
 var _connect_attempt_id := 0
 var _is_connecting := false
+var _leaving := false
+var _status_is_error := false
+var _pending_name := ""
 
 func _ready() -> void:
 	edit_ip.text = "127.0.0.1"
@@ -38,6 +39,7 @@ func _ready() -> void:
 	NetworkManager.disconnected.connect(_on_network_disconnected)
 	NetworkManager.connection_failed.connect(_on_connection_failed)
 	NetworkManager.login_success.connect(_on_login_success)
+	UITheme.theme_changed.connect(func(_mode): _refresh_status())
 
 	_update_texts()
 	_set_status_key("TXT_READY")
@@ -46,7 +48,7 @@ func _ready() -> void:
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_TRANSLATION_CHANGED and is_inside_tree() and is_node_ready():
 		_update_texts()
-		_set_status_key(_status_key, _status_args)
+		_refresh_status()
 
 func _focus_default_control() -> void:
 	if edit_name:
@@ -75,17 +77,21 @@ func _trf(key: String, args: Array = []) -> String:
 		return translated
 	return translated % args
 
-func _set_status_key(key: String, args: Array = []) -> void:
+func _set_status_key(key: String, args: Array = [], is_error: bool = false) -> void:
 	_status_key = key
 	_status_args = args
-	if lbl_status:
-		lbl_status.add_theme_color_override("font_color", STATUS_COLOR_NORMAL)
-		lbl_status.text = _trf(_status_key, _status_args)
+	_status_is_error = is_error
+	_refresh_status()
+	if is_error:
+		UITheme.pulse(lbl_status, 1.02)
 
-func _set_error_status(message: String) -> void:
+func _refresh_status() -> void:
 	if lbl_status:
-		lbl_status.add_theme_color_override("font_color", STATUS_COLOR_ERROR)
-		lbl_status.text = message
+		if _status_is_error:
+			lbl_status.add_theme_color_override("font_color", UITheme.color("danger"))
+		else:
+			lbl_status.remove_theme_color_override("font_color")
+		lbl_status.text = _trf(_status_key, _status_args)
 
 func _update_texts() -> void:
 	if lbl_title:
@@ -108,8 +114,8 @@ func _update_texts() -> void:
 		btn_back.text = tr("TXT_BACK_MAIN")
 
 func _on_connect_pressed() -> void:
-	if ButtonSfx:
-		ButtonSfx.play_click()
+	if _is_connecting or _leaving:
+		return
 
 	var ip := edit_ip.text.strip_edges()
 	var port := edit_port.text.to_int()
@@ -119,51 +125,64 @@ func _on_connect_pressed() -> void:
 	if pname.is_empty():
 		_set_status_key("TXT_ENTER_USERNAME")
 		return
+	if ip.is_empty() or not edit_port.text.strip_edges().is_valid_int() or port < 1 or port > 65535:
+		_set_status_key("TXT_CONNECTION_ADDRESS_INVALID", [], true)
+		return
 
 	_set_status_key("TXT_CONNECTING_SERVER")
-	btn_connect.disabled = true
 	_is_connecting = true
+	_pending_name = pname
+	_set_connection_fields_enabled(false)
 	_connect_attempt_id += 1
 
 	var err := NetworkManager.connect_to_server(ip, port)
 	if err != OK:
-		_is_connecting = false
-		btn_connect.disabled = false
-		var reason := NetworkManager.get_last_connect_error()
-		if reason.strip_edges().is_empty():
-			reason = "connect_to_url failed"
-		_set_error_status("连接失败（%s）" % reason)
+		# NetworkManager emits connection_failed synchronously for this case.
 		return
 
 	_start_connect_timeout(_connect_attempt_id)
 
 func _on_back_pressed() -> void:
-	get_tree().change_scene_to_file("res://scenes/ui/main.tscn")
+	_leaving = true
+	_connect_attempt_id += 1
+	_is_connecting = false
+	NetworkManager.disconnect_from_server()
+	UITheme.goto_scene("res://scenes/ui/main.tscn")
 
 func _on_network_connected() -> void:
-	_is_connecting = false
+	if not _is_connecting or _leaving:
+		return
 	_set_status_key("TXT_CONNECTED_LOGGING_IN")
-	NetworkManager.login(edit_name.text.strip_edges().substr(0, MAX_PLAYER_NAME_LENGTH))
+	NetworkManager.login(_pending_name)
 
 func _on_network_disconnected() -> void:
-	if _is_connecting:
+	if _leaving or (_status_is_error and not _is_connecting):
 		return
+	_is_connecting = false
+	_connect_attempt_id += 1
 	_set_status_key("TXT_DISCONNECTED")
-	btn_connect.disabled = false
+	_set_connection_fields_enabled(true)
 
 func _on_connection_failed(reason: String) -> void:
+	if _leaving:
+		return
 	_is_connecting = false
-	btn_connect.disabled = false
+	_set_connection_fields_enabled(true)
 	var fail_reason := reason.strip_edges()
 	if fail_reason.is_empty():
 		fail_reason = "unknown error"
-	_set_error_status("连接失败（%s）" % fail_reason)
+	_set_status_key("TXT_CONNECTION_FAILED_REASON", [fail_reason], true)
 
 func _on_login_success(_id: String) -> void:
+	if not _is_connecting or _leaving:
+		return
 	_is_connecting = false
+	var attempt_id := _connect_attempt_id
 	_set_status_key("TXT_LOGIN_SUCCESS_ENTER_LOBBY")
 	await get_tree().create_timer(0.5).timeout
-	get_tree().change_scene_to_file("res://scenes/ui/multiplayer_lobby.tscn")
+	if _leaving or attempt_id != _connect_attempt_id:
+		return
+	UITheme.goto_scene("res://scenes/ui/multiplayer_lobby.tscn")
 
 func _start_connect_timeout(attempt_id: int) -> void:
 	await get_tree().create_timer(CONNECT_TIMEOUT_SECONDS).timeout
@@ -173,9 +192,13 @@ func _start_connect_timeout(attempt_id: int) -> void:
 		return
 
 	_is_connecting = false
-	btn_connect.disabled = false
+	NetworkManager.disconnect_from_server()
+	_set_connection_fields_enabled(true)
+	_set_status_key("TXT_CONNECTION_TIMEOUT", [int(CONNECT_TIMEOUT_SECONDS)], true)
 
-	var reason := NetworkManager.get_last_connect_error()
-	if reason.strip_edges().is_empty():
-		reason = "no response within %ds" % int(CONNECT_TIMEOUT_SECONDS)
-	_set_error_status("连接超时（%s）" % reason)
+
+func _set_connection_fields_enabled(enabled: bool) -> void:
+	btn_connect.disabled = not enabled
+	edit_ip.editable = enabled
+	edit_port.editable = enabled
+	edit_name.editable = enabled

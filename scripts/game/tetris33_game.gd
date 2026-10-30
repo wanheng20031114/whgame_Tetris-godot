@@ -36,7 +36,7 @@ extends TetrisCore
 @onready var sfx_tetris: AudioStreamPlayer = $SfxSuccess
 @onready var sfx_spin: AudioStreamPlayer = $SfxSpin
 @onready var sfx_death: AudioStreamPlayer = $SfxDeath
-@onready var sfx_move: AudioStreamPlayer = get_node_or_null("SfxMove") as AudioStreamPlayer
+@onready var sfx_move: AudioStreamPlayer = $SfxMove
 
 const BGM_STREAM: AudioStream = preload("res://audio/bgm.ogg")
 const SFX_PLANTING_STREAM: AudioStream = preload("res://audio/planting.ogg")
@@ -44,7 +44,6 @@ const SFX_LINE_CLEAR_STREAM: AudioStream = preload("res://audio/line_clear.ogg")
 const SFX_TETRIS_STREAM: AudioStream = preload("res://audio/tetris.ogg")
 const SFX_SPIN_STREAM: AudioStream = preload("res://audio/spin.ogg")
 const SFX_DEATH_STREAM: AudioStream = preload("res://audio/death.ogg")
-const SFX_MOVE_STREAM: AudioStream = preload("res://audio/move_scrape.wav")
 const MOVE_SFX_MIN_INTERVAL_MSEC: int = 45
 const ATTACK_DAMAGE_POPUP := preload("res://scripts/ui/attack_damage_popup.gd")
 const B2B_STREAK_BADGE := preload("res://scripts/ui/b2b_streak_badge.gd")
@@ -75,6 +74,13 @@ var _rematch_requested: bool = false
 var _rematch_declined: bool = false
 var _local_rank: int = 0
 var _last_result_title: String = ""
+var _result_title_key: String = ""
+var _result_title_args: Array = []
+var _result_subtitle_key: String = ""
+var _result_subtitle_args: Array = []
+var _attack_log_key: String = "TXT_TETRIS33_ATTACK_READY"
+var _attack_log_args: Array = []
+var _server_disconnected := false
 var _last_vote_statuses: Array = []
 
 var pending_attacks: Array = []
@@ -92,9 +98,14 @@ var _cached_board_after_drop: Array = []
 var _action_text_tween: Tween
 var _combo_text_tween: Tween
 var _last_move_sfx_msec: int = 0
+var _resolving_lock: bool = false
 
+
+var _was_network_match := false
 
 func _ready() -> void:
+	_was_network_match = NetworkManager.current_room_mode == "tetris33"
+	NetworkManager.disconnected.connect(_on_server_disconnected)
 	super._ready()
 	_rng.randomize()
 	_apply_network_match_state()
@@ -123,22 +134,50 @@ func _ready() -> void:
 		bgm.play()
 
 
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_TRANSLATION_CHANGED and is_inside_tree() and is_node_ready():
+		_refresh_ui_texts()
+		_refresh_result_text()
+		if local_ko_name_label.visible:
+			_show_local_rank_overlay()
+		if result_overlay.visible and _is_network_match():
+			_update_vote_list(_last_vote_statuses)
+
+
+func _refresh_ui_texts() -> void:
+	btn_restart.text = tr("TXT_WAITING_CONNECT") if _rematch_requested else tr("TXT_REMATCH" if _is_network_match() else "TXT_RESTART")
+	btn_lobby.text = tr("TXT_RETURN_LOBBY")
+	label_hold.text = tr("TXT_HOLD")
+	label_next.text = tr("TXT_NEXT")
+	_on_score_changed(scoring.score, scoring.level, scoring.lines)
+	_refresh_match_labels()
+	var target_name := tr("TXT_TETRIS33_AUTO")
+	if _last_target_index >= 0 and _last_target_index < _opponents.size():
+		target_name = str(_opponents[_last_target_index].get("name", ""))
+	label_target.text = _trf("TXT_TETRIS33_TARGET", [target_name])
+	label_attack_log.text = _trf(_attack_log_key, _attack_log_args)
+
+
 func _process(delta: float) -> void:
-	process_logic(delta)
 	if _data_collector and _data_collector.is_active() and not game_over and not paused:
 		_count_key_presses()
+	process_logic(delta)
 	if not game_over and not paused:
 		_update_player_garbage(delta)
-		if not _is_network_match():
-			_update_opponent_samples(delta)
+	# 本地淘汰只冻结自己的操作，离线对手仍需推进到最终结算。
+	if not _is_network_match() and not _match_finished and (not paused or _local_eliminated):
+		_update_opponent_samples(delta)
+		if not _local_eliminated:
 			_update_bot_pressure(delta)
-			_update_match_state(delta)
+		_update_match_state(delta)
 
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel"):
 		_save_and_cleanup_data()
-		get_tree().change_scene_to_file("res://scenes/ui/main.tscn")
+		if _is_network_match():
+			NetworkManager.leave_room()
+		UITheme.goto_scene("res://scenes/ui/main.tscn")
 		var vp := get_viewport()
 		if vp:
 			vp.set_input_as_handled()
@@ -159,14 +198,6 @@ func _assign_audio_streams() -> void:
 		sfx_spin.stream = SFX_SPIN_STREAM
 	if sfx_death:
 		sfx_death.stream = SFX_DEATH_STREAM
-	if sfx_move == null:
-		sfx_move = AudioStreamPlayer.new()
-		sfx_move.name = "SfxMove"
-		add_child(sfx_move)
-	sfx_move.stream = SFX_MOVE_STREAM
-	sfx_move.volume_db = 1.5
-	sfx_move.pitch_scale = 1.0
-	sfx_move.max_polyphony = 4
 
 
 func _on_successful_horizontal_move(_dx: int) -> void:
@@ -218,12 +249,22 @@ func _apply_match_seed() -> void:
 
 func _bind_opponent_panels() -> void:
 	_opponent_panels.clear()
-	for child in %OpponentLeftGrid.get_children():
-		if child is Tetris33OpponentPanel:
-			_opponent_panels.append(child)
-	for child2 in %OpponentRightGrid.get_children():
-		if child2 is Tetris33OpponentPanel:
-			_opponent_panels.append(child2)
+	var opponent_count := clampi(active_player_count, 1, 33) - 1
+	var left_count := ceili(opponent_count / 2.0)
+	var columns := maxi(1, ceili(sqrt(float(left_count))))
+	# Keep starting slots stable through eliminations and preserve roster order.
+	_bind_opponent_side(%OpponentLeftGrid, left_count, columns)
+	_bind_opponent_side(%OpponentRightGrid, opponent_count - left_count, columns)
+
+
+func _bind_opponent_side(grid: GridContainer, count: int, columns: int) -> void:
+	grid.columns = columns
+	for i in range(grid.get_child_count()):
+		var panel := grid.get_child(i) as Tetris33OpponentPanel
+		panel.visible = i < count
+		if panel.visible:
+			panel.configure_layout(columns)
+			_opponent_panels.append(panel)
 
 
 func _initialize_ui() -> void:
@@ -232,20 +273,15 @@ func _initialize_ui() -> void:
 	if result_label:
 		result_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	if btn_restart:
-		btn_restart.text = tr("TXT_REMATCH")
 		btn_restart.disabled = true
 		btn_restart.pressed.connect(_on_rematch_pressed)
 	if btn_lobby:
-		btn_lobby.text = tr("TXT_RETURN_LOBBY")
 		btn_lobby.pressed.connect(_on_lobby_pressed)
 	if player_garbage_bar and board:
 		player_garbage_bar.max_lines = board.visible_rows
 		player_garbage_bar.update_bar(0, 0, 0)
 		call_deferred("_layout_player_garbage_bar")
-	if label_hold:
-		label_hold.text = "HOLD"
-	if label_next:
-		label_next.text = "NEXT"
+	_refresh_ui_texts()
 	if label_action_text:
 		label_action_text.visible = false
 	if label_combo_text:
@@ -273,20 +309,14 @@ func _initialize_match() -> void:
 	active_player_count = clampi(active_player_count, 1, 33)
 	if active_player_count < min_players_to_start:
 		paused = true
-		if label_status:
-			label_status.text = "WAITING FOR %d PLAYERS" % min_players_to_start
+		_refresh_match_labels()
 		return
 
 	_alive_count = active_player_count
 	_opponents.clear()
-	var opponent_count := active_player_count - 1
 	for i in range(_opponent_panels.size()):
 		var panel := _opponent_panels[i]
-		var is_active := i < opponent_count
-		panel.visible = is_active
 		panel.opponent_index = i
-		if not is_active:
-			continue
 
 		var sample := _build_initial_opponent_sample(i) if _is_network_match() else _build_opponent_sample(i)
 		_opponents.append(sample)
@@ -314,8 +344,6 @@ func _start_data_collection() -> void:
 
 func _update_player_garbage(delta: float) -> void:
 	var new_pending: Array = []
-	var grey_count := 0
-	var yellow_count := 0
 
 	for attack in pending_attacks:
 		attack["delay"] = float(attack["delay"]) - delta
@@ -323,14 +351,42 @@ func _update_player_garbage(delta: float) -> void:
 			ready_garbage += int(attack["amount"])
 		else:
 			new_pending.append(attack)
-			if float(attack["delay"]) > WARNING_STAGE_SECONDS:
-				grey_count += int(attack["amount"])
-			else:
-				yellow_count += int(attack["amount"])
 
 	pending_attacks = new_pending
 	if player_garbage_bar:
-		player_garbage_bar.update_bar(grey_count, yellow_count, ready_garbage)
+		player_garbage_bar.sync_queue(pending_attacks, ready_garbage, ATTACK_DELAY_SECONDS, WARNING_STAGE_SECONDS)
+
+
+## 收到攻击：整包入队，并从一名存活对手的面板发射攻击弹（优先左侧面板，不穿过棋盘）
+func _receive_attack(amount: int) -> void:
+	if amount <= 0 or amount > 12 or game_over:
+		return
+	var available := maxi(0, board.total_rows - _get_pending_garbage_total())
+	amount = mini(amount, available)
+	if amount == 0:
+		return
+	pending_attacks.append({"delay": ATTACK_DELAY_SECONDS, "amount": amount})
+	if player_garbage_bar == null:
+		return
+	player_garbage_bar.sync_queue(pending_attacks, ready_garbage, ATTACK_DELAY_SECONDS, WARNING_STAGE_SECONDS)
+	var board_x := _board_canvas_rect().position.x
+	var left: Array = []
+	var any: Array = []
+	for i in range(_opponents.size()):
+		if bool(_opponents[i].get("eliminated", false)):
+			continue
+		var panel := _opponent_panels[i]
+		var c := panel.get_global_transform_with_canvas() * (panel.size * 0.5)
+		any.append(c)
+		if c.x < board_x:
+			left.append(c)
+	var pool := left if not left.is_empty() else any
+	var src: Vector2 = pool[_rng.randi() % pool.size()] if not pool.is_empty() else AttackFX.canvas_pos(player_garbage_bar) + Vector2(-90, -70)
+	_fire_incoming(src, player_garbage_bar, amount)
+
+
+func _incoming_garbage_total() -> int:
+	return _get_pending_garbage_total()
 
 
 func _update_opponent_samples(delta: float) -> void:
@@ -359,9 +415,8 @@ func _update_bot_pressure(delta: float) -> void:
 	if _alive_count <= 1:
 		return
 	var amount := 1 + int(_rng.randf() < 0.22)
-	for _i in range(amount):
-		pending_attacks.append({"delay": ATTACK_DELAY_SECONDS, "amount": 1})
-	_log_attack("INCOMING +%d" % amount)
+	_receive_attack(amount)
+	_log_attack("TXT_TETRIS33_INCOMING", [amount])
 
 
 func _update_match_state(delta: float) -> void:
@@ -395,8 +450,13 @@ func _eliminate_opponent(index: int) -> void:
 	if index < _opponent_panels.size():
 		_opponent_panels[index].set_eliminated(true)
 	_refresh_match_labels()
-	if _alive_count <= 1 and not _local_eliminated:
-		_on_victory()
+	if _alive_count <= 1:
+		if not _local_eliminated and not _resolving_lock:
+			_on_victory()
+		elif _local_eliminated and not _is_network_match():
+			_match_finished = true
+			_refresh_match_labels()
+			_show_rank_result(true)
 
 
 func _build_opponent_sample(index: int, previous: Dictionary = {}) -> Dictionary:
@@ -548,12 +608,18 @@ func _send_attack_to_target(amount: int) -> void:
 			_opponent_panels[target_index].update_from_sample(_opponents[target_index])
 
 	var target_name := str(_opponents[target_index].get("name", "P%02d" % (target_index + 2)))
-	_log_attack("ATTACK %s +%d" % [target_name, amount])
+	_log_attack("TXT_TETRIS33_ATTACK", [target_name, amount])
 	var target_id := str(_opponents[target_index].get("id", ""))
 	if not target_id.is_empty() and NetworkManager.current_room_mode == "tetris33":
 		NetworkManager.send_tetris33_attack(target_id, amount)
 	if label_target:
-		label_target.text = "TARGET  %s" % target_name
+		label_target.text = _trf("TXT_TETRIS33_TARGET", [target_name])
+	if target_index < _opponent_panels.size():
+		var panel := _opponent_panels[target_index]
+		var center := panel.get_global_transform_with_canvas() * (panel.size * 0.5)
+		_fire_outgoing(center, amount, func():
+			if is_instance_valid(panel):
+				UITheme.pulse(panel, 1.08))
 
 	if not _is_network_match() and int(_opponents[target_index].get("pending_garbage", 0)) >= 12 and _rng.randf() < 0.35:
 		_eliminate_opponent(target_index)
@@ -561,9 +627,9 @@ func _send_attack_to_target(amount: int) -> void:
 
 func _on_score_changed(s: int, _l: int, ln: int) -> void:
 	if label_score:
-		label_score.text = "SCORE\n%d" % s
+		label_score.text = "%s\n%d" % [tr("TXT_SCORE"), s]
 	if label_lines:
-		label_lines.text = "LINES\n%d" % ln
+		label_lines.text = "%s\n%d" % [tr("TXT_LINES"), ln]
 
 
 func _on_lines_cleared(amount: int, is_spin: bool, is_t_spin: bool, dmg: int) -> void:
@@ -574,16 +640,13 @@ func _on_lines_cleared(amount: int, is_spin: bool, is_t_spin: bool, dmg: int) ->
 	_update_b2b_badge()
 
 	if is_spin or is_t_spin:
-		if sfx_spin:
-			sfx_spin.play()
+		_play_clear_sfx(sfx_spin)
 		_show_action_text(_build_spin_text(cur_type, is_t_spin))
 	elif amount == 4:
-		if sfx_tetris:
-			sfx_tetris.play()
+		_play_clear_sfx(sfx_tetris)
 		_show_action_text("TETRIS!")
 	else:
-		if sfx_line_clear:
-			sfx_line_clear.play()
+		_play_clear_sfx(sfx_line_clear)
 
 	if scoring.combo > 0:
 		_show_combo_text(scoring.combo)
@@ -601,11 +664,14 @@ func _on_lines_cleared(amount: int, is_spin: bool, is_t_spin: bool, dmg: int) ->
 		if int(target["amount"]) <= 0:
 			pending_attacks.pop_front()
 
+	if dmg - block_amount > 0:
+		_fire_cancel(player_garbage_bar, dmg - block_amount)
 	if block_amount > 0:
 		_send_attack_to_target(block_amount)
 
 
 func _lock_piece() -> void:
+	_resolving_lock = true
 	var will_receive_garbage := ready_garbage > 0
 	var lines_before_lock := scoring.lines
 
@@ -621,6 +687,7 @@ func _lock_piece() -> void:
 	var next_pieces_at_lock: Array = bag.peek(5)
 
 	lock_timer.stop()
+	var is_spin: bool = _resolve_spin()
 	board.lock_piece(cur_type, cur_rot, cur_col, cur_row, PieceData.COLORS[cur_type])
 
 	var full_grid_before_clear: Array = board.get_grid_state()
@@ -629,16 +696,13 @@ func _lock_piece() -> void:
 		if r < full_grid_before_clear.size():
 			_cached_board_after_drop.append(full_grid_before_clear[r])
 
-	var is_spin := false
-	if last_was_rotation and _is_spin_piece_type(cur_type):
-		is_spin = _check_immobile()
 
 	var clear_result: Dictionary = board.clear_lines_with_data()
 	var cleared := int(clear_result["cleared"])
 	var cleared_rows_data: Array = clear_result["rows_data"]
 	var dmg := 0
 	if cleared > 0:
-		var is_t_spin := cur_type == PieceData.Type.T and is_spin
+		var is_t_spin := _is_full_t_spin()
 		scoring.process_line_clear(cleared, is_spin, is_t_spin)
 		dmg = _calculate_damage(cleared, is_spin, is_t_spin)
 		lines_cleared.emit(cleared, is_spin, is_t_spin, dmg)
@@ -649,17 +713,18 @@ func _lock_piece() -> void:
 	score_changed.emit(scoring.score, scoring.level, scoring.lines)
 	piece_locked.emit(cur_type, board.get_grid_state())
 
+	var garbage_topped_out := false
 	var did_clear_lines := scoring.lines > lines_before_lock
 	if will_receive_garbage and not did_clear_lines and board:
-		board.add_garbage_lines(ready_garbage)
+		garbage_topped_out = board.add_garbage_lines(ready_garbage)
 		ready_garbage = 0
 		if player_garbage_bar:
-			player_garbage_bar.update_bar(0, 0, 0)
+			player_garbage_bar.mark_entered()
+			player_garbage_bar.sync_queue(pending_attacks, ready_garbage, ATTACK_DELAY_SECONDS, WARNING_STAGE_SECONDS)
 
 	_play_piece_lock_sound_once()
 
 	hold_used = false
-	_spawn_next_piece()
 
 	_record_piece_snapshot(
 		locked_piece_type,
@@ -668,6 +733,13 @@ func _lock_piece() -> void:
 		locked_row,
 		next_pieces_at_lock
 	)
+	_resolving_lock = false
+	if _alive_count <= 1 and not _local_eliminated:
+		_on_victory()
+	elif garbage_topped_out:
+		_trigger_game_over()
+	else:
+		_spawn_next_piece()
 
 
 func _try_hold() -> void:
@@ -681,6 +753,7 @@ func _on_local_game_over() -> void:
 		return
 	_local_eliminated = true
 	_local_rank = maxi(2, _alive_count)
+	_alive_count = maxi(1, _alive_count - 1)
 	_freeze_local_play(true)
 	if bgm:
 		bgm.stop()
@@ -704,14 +777,13 @@ func _on_victory() -> void:
 		_send_local_network_sample()
 	else:
 		_match_finished = true
-		_show_result(_compose_result_text(_local_rank, tr("TXT_TETRIS33_REMATCH_READY")), false)
+		_refresh_match_labels()
+		_show_rank_result(true)
 	_save_and_cleanup_data()
 
 
 func _enter_spectator_mode() -> void:
 	_show_local_rank_overlay()
-	if label_status:
-		label_status.text = "SPECTATING"
 	_refresh_match_labels()
 	if result_overlay:
 		result_overlay.visible = false
@@ -719,6 +791,10 @@ func _enter_spectator_mode() -> void:
 
 func _show_result(text: String, allow_rematch: bool = false) -> void:
 	_last_result_title = text.get_slice("\n", 0)
+	_result_title_key = ""
+	_result_title_args = []
+	_result_subtitle_key = ""
+	_result_subtitle_args = []
 	if result_label:
 		result_label.text = text
 	if btn_restart:
@@ -731,19 +807,40 @@ func _show_result(text: String, allow_rematch: bool = false) -> void:
 			btn_lobby.grab_focus()
 
 
-func _set_result_subtitle(subtitle: String) -> void:
-	if result_label:
-		result_label.text = "%s\n%s" % [_last_result_title, subtitle]
+func _show_rank_result(allow_rematch: bool) -> void:
+	_show_result(_compose_result_text(_local_rank, tr("TXT_TETRIS33_REMATCH_READY")), allow_rematch)
+	_result_title_key = "TXT_TETRIS33_WINNER" if _local_rank == 1 else "TXT_TETRIS33_RANK"
+	_result_title_args = [] if _local_rank == 1 else [_local_rank]
+	_set_result_subtitle("TXT_TETRIS33_REMATCH_READY")
+
+
+func _set_result_subtitle(key: String, args: Array = []) -> void:
+	_result_subtitle_key = key
+	_result_subtitle_args = args
+	_refresh_result_text()
+
+
+func _refresh_result_text() -> void:
+	if not _result_title_key.is_empty():
+		_last_result_title = _trf(_result_title_key, _result_title_args)
+	if _last_result_title.is_empty():
+		return
+	result_label.text = _last_result_title
+	if not _result_subtitle_key.is_empty():
+		result_label.text += "\n" + _trf(_result_subtitle_key, _result_subtitle_args)
 
 
 func _compose_result_text(rank: int, subtitle: String) -> String:
-	var title := "WINNER  #1" if rank == 1 else "RANK #%d" % rank
+	var title := tr("TXT_TETRIS33_WINNER") if rank == 1 else _trf("TXT_TETRIS33_RANK", [rank])
 	return "%s\n%s" % [title, subtitle]
 
 
 func _freeze_local_play(hide_active_piece: bool) -> void:
 	game_over = true
 	paused = true
+	das.stop()
+	board.set_danger_level(0.0)
+	board.set_spawn_warning(-1, 0, 0)
 	if lock_timer:
 		lock_timer.stop()
 	if ghost_piece:
@@ -756,16 +853,14 @@ func _show_local_rank_overlay() -> void:
 	if local_ko_name_label == null:
 		return
 	var rank_value := _local_rank if _local_rank > 0 else maxi(2, _alive_count)
-	local_ko_name_label.text = "RANK #%d" % rank_value
+	local_ko_name_label.text = _trf("TXT_TETRIS33_RANK", [rank_value])
 	local_ko_name_label.visible = true
 
 
 func _on_rows_cleared(rows_data: Array) -> void:
 	if board == null or rows_data.is_empty():
 		return
-	var effect := LineClearEffect.new()
-	board.add_child(effect)
-	effect.setup(rows_data, board.cell_size, board.buffer_rows)
+	_spawn_line_clear_fx(rows_data)
 	var popup_parent: Node = get_node_or_null("HUD")
 	var popup_node: Node = popup_parent if popup_parent else self
 	ATTACK_DAMAGE_POPUP.spawn(popup_node, board, _last_damage_this_lock, rows_data, _attack_popup_style())
@@ -883,14 +978,18 @@ func _calculate_total_height(board_state_visible: Array) -> int:
 
 func _refresh_match_labels() -> void:
 	if label_alive:
-		label_alive.text = "ALIVE\n%d/%d" % [_alive_count, active_player_count]
+		label_alive.text = "%s\n%d/%d" % [tr("TXT_TETRIS33_ALIVE"), _alive_count, active_player_count]
 	if label_rank:
-		label_rank.text = "LEFT %d/%d" % [_alive_count, active_player_count]
+		label_rank.text = _trf("TXT_TETRIS33_LEFT", [_alive_count, active_player_count])
 	if label_status:
-		if _match_finished:
-			label_status.text = "FINISHED"
+		if _server_disconnected:
+			label_status.text = tr("TXT_DISCONNECTED")
+		elif active_player_count < min_players_to_start:
+			label_status.text = _trf("TXT_TETRIS33_WAIT_PLAYERS", [min_players_to_start])
+		elif _match_finished:
+			label_status.text = tr("TXT_TETRIS33_FINISHED")
 		elif _local_eliminated:
-			label_status.text = "SPECTATING"
+			label_status.text = tr("TXT_TETRIS33_SPECTATING")
 		else:
 			label_status.text = "TETRIS33"
 
@@ -902,7 +1001,8 @@ func _on_network_sample_received(payload: Dictionary) -> void:
 		return
 	var sample := _opponents[idx].duplicate(true)
 	for key in payload.keys():
-		sample[key] = payload[key]
+		if key != "eliminated" and key != "rank":
+			sample[key] = payload[key]
 	sample["id"] = from_id
 	sample["name"] = str(payload.get("from_name", sample.get("name", "")))
 	sample["danger_score"] = _calculate_danger_score(
@@ -919,14 +1019,13 @@ func _on_network_sample_received(payload: Dictionary) -> void:
 
 func _on_network_attack_received(payload: Dictionary) -> void:
 	var target_id := str(payload.get("target_id", ""))
-	if not target_id.is_empty() and target_id != NetworkManager.my_id:
+	if target_id != NetworkManager.my_id or _local_eliminated or _match_finished:
 		return
 	var amount := int(payload.get("amount", 0))
-	if amount <= 0:
+	if amount <= 0 or amount > 12:
 		return
-	for _i in range(amount):
-		pending_attacks.append({"delay": ATTACK_DELAY_SECONDS, "amount": 1})
-	_log_attack("INCOMING +%d" % amount)
+	_receive_attack(amount)
+	_log_attack("TXT_TETRIS33_INCOMING", [amount])
 
 
 func _on_network_game_over_received(payload: Dictionary) -> void:
@@ -945,6 +1044,7 @@ func _on_network_player_left(payload: Dictionary) -> void:
 func _on_tetris33_match_finished(payload: Dictionary) -> void:
 	_match_finished = true
 	_freeze_local_play(false)
+	bgm.stop()
 	for result in payload.get("results", []):
 		if result is Dictionary and str(result.get("id", "")) == NetworkManager.my_id:
 			_local_rank = int(result.get("rank", _local_rank))
@@ -956,7 +1056,7 @@ func _on_tetris33_match_finished(payload: Dictionary) -> void:
 	elif _local_eliminated:
 		_show_local_rank_overlay()
 	_refresh_match_labels()
-	_show_result(_compose_result_text(_local_rank, tr("TXT_TETRIS33_REMATCH_READY")), not _rematch_declined)
+	_show_rank_result(not _rematch_declined)
 	_last_vote_statuses.clear()
 	_update_vote_list(_last_vote_statuses)
 	_save_and_cleanup_data()
@@ -964,6 +1064,9 @@ func _on_tetris33_match_finished(payload: Dictionary) -> void:
 
 func _on_rematch_pressed() -> void:
 	if not _match_finished or _rematch_requested or _rematch_declined:
+		return
+	if not _is_network_match():
+		get_tree().reload_current_scene()
 		return
 	_rematch_requested = true
 	if btn_restart:
@@ -974,11 +1077,14 @@ func _on_rematch_pressed() -> void:
 
 func _on_lobby_pressed() -> void:
 	_save_and_cleanup_data()
+	if not _is_network_match():
+		UITheme.goto_scene("res://scenes/ui/main.tscn")
+		return
 	if _match_finished:
 		NetworkManager.decline_rematch()
 	else:
 		NetworkManager.leave_room()
-	get_tree().change_scene_to_file("res://scenes/ui/multiplayer_lobby.tscn")
+	UITheme.goto_scene("res://scenes/ui/multiplayer_lobby.tscn")
 
 
 func _on_rematch_status_received(payload: Dictionary) -> void:
@@ -992,11 +1098,11 @@ func _on_rematch_status_received(payload: Dictionary) -> void:
 		if btn_restart:
 			btn_restart.disabled = true
 		if result_label and _match_finished:
-			_set_result_subtitle(tr("TXT_TETRIS33_REMATCH_DECLINED"))
+			_set_result_subtitle("TXT_TETRIS33_REMATCH_DECLINED")
 		_update_vote_list(payload.get("statuses", []))
 		return
 	if result_label and _match_finished:
-		_set_result_subtitle(_trf("TXT_TETRIS33_REMATCH_WAITING", [ready_count, total_count]))
+		_set_result_subtitle("TXT_TETRIS33_REMATCH_WAITING", [ready_count, total_count])
 	_update_vote_list(payload.get("statuses", []))
 
 
@@ -1093,17 +1199,21 @@ func _vote_status_text(status: String) -> String:
 			return tr("TXT_REMATCH_WAITING")
 
 
-func _log_attack(text: String) -> void:
+func _log_attack(key: String, args: Array = []) -> void:
+	_attack_log_key = key
+	_attack_log_args = args
 	if label_attack_log == null:
 		return
-	label_attack_log.text = text
+	label_attack_log.text = _trf(key, args)
 
 
 func _build_spin_text(piece_type: int, is_t_spin: bool) -> String:
 	if is_t_spin:
 		return "T-SPIN!"
 	var piece_name := _piece_type_to_letter(piece_type)
-	return "SPIN!" if piece_name.is_empty() else "%s-SPIN!" % piece_name
+	if piece_name.is_empty():
+		return "SPIN!"
+	return ("%s-SPIN MINI" if last_spin_mini else "%s-SPIN!") % piece_name
 
 
 func _piece_type_to_letter(piece_type: int) -> String:
@@ -1165,3 +1275,20 @@ func _show_combo_text(combo_count: int) -> void:
 		if label_combo_text:
 			label_combo_text.visible = false
 	)
+
+func _on_server_disconnected() -> void:
+	if not _was_network_match:
+		return
+	_server_disconnected = true
+	_match_finished = true
+	_freeze_local_play(_local_eliminated)
+	if bgm:
+		bgm.stop()
+	_show_result(tr("TXT_DISCONNECTED"), false)
+	_result_title_key = "TXT_DISCONNECTED"
+	_refresh_match_labels()
+	_save_and_cleanup_data()
+
+
+func _exit_tree() -> void:
+	_save_and_cleanup_data()

@@ -1,66 +1,12 @@
 [gd_scene format=3 uid="uid://dvueqf22sfge1"]
 
 [ext_resource type="Script" uid="uid://cw4uaiot1xqqt" path="res://scripts/ui/login_screen.gd" id="1_login"]
-[ext_resource type="Texture2D" uid="uid://c1176m2llbj8n" path="res://assets/images/bg_login.jpg" id="2_vtwjt"]
 [ext_resource type="PackedScene" path="res://scenes/ui/settings_menu.tscn" id="3_stngs"]
+[ext_resource type="PackedScene" path="res://scenes/ui/ui_background.tscn" id="ui_bg_scene"]
+[ext_resource type="Script" path="res://scripts/ui/hero_title.gd" id="4_hero"]
+[ext_resource type="Script" path="res://scripts/ui/key_hints.gd" id="5_keys"]
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_input_normal"]
-bg_color = Color(0.098, 0.098, 0.133, 1)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(0.2, 0.2, 0.28, 1)
-corner_radius_top_left = 4
-corner_radius_top_right = 4
-corner_radius_bottom_right = 4
-corner_radius_bottom_left = 4
-expand_margin_left = 8.0
-expand_margin_right = 8.0
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_input_focus"]
-bg_color = Color(0.12, 0.12, 0.16, 1)
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
-border_color = Color(0.5, 0.5, 0.8, 1)
-corner_radius_top_left = 4
-corner_radius_top_right = 4
-corner_radius_bottom_right = 4
-corner_radius_bottom_left = 4
-expand_margin_left = 8.0
-expand_margin_right = 8.0
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn_normal"]
-bg_color = Color(0.18, 0.18, 0.27, 1)
-corner_radius_top_left = 6
-corner_radius_top_right = 6
-corner_radius_bottom_right = 6
-corner_radius_bottom_left = 6
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn_pressed"]
-bg_color = Color(0.12, 0.12, 0.2, 1)
-corner_radius_top_left = 6
-corner_radius_top_right = 6
-corner_radius_bottom_right = 6
-corner_radius_bottom_left = 6
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_btn_hover"]
-bg_color = Color(0.25, 0.25, 0.4, 1)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(0.6, 0.6, 1, 1)
-corner_radius_top_left = 6
-corner_radius_top_right = 6
-corner_radius_bottom_right = 6
-corner_radius_bottom_left = 6
-shadow_color = Color(0.6, 0.6, 1, 0.15)
-shadow_size = 8
-
-[node name="LoginScreen" type="Control" unique_id=505491852]
+[node name="LoginScreen" type="Control"]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -69,13 +15,10 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_login")
 
-[node name="CustomBackground" type="TextureRect" parent="." unique_id=747458321]
-layout_mode = 0
-offset_right = 1280.0
-offset_bottom = 1280.0
-texture = ExtResource("2_vtwjt")
+[node name="CustomBackground" parent="." instance=ExtResource("ui_bg_scene")]
+layout_mode = 1
 
-[node name="CenterContainer" type="CenterContainer" parent="." unique_id=1248599727]
+[node name="CenterContainer" type="CenterContainer" parent="."]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -83,75 +26,55 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="VBoxContainer" type="VBoxContainer" parent="CenterContainer" unique_id=1138924190]
+[node name="Card" type="VBoxContainer" parent="CenterContainer"]
+custom_minimum_size = Vector2(540, 0)
 layout_mode = 2
-theme_override_constants/separation = 40
+theme_override_constants/separation = 34
 
-[node name="TitleLabel" type="Label" parent="CenterContainer/VBoxContainer" unique_id=546134399]
+[node name="HeroTitle" type="Control" parent="CenterContainer/Card"]
+custom_minimum_size = Vector2(0, 160)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.9, 0.9, 0.95, 1)
-theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.5)
-theme_override_constants/shadow_offset_x = 2
-theme_override_constants/shadow_offset_y = 2
-theme_override_constants/shadow_outline_size = 4
-theme_override_font_sizes/font_size = 64
-text = "WIDE TETRIS"
+mouse_filter = 2
+script = ExtResource("4_hero")
 horizontal_alignment = 1
 
-[node name="SubtitleLabel" type="Label" parent="CenterContainer/VBoxContainer" unique_id=1546112400]
+[node name="Row" type="HBoxContainer" parent="CenterContainer/Card"]
 layout_mode = 2
-theme_override_colors/font_color = Color(0.6, 0.6, 0.7, 1)
-theme_override_constants/line_spacing = -10
-theme_override_font_sizes/font_size = 18
-text = "CONNECTING TO RELAY..."
-horizontal_alignment = 1
+theme_override_constants/separation = 12
 
-[node name="Spacer" type="Control" parent="CenterContainer/VBoxContainer" unique_id=1641811019]
-custom_minimum_size = Vector2(0, 20)
-layout_mode = 2
-
-[node name="HBoxContainer" type="HBoxContainer" parent="CenterContainer/VBoxContainer" unique_id=1044915067]
-layout_mode = 2
-alignment = 1
-
-[node name="Label" type="Label" parent="CenterContainer/VBoxContainer/HBoxContainer" unique_id=1845026666]
-layout_mode = 2
-theme_override_colors/font_color = Color(0.7, 0.7, 0.8, 1)
-theme_override_font_sizes/font_size = 20
-text = "CALLSIGN: "
-
-[node name="NameInput" type="LineEdit" parent="CenterContainer/VBoxContainer/HBoxContainer" unique_id=869069792]
+[node name="NameInput" type="LineEdit" parent="CenterContainer/Card/Row"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(250, 40)
+custom_minimum_size = Vector2(0, 58)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.9, 0.9, 1, 1)
-theme_override_colors/caret_color = Color(1, 1, 1, 1)
+size_flags_horizontal = 3
 theme_override_font_sizes/font_size = 20
-theme_override_styles/normal = SubResource("StyleBoxFlat_input_normal")
-theme_override_styles/read_only = SubResource("StyleBoxFlat_input_normal")
-theme_override_styles/focus = SubResource("StyleBoxFlat_input_focus")
 placeholder_text = "ENTER NAME"
-alignment = 1
 max_length = 12
 caret_blink = true
 
-[node name="LoginButton" type="Button" parent="CenterContainer/VBoxContainer" unique_id=544402641]
+[node name="LoginButton" type="Button" parent="CenterContainer/Card/Row"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(200, 50)
+custom_minimum_size = Vector2(150, 58)
 layout_mode = 2
-size_flags_horizontal = 4
-theme_override_colors/font_color = Color(0.9, 0.9, 1, 1)
-theme_override_font_sizes/font_size = 22
-theme_override_styles/normal = SubResource("StyleBoxFlat_btn_normal")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_btn_pressed")
-theme_override_styles/hover = SubResource("StyleBoxFlat_btn_hover")
-theme_override_styles/focus = SubResource("StyleBoxFlat_btn_hover")
+theme_type_variation = &"AccentButton"
+theme_override_font_sizes/font_size = 19
 text = "INITIALIZE"
 
-[node name="BtnSettings" parent="." unique_id=747060010 instance=ExtResource("3_stngs")]
+[node name="KeyHints" type="Control" parent="CenterContainer/Card"]
+layout_mode = 2
+size_flags_horizontal = 4
+mouse_filter = 2
+script = ExtResource("5_keys")
+keys = PackedStringArray("enter")
+
+[node name="BtnSettings" parent="." instance=ExtResource("3_stngs")]
 unique_name_in_owner = true
-layout_mode = 0
-offset_left = 1183.0
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -76.0
 offset_top = 20.0
-offset_right = 1263.0
-offset_bottom = 100.0
+offset_right = -32.0
+offset_bottom = 64.0
+grow_horizontal = 0

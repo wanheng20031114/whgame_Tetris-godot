@@ -26,20 +26,19 @@ theme_override_constants/separation = 14
 [node name="ObjectiveLabel" type="Label" parent="SidePanel/SideMargin/SideBox"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_colors/font_color = Color(0.058824, 0.121569, 0.270588, 1)
 theme_override_font_sizes/font_size = 22
 
 [node name="FeedbackLabel" type="Label" parent="SidePanel/SideMargin/SideBox"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_colors/font_color = Color(0.278431, 0.333333, 0.411765, 1)
+theme_type_variation = &"MutedLabel"
 theme_override_font_sizes/font_size = 15
 autowrap_mode = 3
 
 [node name="FocusHint" type="Label" parent="SidePanel/SideMargin/SideBox"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_colors/font_color = Color(0.027451, 0.521569, 0.921569, 1)
+theme_type_variation = &"AccentLabel"
 theme_override_font_sizes/font_size = 14
 text = "点击右侧棋盘聚焦，使用游戏按键操作方块。
 方向键会锁定为方块操作，Esc 取消棋盘聚焦。

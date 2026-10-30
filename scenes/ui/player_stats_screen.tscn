@@ -5,21 +5,16 @@
 [ext_resource type="PackedScene" path="res://scenes/ui/settings_menu.tscn" id="3_cjdni"]
 [ext_resource type="PackedScene" path="res://scenes/ui/stats_card.tscn" id="4_stats_card"]
 [ext_resource type="PackedScene" path="res://scenes/ui/history_card.tscn" id="5_history_card"]
+[ext_resource type="PackedScene" path="res://scenes/ui/ui_background.tscn" id="ui_bg_scene"]
+[ext_resource type="Script" path="res://scripts/ui/icon_button.gd" id="6_iconbtn"]
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_topbar"]
-bg_color = Color(0.08, 0.08, 0.11, 1)
-border_width_bottom = 2
-border_color = Color(0.2, 0.2, 0.3, 1)
+[sub_resource type="StyleBoxEmpty" id="StyleBoxEmpty_top"]
+content_margin_left = 8.0
+content_margin_top = 10.0
+content_margin_right = 8.0
+content_margin_bottom = 4.0
 
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_fnpq7"]
-bg_color = Color(0, 0.9882353, 1, 1)
-draw_center = false
-border_width_left = 2
-border_width_top = 2
-border_width_right = 2
-border_width_bottom = 2
-
-[node name="PlayerStatsScreen" type="Control" unique_id=534328314]
+[node name="PlayerStatsScreen" type="Control"]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -28,110 +23,114 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_stats")
 
-[node name="Background" type="ColorRect" parent="." unique_id=1400814482]
+[node name="Background" parent="." instance=ExtResource("ui_bg_scene")]
+layout_mode = 1
+
+[node name="MainVBox" type="VBoxContainer" parent="."]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+offset_left = 20.0
+offset_top = 6.0
+offset_right = -20.0
+offset_bottom = -20.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.05, 0.05, 0.08, 1)
+theme_override_constants/separation = 14
 
-[node name="MainVBox" type="VBoxContainer" parent="." unique_id=1069843735]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-
-[node name="TopBar" type="Panel" parent="MainVBox" unique_id=850339189]
-custom_minimum_size = Vector2(0, 60)
+[node name="TopBar" type="PanelContainer" parent="MainVBox"]
+custom_minimum_size = Vector2(0, 50)
 layout_mode = 2
-theme_override_styles/panel = SubResource("StyleBoxFlat_topbar")
+theme_override_styles/panel = SubResource("StyleBoxEmpty_top")
 
-[node name="HBox" type="HBoxContainer" parent="MainVBox/TopBar" unique_id=1289222385]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-offset_bottom = -2.0
-grow_horizontal = 2
-grow_vertical = 2
-theme_override_constants/separation = 16
-
-[node name="LeftMargin" type="Control" parent="MainVBox/TopBar/HBox" unique_id=394929115]
-custom_minimum_size = Vector2(20, 0)
+[node name="HBox" type="HBoxContainer" parent="MainVBox/TopBar"]
 layout_mode = 2
+theme_override_constants/separation = 14
 
-[node name="BtnBack" type="Button" parent="MainVBox/TopBar/HBox" unique_id=376666311]
+[node name="BtnBack" type="Button" parent="MainVBox/TopBar/HBox"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(100, 40)
+custom_minimum_size = Vector2(44, 44)
 layout_mode = 2
-theme_override_colors/font_color = Color(0.875, 0.875, 0.875, 1)
-theme_override_font_sizes/font_size = 24
-theme_override_styles/focus = SubResource("StyleBoxFlat_fnpq7")
-text = "BACK"
+size_flags_vertical = 4
+script = ExtResource("6_iconbtn")
+icon_name = "back"
 
-[node name="LblTitle" type="Label" parent="MainVBox/TopBar/HBox" unique_id=708102119]
+[node name="LblTitle" type="Label" parent="MainVBox/TopBar/HBox"]
 unique_name_in_owner = true
 layout_mode = 2
-theme_override_colors/font_color = Color(0.9, 0.9, 1, 1)
+theme_type_variation = &"TitleLabel"
 theme_override_font_sizes/font_size = 28
 text = "PLAYER STATS"
 vertical_alignment = 1
 
-[node name="ScrollContainer" type="ScrollContainer" parent="MainVBox" unique_id=246376815]
+[node name="Body" type="HBoxContainer" parent="MainVBox"]
 layout_mode = 2
 size_flags_vertical = 3
-horizontal_scroll_mode = 0
+theme_override_constants/separation = 20
 
-[node name="MarginContainer" type="MarginContainer" parent="MainVBox/ScrollContainer" unique_id=1658143196]
+[node name="RadarCard" type="PanelContainer" parent="MainVBox/Body"]
+custom_minimum_size = Vector2(470, 0)
 layout_mode = 2
-size_flags_horizontal = 3
-theme_override_constants/margin_left = 30
-theme_override_constants/margin_top = 30
-theme_override_constants/margin_right = 30
-theme_override_constants/margin_bottom = 30
+theme_type_variation = &"CardPanel"
 
-[node name="ContentVBox" type="VBoxContainer" parent="MainVBox/ScrollContainer/MarginContainer" unique_id=1201571114]
+[node name="RadarVBox" type="VBoxContainer" parent="MainVBox/Body/RadarCard"]
 layout_mode = 2
-size_flags_horizontal = 3
-theme_override_constants/separation = 24
+theme_override_constants/separation = 8
 
-[node name="LblNoData" type="Label" parent="MainVBox/ScrollContainer/MarginContainer/ContentVBox" unique_id=1278232790]
+[node name="LblNoData" type="Label" parent="MainVBox/Body/RadarCard/RadarVBox"]
 unique_name_in_owner = true
 visible = false
 layout_mode = 2
-theme_override_colors/font_color = Color(0.55, 0.58, 0.7, 1)
-theme_override_font_sizes/font_size = 18
+theme_type_variation = &"MutedLabel"
 text = "No data yet. Play a game first!"
 horizontal_alignment = 1
+autowrap_mode = 3
 
-[node name="RadarCenter" type="CenterContainer" parent="MainVBox/ScrollContainer/MarginContainer/ContentVBox" unique_id=1891034087]
+[node name="RadarCenter" type="CenterContainer" parent="MainVBox/Body/RadarCard/RadarVBox"]
 layout_mode = 2
-size_flags_horizontal = 3
+size_flags_vertical = 3
 
-[node name="RadarChart" type="Control" parent="MainVBox/ScrollContainer/MarginContainer/ContentVBox/RadarCenter" unique_id=156560388]
+[node name="RadarChart" type="Control" parent="MainVBox/Body/RadarCard/RadarVBox/RadarCenter"]
 unique_name_in_owner = true
-custom_minimum_size = Vector2(448, 448)
+custom_minimum_size = Vector2(410, 410)
 layout_mode = 2
 script = ExtResource("2_radar")
+auto_minimum_size = false
 
-[node name="StatsCard" parent="MainVBox/ScrollContainer/MarginContainer/ContentVBox" unique_id=840100975 instance=ExtResource("4_stats_card")]
+[node name="ScrollContainer" type="ScrollContainer" parent="MainVBox/Body"]
+layout_mode = 2
+size_flags_horizontal = 3
+horizontal_scroll_mode = 0
+
+[node name="MarginContainer" type="MarginContainer" parent="MainVBox/Body/ScrollContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/margin_left = 6
+theme_override_constants/margin_top = 6
+theme_override_constants/margin_right = 6
+theme_override_constants/margin_bottom = 24
+
+[node name="ContentVBox" type="VBoxContainer" parent="MainVBox/Body/ScrollContainer/MarginContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 20
+
+[node name="StatsCard" parent="MainVBox/Body/ScrollContainer/MarginContainer/ContentVBox" instance=ExtResource("4_stats_card")]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="HistoryCard" parent="MainVBox/ScrollContainer/MarginContainer/ContentVBox" unique_id=1269424795 instance=ExtResource("5_history_card")]
+[node name="HistoryCard" parent="MainVBox/Body/ScrollContainer/MarginContainer/ContentVBox" instance=ExtResource("5_history_card")]
 unique_name_in_owner = true
 layout_mode = 2
 
-[node name="BottomSpacer" type="Control" parent="MainVBox/ScrollContainer/MarginContainer/ContentVBox" unique_id=1358430928]
-custom_minimum_size = Vector2(0, 40)
-layout_mode = 2
-
-[node name="SettingsMenu" parent="." unique_id=1317418228 instance=ExtResource("3_cjdni")]
-layout_mode = 0
-offset_left = 1164.0
-offset_right = 1219.0
-offset_bottom = 58.0
+[node name="SettingsMenu" parent="." instance=ExtResource("3_cjdni")]
+layout_mode = 1
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -72.0
+offset_top = 16.0
+offset_right = -28.0
+offset_bottom = 60.0
+grow_horizontal = 0
