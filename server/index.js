@@ -136,8 +136,18 @@ function createGameServer({ WebSocket = require('ws'), http = require('http'),
             && p.match_id === room.matchId ? room : null;
     }
     function matchPayload(room, p) { return { ...p, match_id: room.matchId }; }
+    function sendToRoom(room, type, payloadForPlayer, except = null) {
+        // send() may synchronously remove a peer and broadcast a newer state.
+        // Departures replace room.players; never resume the obsolete broadcast.
+        const recipients = room.players, matchId = room.matchId, status = room.status;
+        for (const p of recipients) {
+            if (rooms.get(room.id) !== room || room.players !== recipients
+                || room.matchId !== matchId || room.status !== status) break;
+            if (p !== except) send(p, type, payloadForPlayer(p));
+        }
+    }
     function broadcast(room, type, payload, except = null) {
-        for (const p of [...room.players]) if (p !== except) send(p, type, payload);
+        sendToRoom(room, type, () => payload, except);
     }
     function roomList() { return [...rooms.values()].filter(r => r.status === 'waiting').map(serializeRoom); }
     function broadcastRoomList() {
@@ -271,12 +281,12 @@ function createGameServer({ WebSocket = require('ws'), http = require('http'),
         if (room.mode === 'tetris33') {
             const statuses = room.players.map(p => ({ id: clients.get(p).id, name: clients.get(p).name, status: room.rematch.get(p) || 'none' }));
             const ready = statuses.filter(s => s.status === 'ready').length;
-            for (const p of [...room.players]) send(p, 'rematch_status', matchPayload(room,
+            sendToRoom(room, 'rematch_status', p => matchPayload(room,
                 { mode: room.mode, my_status: room.rematch.get(p) || 'none',
                     opponent_status: room.rematchLocked ? 'declined' : 'none', ready_count: ready,
                     total_count: statuses.length, declined: room.rematchLocked, statuses }));
         } else {
-            for (const p of [...room.players]) send(p, 'rematch_status', matchPayload(room,
+            sendToRoom(room, 'rematch_status', p => matchPayload(room,
                 { my_status: room.rematch.get(p) || 'none', opponent_status: room.rematch.get(room.players.find(other => other !== p)) || 'none' }));
         }
     }

@@ -86,6 +86,20 @@ func _run() -> void:
 	check(attacks == [12], "old round packet rejected after new start")
 	manager.disconnect_from_server()
 	check(manager.current_room_id.is_empty() and manager.match_id.is_empty(), "disconnect clears room and round")
+	var lobby := {"room_id": "ROOM", "player_count": 1, "owner_slot": 1, "min_players": 3, "max_players": 33,
+		"players": [{"id": "local", "name": "A", "slot": 1}]}
+	manager._handle_message(packet("tetris33_lobby_update", lobby))
+	check(manager.current_room_id.is_empty(), "late lobby state cannot resurrect a departed room")
+	manager.current_room_id = "OTHER"
+	manager._handle_message(packet("tetris33_lobby_update", lobby))
+	check(manager.current_room_id == "OTHER", "old-room lobby cannot replace a newly joined room")
+	manager.current_room_id = "ROOM"
+	manager._handle_message(packet("tetris33_lobby_update", lobby))
+	check(manager.tetris33_players.size() == 1, "current waiting-room lobby updates normally")
+	manager.match_id = "playing"
+	manager.tetris33_players.clear()
+	manager._handle_message(packet("tetris33_lobby_update", lobby))
+	check(manager.tetris33_players.is_empty(), "late lobby cannot replace the active match roster")
 
 	# Malformed envelopes must not execute Dictionary methods on other Variants.
 	for text in ["null", "[]", "1", "true", "{\"type\":\"attack\",\"payload\":[]}"]:

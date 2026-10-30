@@ -101,5 +101,7 @@ func _run() -> void:
 	check(full_logger.flush_pending() != OK, "full diagnostic file rejects append")
 	check(StorageBudget._size(full_logger._path) == PrototypeLogger.FILE_LIMIT, "diagnostic file never exceeds 8 MiB")
 	check(full_logger._stopped, "full diagnostic recording stops")
+	await process_frame
+	await create_timer(0.5).timeout
 	print(JSON.stringify({"checks": checks, "failures": failures}))
 	quit(0 if failures.is_empty() else 1)

@@ -196,7 +196,6 @@ offset_left = 12.0
 offset_top = 5.0
 offset_right = 186.0
 offset_bottom = 41.0
-theme_override_colors/font_color = Color(1, 0.78, 0.22, 1)
 theme_override_font_sizes/font_size = 24
 text = "TETRIS33"
 vertical_alignment = 1
@@ -225,11 +224,18 @@ unique_name_in_owner = true
 position = Vector2(0, 52)
 cell_size = 29.0
 
-[node name="CurrentPiece" parent="PlayerFocus/Board" unique_id=237738877 instance=ExtResource("4_piece")]
+[node name="PieceClip" type="Control" parent="PlayerFocus/Board"]
+clip_contents = true
+layout_mode = 0
+offset_right = 290.0
+offset_bottom = 580.0
+mouse_filter = 2
+
+[node name="CurrentPiece" parent="PlayerFocus/Board/PieceClip" unique_id=237738877 instance=ExtResource("4_piece")]
 unique_name_in_owner = true
 cell_size = 29.0
 
-[node name="GhostPiece" parent="PlayerFocus/Board" unique_id=765790715 instance=ExtResource("4_piece")]
+[node name="GhostPiece" parent="PlayerFocus/Board/PieceClip" unique_id=765790715 instance=ExtResource("4_piece")]
 unique_name_in_owner = true
 cell_size = 29.0
 

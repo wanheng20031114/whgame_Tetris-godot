@@ -22,6 +22,9 @@ func add_preview(shape: Array, origin: Vector2, color: Color) -> void:
 func _draw() -> void:
 	if _colors.is_empty():
 		return
+	# Fill the gaps between cells as well; otherwise the light panel shows
+	# through as bright white lines around every square.
+	draw_rect(Rect2(0, 0, 300, 600), _colors[0])
 	for r in mini(_cells.size(), 20):
 		var row: Array = _cells[r]
 		for c in mini(row.size(), 10):

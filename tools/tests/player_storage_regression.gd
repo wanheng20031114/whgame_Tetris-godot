@@ -36,14 +36,22 @@ func _run() -> void:
 	check(first.end_session(10, 1, 0).is_empty(), "end_session is idempotent")
 	var stats := PlayerDataStore.load_stats()
 	check(int(stats.get("total_games", 0)) == 1, "successful stats counted once")
-	for malformed in ["{broken", '{"radar_scores":[],"history":[]}', '{"radar_scores":{},"history":{}}', '{"radar_scores":{"speed":[]},"history":[]}']:
+	for malformed in ["{broken", '{"radar_scores":[],"history":[]}', '{"radar_scores":{},"history":{}}', '{"radar_scores":{"speed":[]},"history":[]}', '{"total_games":{},"history":[]}', '{"history":[1]}', '{"history":[{"score":{}}]}', '{"history":[{"radar_scores":{"speed":[]}}]}']:
 		var path := PlayerDataStore.get_stats_path()
 		var original: PackedByteArray = malformed.to_utf8_buffer()
 		check(StorageBudget.write_atomic(path, original, 4000000) == OK, "corrupt stats fixture saved")
+		var safe_stats := PlayerDataStore.load_stats()
+		check(safe_stats.get("total_games") is int and safe_stats.total_games == 0 and safe_stats.get("history") is Array and safe_stats.history.is_empty(), "corrupt stats never reach the statistics screen: " + malformed)
 		check(PlayerDataStore.update_stats("Fixture", {"session_id": "malformed-test"}, {}) != OK, "corrupt stats rejected")
 		var unchanged := StorageBudget.read_bounded(path, 4000000)
 		check(unchanged.error == OK and unchanged.data == original, "corrupt primary retained without overwrite")
 		check(StorageBudget.write_atomic(StorageBudget.data_root().path_join("lock-check.txt"), "ok".to_utf8_buffer(), 2) == OK, "transaction lock released after rejected stats")
+	var screen: Control = load("res://scenes/ui/player_stats_screen.tscn").instantiate()
+	root.add_child(screen)
+	await process_frame
+	check(screen.lbl_total_games.text == "0" and screen.lbl_no_data.visible, "statistics screen opens safely with damaged history")
+	screen.queue_free()
+	await process_frame
 	check(StorageBudget.configure_root_for_tests(base.path_join("player-full"), 4000) == OK, "full-budget isolated root")
 	var prior := '{"total_games":7,"radar_scores":{},"history":[]}'.to_utf8_buffer()
 	check(StorageBudget.write_atomic(PlayerDataStore.get_stats_path(), prior, 4000000) == OK, "prior stats fixture")

@@ -368,7 +368,10 @@ func _load_session_data(session_id: String) -> Dictionary:
 	if loaded.error != OK:
 		return {}
 	var parsed = JSON.parse_string((loaded.data as PackedByteArray).get_string_from_utf8())
-	return parsed if parsed is Dictionary else {}
+	if not ReplaySchema.valid_session(parsed):
+		StorageBudget.report_error("Session contains invalid fields; the original file was retained: " + path)
+		return {}
+	return parsed
 
 
 func _on_back_pressed() -> void:

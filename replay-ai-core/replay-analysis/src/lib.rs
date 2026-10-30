@@ -174,6 +174,14 @@ pub fn recommend_plan(
     incoming_garbage: u32,
     max_steps: usize,
 ) -> Option<Recommendation> {
+    // Cold Clear consumes the current piece to seed an empty hold. Without a
+    // visible preview there is no known search generation (speculation is off).
+    // Legacy snapshots can omit the queue entirely; do not initialize the bot
+    // or invent unseen pieces in either case.
+    let required_pieces = if state.use_hold && state.hold.is_none() { 2 } else { 1 };
+    if state.next.len() < required_pieces {
+        return None;
+    }
     let mut options = Options::default();
     options.mode = state.movement_mode;
     options.spawn_rule = state.spawn_rule;
@@ -316,6 +324,36 @@ fn add_ranked_moves(
 #[cfg(test)]
 mod queue_tests {
     use super::*;
+
+    #[test]
+    fn recommendations_require_a_known_current_piece() {
+        for use_hold in [false, true] {
+            for hold in [None, Some(Piece::T)] {
+                let mut state = AnalysisState::default();
+                state.use_hold = use_hold;
+                state.hold = hold;
+                assert!(recommend_plan(&state, Standard::default(), 32, 0, 3).is_none());
+            }
+        }
+    }
+
+    #[test]
+    fn empty_hold_requires_a_visible_preview_for_search() {
+        let mut state = AnalysisState::default();
+        state.next.push(Piece::I);
+        assert!(recommend_plan(&state, Standard::default(), 32, 0, 3).is_none());
+        // The current placement can still be scored without inventing a preview.
+        assert!(!rank_current_moves(&state, None, &Standard::default()).is_empty());
+    }
+
+    #[test]
+    fn known_queue_still_produces_a_recommendation() {
+        let mut state = AnalysisState::default();
+        state.next = vec![Piece::I, Piece::O, Piece::T];
+        let plan = recommend_plan(&state, Standard::default(), 32, 0, 3).unwrap();
+        assert!(!plan.steps.is_empty());
+        assert!(plan.steps.len() <= 3);
+    }
 
     #[test]
     fn current_piece_without_preview_still_has_legal_non_hold_moves() {

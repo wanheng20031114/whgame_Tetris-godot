@@ -53,6 +53,39 @@ function fixture(t) {
 const messages = (ws, type) => ws.sent.filter(m => m.type === type);
 const lastError = ws => messages(ws, 'error').at(-1)?.payload.message;
 
+test('a failed lobby send cannot resurrect a closed room on another client', t => {
+    const f = fixture(t), owner = f.socket('owner'), guest = f.socket('guest');
+    f.msg(owner, 'create_tetris33_room');
+    const roomId = f.clients.get(owner).room_id;
+    const send = owner.send;
+    owner.send = (message, cb) => JSON.parse(message).type === 'tetris33_lobby_update'
+        ? cb(new Error('lobby send failed')) : send(message, cb);
+    f.msg(guest, 'join_room', { room_id: roomId });
+    assert.equal(f.rooms.size, 0);
+    assert.equal(f.clients.get(guest).room_id, null);
+    const closed = guest.sent.findIndex(message => message.type === 'room_closed');
+    assert(closed >= 0);
+    assert.equal(guest.sent.slice(closed + 1).filter(message => message.type === 'tetris33_lobby_update').length, 0);
+});
+
+test('a lobby departure during broadcast cannot overwrite the updated roster', t => {
+    const f = fixture(t), p = [f.socket('owner'), f.socket('leaver'), f.socket('survivor')];
+    f.msg(p[0], 'create_tetris33_room');
+    const roomId = f.clients.get(p[0]).room_id;
+    f.msg(p[1], 'join_room', { room_id: roomId });
+    const send = p[1].send;
+    p[1].send = (message, cb) => JSON.parse(message).type === 'tetris33_lobby_update'
+        ? cb(new Error('lobby send failed')) : send(message, cb);
+    f.msg(p[2], 'join_room', { room_id: roomId });
+    const room = f.rooms.get(roomId);
+    assert.equal(room.players.length, 2);
+    for (const survivor of room.players) {
+        const lobby = messages(survivor, 'tetris33_lobby_update').at(-1).payload;
+        assert.equal(lobby.player_count, 2);
+        assert.deepEqual(lobby.players.map(player => player.id), room.players.map(ws => f.clients.get(ws).id));
+    }
+});
+
 test('repeat login preserves identity/membership and disconnect leaves no orphan', t => {
     const f = fixture(t), a = f.socket('A'); f.msg(a, 'create_room');
     const before = { ...f.clients.get(a) }; f.advance(1100); f.msg(a, 'login', { name: 'A2' });

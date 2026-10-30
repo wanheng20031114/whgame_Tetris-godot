@@ -183,6 +183,11 @@ func _test_session_and_analysis_refresh() -> void:
 	_check(not _replay.assistant_panel._plan_preview, "empty replay clears prior preview state")
 	_check(_replay.assistant_panel.plan_button.disabled or not _replay.assistant_panel.plan_button.visible,
 		"empty replay cannot open a stale plan")
+	for locale in ["zh", "en", "ja"]:
+		TranslationServer.set_locale(locale)
+		await _settle()
+		_check(_replay._summary_value_labels["ai_score"].text == tr("TXT_NA"),
+			locale + ": empty replay summary refreshes its unknown-score label")
 	_replay._on_session_selected(_session_files[0])
 	await _settle()
 	_check_current_review(0, "loading a populated replay after an empty one")

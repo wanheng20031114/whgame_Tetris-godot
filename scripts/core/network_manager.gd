@@ -176,6 +176,8 @@ func _handle_message(json_str: String) -> void:
 		return
 	if type in ["game_start", "game_start_tetris33"] and current_room_id.is_empty():
 		return
+	if type == "tetris33_lobby_update" and (payload["room_id"] != current_room_id or not match_id.is_empty()):
+		return
 
 	match type:
 		"login_success":

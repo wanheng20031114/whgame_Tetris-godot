@@ -29,6 +29,8 @@ const MAX_HISTORY_ENTRIES: int = 500
 const MAX_SESSION_BYTES: int = StorageBudget.SESSION_BYTES
 const MAX_STATS_BYTES: int = 4_000_000
 const MAX_PENDING_SESSIONS: int = 2
+const STATS_NUMBERS := ["total_games", "total_play_time_seconds", "total_pieces_placed", "total_lines_cleared", "best_score", "best_lines", "best_pps", "best_apm"]
+const HISTORY_NUMBERS := ["score", "lines", "level", "duration_seconds", "pieces_placed", "pps", "apm", "app", "kpp", "structure", "stability"]
 static var _pending_saves: Array[Dictionary] = []
 
 
@@ -178,17 +180,56 @@ static func load_stats() -> Dictionary:
 	if json.parse(content) != OK:
 		StorageBudget.report_error("Statistics are damaged; the existing file and backups were retained.")
 		return _default_stats()
-	if not (json.data is Dictionary):
+	if not _valid_stats(json.data):
+		StorageBudget.report_error("Statistics contain invalid fields; the existing file and backups were retained.")
 		return _default_stats()
 
 	var stats: Dictionary = json.data
-	if not stats.has("radar_scores") or not (stats["radar_scores"] is Dictionary):
+	if not stats.has("radar_scores"):
 		stats["radar_scores"] = {}
 	var radar: Dictionary = stats["radar_scores"]
 	if not radar.has("stability"):
 		radar["stability"] = 0.0
 	stats["radar_scores"] = radar
 	return stats
+
+
+static func _valid_numbers(data: Dictionary, keys: Array) -> bool:
+	for key in keys:
+		if data.has(key) and not ReplaySchema.valid_number(data[key]):
+			return false
+	return true
+
+
+static func _valid_radar(radar: Variant) -> bool:
+	if not radar is Dictionary:
+		return false
+	for value in radar.values():
+		if not ReplaySchema.valid_number(value):
+			return false
+	return true
+
+
+static func _valid_history_entry(entry: Variant) -> bool:
+	if not entry is Dictionary or not _valid_numbers(entry, HISTORY_NUMBERS):
+		return false
+	for key in ["session_id", "date"]:
+		if entry.has(key) and not entry[key] is String:
+			return false
+	return _valid_radar(entry.get("radar_scores", {}))
+
+
+static func _valid_stats(stats: Variant) -> bool:
+	if not stats is Dictionary or not _valid_numbers(stats, STATS_NUMBERS):
+		return false
+	if stats.has("player_name") and not stats.player_name is String:
+		return false
+	if not _valid_radar(stats.get("radar_scores", {})) or not stats.get("history", []) is Array:
+		return false
+	for entry in stats.get("history", []):
+		if not _valid_history_entry(entry):
+			return false
+	return true
 
 
 # ==========================================
@@ -213,20 +254,10 @@ static func _merge_stats(current: Dictionary, player_name: String, history_entry
 	var stats: Dictionary = current if not current.is_empty() else _default_stats()
 	# Returning null rejects corrupt data while the storage transaction owns its
 	# mutex. Do not call StorageBudget from this callback (that would re-enter it).
-	if stats.has("history") and not (stats.history is Array):
+	if not _valid_stats(stats) or not _valid_history_entry(history_entry) or not _valid_radar(radar_scores):
 		return null
-	if stats.has("radar_scores") and not (stats.radar_scores is Dictionary):
-		return null
-	for key in ["total_games", "total_play_time_seconds", "total_pieces_placed", "total_lines_cleared", "best_score", "best_lines", "best_pps", "best_apm"]:
-		if stats.has(key) and not (stats[key] is int or stats[key] is float):
-			return null
-	for value in stats.get("radar_scores", {}).values():
-		if not (value is int or value is float):
-			return null
 	for existing in stats.get("history", []):
-		if not (existing is Dictionary):
-			return null
-		if existing is Dictionary and existing.get("session_id") == history_entry.get("session_id"):
+		if existing.get("session_id") == history_entry.get("session_id"):
 			return stats
 
 	stats["player_name"] = player_name

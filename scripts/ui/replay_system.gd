@@ -184,6 +184,7 @@ func _ready() -> void:
 func _notification(what: int) -> void:
 	if what == NOTIFICATION_TRANSLATION_CHANGED and is_node_ready():
 		_update_texts()
+		_update_session_overview()
 		_update_session_info()
 		_update_analysis_overlay_text()
 		if _current_step >= 0:
@@ -727,17 +728,10 @@ func _load_session(file_name: String) -> void:
 	if loaded.error != OK:
 		return
 	var parsed = JSON.parse_string((loaded.data as PackedByteArray).get_string_from_utf8())
-	if not (parsed is Dictionary) or not (parsed.get("snapshots") is Array):
+	if not ReplaySchema.valid_session(parsed):
 		StorageBudget.report_error("Replay has an invalid session schema; its original file was retained.")
 		return
 	var snapshots: Array = parsed.snapshots
-	if snapshots.size() > PlayerDataCollector.MAX_SNAPSHOTS:
-		StorageBudget.report_error("Replay exceeds the supported 10,000-snapshot limit; its original file was retained.")
-		return
-	for snapshot in snapshots:
-		if not (snapshot is Dictionary) or not _valid_snapshot_boards(snapshot):
-			StorageBudget.report_error("Replay contains an invalid snapshot; its original file was retained.")
-			return
 	_cancel_ai_analysis()
 	if _analysis_active or not _analysis_reservation.is_empty():
 		return
@@ -783,22 +777,6 @@ func _load_session(file_name: String) -> void:
 
 	# 生成时间线
 	_build_timeline()
-
-
-func _valid_snapshot_boards(snapshot: Dictionary) -> bool:
-	for key in ["board_state", "board_state_after_drop", "board_state_after_clear"]:
-		if not snapshot.has(key):
-			continue
-		var cells = snapshot[key]
-		if not (cells is Array) or (not cells.is_empty() and cells.size() != BOARD_ROWS):
-			return false
-		for row in cells:
-			if not (row is Array) or row.size() != BOARD_COLS:
-				return false
-			for value in row:
-				if not (value is int or value is float) or value != int(value) or value < 0 or value >= CELL_COLORS.size():
-					return false
-	return not snapshot.has("next_pieces") or snapshot.next_pieces is Array
 
 
 func _update_session_info() -> void:
@@ -871,16 +849,9 @@ func _try_load_ai_scores_from_path(path: String) -> bool:
 	if loaded.error != OK:
 		return false
 	var parsed = JSON.parse_string((loaded.data as PackedByteArray).get_string_from_utf8())
-	if not (parsed is Dictionary):
+	if not ReplaySchema.valid_analysis(parsed, str(_session_data.get("session_id", "")), _snapshots.size()):
 		return false
 	var data: Dictionary = parsed
-	if int(data.get("storage_protocol", 0)) != 1 or int(data.get("analysis_revision", 0)) != 2 or str(data.get("ai_model_used", "")) != "cold-clear-standard":
-		return false
-	if str(data.get("session_id", "")) != str(_session_data.get("session_id", "")):
-		return false
-	for key in ["ai_scores", "ai_details", "recommendations"]:
-		if not (data.get(key) is Array) or data[key].size() != _snapshots.size():
-			return false
 	_ai_scores = data.ai_scores
 	_ai_details = data.ai_details
 	_ai_recommendations = data.recommendations

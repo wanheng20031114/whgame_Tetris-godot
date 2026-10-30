@@ -7,7 +7,9 @@ func _initialize() -> void:
 	_run.call_deferred()
 
 func _run() -> void:
-	var session := {"session_id": "bounded-fixture", "snapshots": [], "pieces_placed": 0, "final_score": 0}
+	# Empty replays intentionally skip analysis. A minimal legacy snapshot still
+	# exercises real process launch, result validation and cancellation.
+	var session := {"session_id": "bounded-fixture", "snapshots": [{}], "pieces_placed": 1, "final_score": 0}
 	var name := "session_bounded-fixture.json"
 	var source := PlayerDataStore.get_sessions_dir().path_join(name)
 	if StorageBudget.write_atomic(source, JSON.stringify(session).to_utf8_buffer(), PlayerDataStore.MAX_SESSION_BYTES, false) != OK:
@@ -24,8 +26,10 @@ func _run() -> void:
 	else:
 		var read := StorageBudget.read_bounded(result, 64000000)
 		var parsed = JSON.parse_string(read.data.get_string_from_utf8())
-		if parsed.get("storage_protocol") != 1 or parsed.get("session_id") != session.session_id:
-			failures.append("result protocol or session mismatch")
+		if not ReplaySchema.valid_analysis(parsed, session.session_id, 1):
+			failures.append("actual analyzer output does not match the cache schema")
+		elif parsed.ai_details[0].get("quality") != "unknown" or parsed.recommendations[0].get("plan") != null:
+			failures.append("incomplete legacy snapshot invented analysis or a plan")
 	# A new analysis can be cancelled without deleting the original or result.
 	replay._run_ai_analysis(name)
 	var process_id: int = replay._analysis_pid
@@ -37,5 +41,7 @@ func _run() -> void:
 	if not replay._analysis_reservation.is_empty():
 		failures.append("cancel retained active reservation")
 	replay.free()
+	await process_frame
+	await create_timer(0.5).timeout
 	print(JSON.stringify({"test": "replay_process", "failures": failures}))
 	quit(0 if failures.is_empty() else 1)
