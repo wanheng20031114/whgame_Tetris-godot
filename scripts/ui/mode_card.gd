@@ -8,7 +8,7 @@ extends PanelContainer
 @export_enum("cyan", "amber", "pink", "violet", "accent") var hue: String = "cyan":
 	set(v):
 		hue = v
-		queue_redraw()
+		_refresh_paint()
 @export var index: int = 1:
 	set(v):
 		index = v
@@ -18,6 +18,7 @@ extends PanelContainer
 @export var show_arrow: bool = true
 @export var hover_activate: bool = false
 @export var corner_radius: int = 28
+@export var preview_tray: PanelContainer
 
 var active: bool = false:
 	set(v):
@@ -25,41 +26,52 @@ var active: bool = false:
 		set_process(true)
 
 var _act: float = 0.0
-var _t: float = 0.0
+var _padding := StyleBoxEmpty.new()
+var _tray_style: StyleBoxFlat
 
 
 func _ready() -> void:
-	var pad := StyleBoxEmpty.new()
-	pad.content_margin_left = 24
-	pad.content_margin_right = 24
-	if show_arrow:
-		pad.content_margin_top = 22
-	elif show_index:
-		pad.content_margin_top = 20
-	else:
-		pad.content_margin_top = 34
-	pad.content_margin_bottom = 18
-	add_theme_stylebox_override("panel", pad)
+	_padding.content_margin_left = 10 if preview_tray else 24
+	_padding.content_margin_right = _padding.content_margin_left
+	_padding.content_margin_top = 20 if show_index else 34
+	_padding.content_margin_bottom = 18
+	if preview_tray:
+		_padding.content_margin_top = 10
+		_tray_style = preview_tray.get_theme_stylebox("panel").duplicate() as StyleBoxFlat
+		preview_tray.add_theme_stylebox_override("panel", _tray_style)
+	add_theme_stylebox_override("panel", _padding)
 	# 磁贴模式：序号徽章放在标题左侧，给标题留出缩进
 	var title := get_node_or_null("VBoxContainer/Title") as Label
 	if title and show_index and show_arrow:
 		var indent := StyleBoxEmpty.new()
-		indent.content_margin_left = 46
+		indent.content_margin_left = 60
+		indent.content_margin_right = 56
 		title.add_theme_stylebox_override("normal", indent)
+	_refresh_paint()
 	if not Engine.is_editor_hint():
-		UITheme.theme_changed.connect(func(_m): queue_redraw())
+		UITheme.theme_changed.connect(func(_m): _refresh_paint())
 		if hover_activate:
 			mouse_entered.connect(func(): active = true)
 			mouse_exited.connect(func(): active = get_global_rect().has_point(get_global_mouse_position()))
 
 
 func _process(delta: float) -> void:
-	_t += delta
 	var target := 1.0 if active else 0.0
 	_act = move_toward(_act, target, delta * 5.0)
-	queue_redraw()
-	if is_equal_approx(_act, target) and not active:
+	if preview_tray:
+		# 托盘、标题和徽章一起上浮；上下边距总和固定，卡片尺寸稳定。
+		var lift := roundi(4.0 * ease(_act, -2.2))
+		_padding.content_margin_top = 10 - lift
+		_padding.content_margin_bottom = 18 + lift
+	_refresh_paint()
+	if is_equal_approx(_act, target):
 		set_process(false)
+
+
+func _refresh_paint() -> void:
+	if _tray_style:
+		_tray_style.bg_color = _c("surface").lerp(_c(hue), (0.14 if _dark() else 0.18) + 0.08 * ease(_act, -2.2))
+	queue_redraw()
 
 
 func _c(key: String) -> Color:
@@ -118,9 +130,6 @@ func _draw() -> void:
 
 	var font := get_theme_font("font", "TitleLabel")
 	if show_arrow:
-		# 图示托盘：章节色淡底（像物品槽一样承载图示）
-		var tray := _box(_c("surface").lerp(h, (0.14 if dark else 0.18) + 0.08 * e), radius - 8)
-		draw_style_box(tray, Rect2(r.position + Vector2(10, 10), Vector2(r.size.x - 20, r.size.y - 82)))
 		if show_index:
 			_badge(font, Vector2(r.position.x + 41, r.end.y - 36), h, dark)
 	elif show_index:

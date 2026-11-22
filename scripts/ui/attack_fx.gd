@@ -8,6 +8,7 @@ extends Node2D
 
 const LAYER_NAME := "AttackFXLayer"
 const TRAIL_LEN := 14
+const LIGHT_TRAIL_LEN := 5
 
 var _p0: Vector2
 var _p1: Vector2
@@ -23,6 +24,7 @@ var _impacted: bool = false
 var _impact_t: float = 0.0
 var _sparks: Array = []
 var _delay: float = 0.0
+var _light := false
 
 
 ## 发射一枚攻击弹。from/to 为画布（屏幕）坐标。
@@ -30,7 +32,14 @@ var _delay: float = 0.0
 static func fire(host: Node, from: Vector2, to: Vector2, amount: int, color: Color, apex_y: float = NAN, on_impact: Callable = Callable(), delay: float = 0.0) -> AttackFX:
 	if host == null or not host.is_inside_tree():
 		return null
+	var level := VisualEffects.get_level(VisualEffects.ATTACK_TRAIL)
+	if level == VisualEffects.Level.OFF:
+		if on_impact.is_valid():
+			var arrival := delay + _flight_time(from.distance_to(to))
+			host.create_tween().tween_callback(on_impact).set_delay(arrival)
+		return null
 	var fx := AttackFX.new()
+	fx._light = level == VisualEffects.Level.LIGHT
 	_layer_for(host).add_child(fx)
 	fx._setup(from, to, amount, color, apex_y, on_impact, delay)
 	return fx
@@ -45,6 +54,10 @@ static func _layer_for(host: Node) -> CanvasLayer:
 	return host.get_node(LAYER_NAME) as CanvasLayer
 
 
+static func _flight_time(distance: float) -> float:
+	return clampf(0.28 + distance / 2600.0, 0.32, 0.62)
+
+
 func _setup(from: Vector2, to: Vector2, amount: int, color: Color, apex_y: float, on_impact: Callable, delay: float) -> void:
 	var mat := CanvasItemMaterial.new()
 	mat.blend_mode = CanvasItemMaterial.BLEND_MODE_ADD
@@ -54,7 +67,7 @@ func _setup(from: Vector2, to: Vector2, amount: int, color: Color, apex_y: float
 	_delay = delay
 	_radius = clampf(5.0 + amount * 1.6, 6.0, 20.0)
 	var dist := from.distance_to(to)
-	_duration = clampf(0.28 + dist / 2600.0, 0.32, 0.62)
+	_duration = _flight_time(dist)
 	_p0 = from
 	_p3 = to
 	var dx := to.x - from.x
@@ -86,7 +99,7 @@ func _process(delta: float) -> void:
 		var e := _t * _t * (2.2 - 1.2 * _t)
 		var pos := _bezier(e)
 		_trail.push_front(pos)
-		if _trail.size() > TRAIL_LEN:
+		if _trail.size() > (LIGHT_TRAIL_LEN if _light else TRAIL_LEN):
 			_trail.pop_back()
 		if _t >= 1.0:
 			_impact()
@@ -106,18 +119,26 @@ func _process(delta: float) -> void:
 
 func _impact() -> void:
 	_impacted = true
-	for i in range(14):
-		var a := randf() * TAU
-		_sparks.append({
-			"pos": _p3,
-			"vel": Vector2(cos(a), sin(a)) * randf_range(120.0, 380.0),
-			"life": randf_range(0.18, 0.4),
-		})
+	if _light:
+		queue_free()
+	else:
+		for i in range(14):
+			var a := randf() * TAU
+			_sparks.append({
+				"pos": _p3,
+				"vel": Vector2(cos(a), sin(a)) * randf_range(120.0, 380.0),
+				"life": randf_range(0.18, 0.4),
+			})
 	if _on_impact.is_valid():
 		_on_impact.call()
 
 
 func _draw() -> void:
+	if _light:
+		if _trail.size() > 1:
+			draw_polyline(PackedVector2Array(_trail), Color(_color, 0.35), 2.0, true)
+		draw_circle(_trail[0], _radius * 0.55, Color(_color, 0.6))
+		return
 	# 拖尾：越往后越细越淡
 	var n := _trail.size()
 	for i in range(n - 1):

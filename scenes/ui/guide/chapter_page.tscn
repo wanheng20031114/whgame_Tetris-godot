@@ -12,11 +12,15 @@ theme_override_constants/separation = 12
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
+follow_focus = true
 
 [node name="ArticleMargin" type="MarginContainer" parent="ArticleScroll"]
 layout_mode = 2
 size_flags_horizontal = 3
+theme_override_constants/margin_left = 8
+theme_override_constants/margin_top = 8
 theme_override_constants/margin_right = 14
+theme_override_constants/margin_bottom = 8
 
 [node name="Article" type="VBoxContainer" parent="ArticleScroll/ArticleMargin"]
 layout_mode = 2
@@ -49,6 +53,7 @@ vertical_alignment = 1
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_font_sizes/font_size = 30
+autowrap_mode = 3
 
 [node name="Summary" type="Label" parent="ArticleScroll/ArticleMargin/Article/TitlePanel/TitleMargin/TitleBox"]
 unique_name_in_owner = true
@@ -197,11 +202,12 @@ layout_mode = 2
 custom_minimum_size = Vector2(420, 0)
 
 [node name="DemoMargin" type="MarginContainer" parent="DemoPanel"]
+clip_contents = true
 layout_mode = 2
-theme_override_constants/margin_left = 16
-theme_override_constants/margin_top = 16
-theme_override_constants/margin_right = 16
-theme_override_constants/margin_bottom = 16
+theme_override_constants/margin_left = 12
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 12
+theme_override_constants/margin_bottom = 8
 
 [node name="DemoBox" type="VBoxContainer" parent="DemoPanel/DemoMargin"]
 layout_mode = 2
@@ -217,11 +223,11 @@ unique_name_in_owner = true
 layout_mode = 2
 theme_type_variation = &"AccentLabel"
 theme_override_font_sizes/font_size = 15
+autowrap_mode = 3
 
 [node name="BoardView" type="Control" parent="DemoPanel/DemoMargin/DemoBox"]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_vertical = 3
-custom_minimum_size = Vector2(200, 300)
 script = ExtResource("1_board")
 

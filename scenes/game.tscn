@@ -12,6 +12,7 @@
 [ext_resource type="AudioStream" uid="uid://ct5gtuuxfchfq" path="res://audio/spin.ogg" id="11_spin"]
 [ext_resource type="Script" uid="uid://coo3rsgbl1jgw" path="res://scripts/core/structure_evaluator_node.gd" id="12_dinhu"]
 [ext_resource type="PackedScene" path="res://scenes/ui/ui_background.tscn" id="ui_bg_scene"]
+[ext_resource type="PackedScene" path="res://scenes/ui/landing_preview_toggle.tscn" id="landing_preview"]
 [ext_resource type="AudioStream" path="res://audio/move_scrape.wav" id="audio_move"]
 
 [ext_resource type="AudioStream" path="res://audio/bgm.ogg" id="audio_bgm"]
@@ -47,9 +48,9 @@ text = "HOLD"
 
 [node name="NextPanel" type="Panel" parent="." unique_id=1153896425]
 offset_left = 820.0
-offset_top = 55.0
+offset_top = 8.0
 offset_right = 960.0
-offset_bottom = 465.0
+offset_bottom = 418.0
 metadata/_edit_group_ = true
 
 [node name="NextLabel" type="Label" parent="NextPanel" unique_id=1805511751]
@@ -64,23 +65,27 @@ text = "NEXT"
 
 [node name="Board" type="Node2D" parent="." unique_id=1867912927]
 unique_name_in_owner = true
-position = Vector2(490, 60)
+position = Vector2(495, 92)
 script = ExtResource("2_board")
+cell_size = 29.0
+shown_buffer_rows = 3
 
 [node name="PieceClip" type="Control" parent="Board"]
 clip_contents = true
-layout_mode = 0
-offset_right = 300.0
-offset_bottom = 600.0
+offset_top = -87.0
+offset_right = 290.0
+offset_bottom = 580.0
 mouse_filter = 2
 
 [node name="GhostPiece" type="Node2D" parent="Board/PieceClip" unique_id=1982642505]
 unique_name_in_owner = true
 script = ExtResource("3_piece")
+cell_size = 29.0
 
 [node name="CurrentPiece" type="Node2D" parent="Board/PieceClip" unique_id=1401558132]
 unique_name_in_owner = true
 script = ExtResource("3_piece")
+cell_size = 29.0
 
 [node name="HoldPiece" type="Node2D" parent="." unique_id=1258247589]
 unique_name_in_owner = true
@@ -91,7 +96,7 @@ cell_size = 21.0
 
 [node name="NextPieces" type="Node2D" parent="." unique_id=171416509]
 unique_name_in_owner = true
-position = Vector2(870, 110)
+position = Vector2(870, 63)
 
 [node name="Next0" type="Node2D" parent="NextPieces" unique_id=2031649321]
 script = ExtResource("3_piece")
@@ -118,6 +123,12 @@ script = ExtResource("3_piece")
 cell_size = 21.0
 
 [node name="HUD" type="CanvasLayer" parent="." unique_id=329423042]
+
+[node name="LandingPreviewToggle" parent="HUD" instance=ExtResource("landing_preview")]
+offset_left = 540.0
+offset_top = 678.0
+offset_right = 740.0
+offset_bottom = 710.0
 
 [node name="ScoreLabel" type="Label" parent="HUD" unique_id=858904405]
 offset_left = 820.0

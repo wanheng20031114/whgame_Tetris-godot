@@ -3,6 +3,8 @@ extends TextureButton
 ## 设置菜单脚本
 ## 负责处理游戏设置，包括语言切换、分辨率调整、全屏开关以及按键绑定。
 
+signal landing_preview_changed(enabled: bool)
+
 # --- 常量定义 ---
 
 # 游戏内可绑定的操作列表
@@ -26,8 +28,10 @@ const SECTION_SETTINGS: String = "Settings"
 const SECTION_BINDINGS: String = "InputBindings"
 const SECTION_RESOLUTION: String = "Resolution"
 const SECTION_DISPLAY: String = "Display"
+const LANDING_PREVIEW_KEY := "landing_preview"
 const SECTION_AUDIO: String = "Audio"
 const DEFAULT_MASTER_VOLUME_PERCENT: float = 60.0
+const EFFECT_LEVEL_LABELS := ["TXT_FX_FULL", "TXT_FX_LIGHT", "TXT_FX_OFF"]
 const PANEL_WIDTH: float = 1040.0
 const PANEL_MAX_HEIGHT: float = 620.0
 const PANEL_SCREEN_MARGIN: float = 48.0
@@ -53,6 +57,8 @@ static var _defaults_captured: bool = false
 static var _default_events_by_action: Dictionary = {}
 
 # --- 界面组件引用 ---
+
+var landing_preview_enabled := true
 
 var canvas_layer: CanvasLayer        # 顶层画布，用于悬浮显示菜单
 var panel: PanelContainer           # 菜单主面板
@@ -81,6 +87,7 @@ var keybind_hint_lbl: Label
 var handling_title_lbl: Label
 var _handling_sliders: Dictionary = {}
 var _handling_values: Dictionary = {}
+var _effect_options: Dictionary[String, OptionButton] = {}
 
 # 按键绑定 UI 的动态映射
 var _action_name_labels: Dictionary = {}    # 操作名称标签映射
@@ -106,7 +113,11 @@ func _ready() -> void:
 	# 启动配置只由 AutoLoad 应用一次；场景内齿轮只绑定可编辑的原生场景。
 	var config := ConfigFile.new()
 	if get_path() == NodePath("/root/SettingsMenu"):
-		var loc := _load_saved_locale(config)
+		if config.load(_get_settings_path()) != OK:
+			config.clear()
+		landing_preview_enabled = bool(config.get_value(SECTION_DISPLAY, LANDING_PREVIEW_KEY, true))
+		VisualEffects.load_settings(config)
+		var loc := str(config.get_value(SECTION_SETTINGS, "locale", "")).strip_edges().to_lower()
 		TranslationServer.set_locale(_detect_locale_from_system() if loc.is_empty() else loc)
 		_apply_saved_display_settings(config)
 		_apply_saved_audio_settings(config)
@@ -164,6 +175,7 @@ func _bind_scene_controls(config: ConfigFile) -> void:
 	option_btn.item_selected.connect(_on_language_selected)
 	fullscreen_checkbox.set_pressed_no_signal(_is_fullscreen_saved(config))
 	fullscreen_checkbox.toggled.connect(_on_fullscreen_toggled)
+	SettingsMenu.bind_landing_preview_toggle(%LandingPreviewSwitch)
 	for option in RESOLUTION_OPTIONS:
 		resolution_option_btn.add_item(option["label"])
 	resolution_option_btn.selected = _get_selected_resolution_index(config)
@@ -171,6 +183,14 @@ func _bind_scene_controls(config: ConfigFile) -> void:
 	volume_slider.value = _get_saved_master_volume_percent(config)
 	volume_slider.value_changed.connect(_on_master_volume_changed)
 	_update_volume_value_label()
+
+	_effect_options = {
+		VisualEffects.DROP_TRAIL: %DropTrailOption,
+		VisualEffects.LINE_CLEAR: %LineClearOption,
+		VisualEffects.ATTACK_TRAIL: %AttackTrailOption,
+	}
+	for effect in _effect_options:
+		_effect_options[effect].item_selected.connect(_on_effect_selected.bind(effect))
 
 	for key in Handling.RANGES:
 		var cell: VBoxContainer = %HandlingRow.get_node(key)
@@ -234,6 +254,7 @@ func _on_gear_pressed() -> void:
 
 ## 显示设置菜单
 func show_menu() -> void:
+	_refresh_effect_options()
 	_recenter_panel()
 	if settings_scroll:
 		settings_scroll.scroll_vertical = 0
@@ -300,6 +321,7 @@ func _notification(what: int) -> void:
 ## 更新界面上的所有本地化文本
 func _update_texts() -> void:
 	tooltip_text = tr("TXT_SETTINGS")
+	_refresh_effect_options()
 	if option_btn:
 		var locale := TranslationServer.get_locale().to_lower()
 		option_btn.select(1 if locale.begins_with("zh") else (2 if locale.begins_with("ja") else 0))
@@ -384,8 +406,31 @@ func _on_fullscreen_toggled(enabled: bool) -> void:
 		window.mode = Window.MODE_WINDOWED
 		_apply_resolution_by_index(_get_selected_resolution_index(ConfigFile.new()))
 
-	_save_fullscreen(enabled)
+	_save_setting(SECTION_DISPLAY, "fullscreen", enabled)
 	_update_resolution_interactability()
+
+func bind_landing_preview_toggle(button: BaseButton) -> void:
+	button.set_pressed_no_signal(landing_preview_enabled)
+	landing_preview_changed.connect(button.set_pressed_no_signal)
+	button.toggled.connect(_on_landing_preview_toggled)
+
+func _on_landing_preview_toggled(enabled: bool) -> void:
+	landing_preview_enabled = enabled
+	landing_preview_changed.emit(enabled)
+	_save_setting(SECTION_DISPLAY, LANDING_PREVIEW_KEY, enabled)
+
+func _refresh_effect_options() -> void:
+	for effect in _effect_options:
+		var option := _effect_options[effect]
+		option.clear()
+		for label_key in EFFECT_LEVEL_LABELS:
+			option.add_item(tr(label_key))
+		option.select(VisualEffects.get_level(effect))
+
+func _on_effect_selected(index: int, effect: String) -> void:
+	ButtonSfx.play_click()
+	VisualEffects.set_level(effect, index as VisualEffects.Level)
+	_save_setting(VisualEffects.SECTION, effect, index)
 
 func _on_master_volume_changed(value: float) -> void:
 	var percent := clampf(value, 0.0, 100.0)
@@ -439,13 +484,6 @@ func _get_settings_path() -> String:
 		return "res://settings.cfg"
 	else:
 		return OS.get_executable_path().get_base_dir().path_join("settings.cfg")
-
-## 加载保存的语言
-func _load_saved_locale(config: ConfigFile) -> String:
-	if config.load(_get_settings_path()) != OK:
-		return ""
-	var loc := str(config.get_value(SECTION_SETTINGS, "locale", "")).strip_edges().to_lower()
-	return loc
 
 ## 加载并应用显示相关设置
 func _apply_saved_display_settings(config: ConfigFile) -> void:
@@ -547,14 +585,13 @@ func _save_selected_resolution(idx: int) -> void:
 	if storage_save_error != OK:
 		StorageBudget.report_error("Settings could not be saved: " + error_string(storage_save_error))
 
-## 保存全屏设置
-func _save_fullscreen(enabled: bool) -> void:
+func _save_setting(section: String, key: String, value: Variant) -> void:
 	var config := ConfigFile.new()
 	var storage_load_error := config.load(_get_settings_path())
 	if storage_load_error != OK and storage_load_error != ERR_FILE_NOT_FOUND:
 		StorageBudget.report_error("Settings could not be read; the existing file was retained: " + error_string(storage_load_error))
 		return
-	config.set_value(SECTION_DISPLAY, "fullscreen", enabled)
+	config.set_value(section, key, value)
 	var storage_save_error := config.save(_get_settings_path())
 	if storage_save_error != OK:
 		StorageBudget.report_error("Settings could not be saved: " + error_string(storage_save_error))

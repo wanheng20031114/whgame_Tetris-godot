@@ -3,11 +3,15 @@ extends Control
 
 const EMPTY := 0
 const GARBAGE := 8
+const FRAME_PADDING := 10.0
+const FOCUSED_FRAME_WIDTH := 2.5
 
 var columns: int = 10
 var rows: int = 20
 var grid: Array = []
 var active_piece: Dictionary = {}
+var _other_turn_pose: Dictionary = {}
+var _turn_blend := 0.0
 var target_cells: Array = []
 var highlight_cells: Array = []
 var highlight_rows: Array = []
@@ -27,6 +31,7 @@ var show_center_point: bool = false
 var _clear_particles: Array = []
 var _clear_flash_timer: float = 0.0
 var _clear_flash_rows: Array = []
+var _light_clear := false
 
 const PARTICLE_COUNT_PER_CELL: int = 4
 const PARTICLE_LIFETIME: float = 0.65
@@ -101,6 +106,8 @@ func set_state(
 ) -> void:
 	grid = new_grid
 	active_piece = new_active_piece
+	_other_turn_pose = {}
+	_turn_blend = 0.0
 	target_cells = new_target_cells
 	highlight_rows = new_highlight_rows
 	highlight_cells = new_highlight_cells
@@ -109,12 +116,12 @@ func set_state(
 
 
 func clear_state() -> void:
-	grid = []
-	active_piece = {}
-	target_cells = []
-	highlight_rows = []
-	highlight_cells = []
-	ghost_row = -1
+	set_state([])
+
+
+func blend_turn_pose(other_pose: Dictionary, weight: float) -> void:
+	_other_turn_pose = other_pose
+	_turn_blend = weight
 	queue_redraw()
 
 
@@ -127,19 +134,22 @@ func set_effect_text(text: String, color: Color = Color(1.0, 0.92, 0.18, 1.0)) -
 ## 播放消行特效（白色闪光 + 粒子爆炸），不播放音效
 func play_clear_effect(cleared_rows: Array) -> void:
 	_clear_particles.clear()
+	var level := VisualEffects.get_level(VisualEffects.LINE_CLEAR)
+	if level == VisualEffects.Level.OFF:
+		_clear_flash_rows.clear()
+		_clear_flash_timer = 0.0
+		return
+	_light_clear = level == VisualEffects.Level.LIGHT
 	_clear_flash_rows = cleared_rows.duplicate()
+	if _light_clear:
+		_clear_flash_timer = LineClearEffect.LIGHT_TIME
+		return
 	_clear_flash_timer = FLASH_DURATION
-
-	var board_rect := _board_rect()
-	var cell := board_rect.size.x / float(columns)
 
 	for row_idx in cleared_rows:
 		if row_idx < 0 or row_idx >= rows:
 			continue
 		for col in range(columns):
-			var center_x: float = board_rect.position.x + col * cell + cell * 0.5
-			var center_y: float = board_rect.position.y + row_idx * cell + cell * 0.5
-
 			# 获取该格子的颜色
 			var cell_value := EMPTY
 			if row_idx < grid.size() and col < (grid[row_idx] as Array).size():
@@ -161,7 +171,8 @@ func play_clear_effect(cleared_rows: Array) -> void:
 				var p_size: float = randf_range(PARTICLE_SIZE * 0.5, PARTICLE_SIZE * 1.5)
 
 				_clear_particles.append({
-					"pos": Vector2(center_x + randf_range(-3, 3), center_y + randf_range(-3, 3)),
+					"cell": Vector2(col + 0.5, row_idx + 0.5),
+					"pos": Vector2(randf_range(-3, 3), randf_range(-3, 3)),
 					"vel": vel,
 					"color": c,
 					"life": PARTICLE_LIFETIME * randf_range(0.7, 1.0),
@@ -174,13 +185,15 @@ func play_clear_effect(cleared_rows: Array) -> void:
 
 func _draw() -> void:
 	var board_rect := _board_rect()
+	if not board_rect.has_area():
+		return
 
 	# 聚焦状态边框颜色
 	var border_glow_color := Color(0.0, 0.85, 1.0, 0.65) if focused else Color(0.0, 0.83, 1.0, 0.38)
-	var border_width := 2.5 if focused else 1.0
+	var border_width := FOCUSED_FRAME_WIDTH if focused else 1.0
 
-	draw_rect(board_rect.grow(10.0), Color(0.025, 0.03, 0.055, 1.0), true)
-	draw_rect(board_rect.grow(10.0), border_glow_color, false, border_width)
+	draw_rect(board_rect.grow(FRAME_PADDING), Color(0.025, 0.03, 0.055, 1.0), true)
+	draw_rect(board_rect.grow(FRAME_PADDING), border_glow_color, false, border_width)
 	draw_rect(board_rect, CELL_COLORS[0], true)
 
 	var cell := board_rect.size.x / float(columns)
@@ -205,13 +218,16 @@ func _draw() -> void:
 		var pos := cell_pos as Vector2i
 		_draw_highlight_cell(board_rect, pos.x, pos.y)
 
-	if show_ghost and ghost_row >= 0 and not active_piece.is_empty():
+	if show_ghost and SettingsMenu.landing_preview_enabled and ghost_row >= 0 and not active_piece.is_empty():
 		var ghost_piece := active_piece.duplicate()
+		ghost_piece["col"] = roundi(active_piece.col)
 		ghost_piece["row"] = ghost_row
-		_draw_piece(board_rect, ghost_piece, 0.12)
+		_draw_piece(board_rect, ghost_piece, 0.12, true)
 
 	if not active_piece.is_empty():
-		_draw_piece(board_rect, active_piece, 1.0)
+		if _turn_blend > 0.0:
+			_draw_piece(board_rect, _other_turn_pose, _turn_blend)
+		_draw_piece(board_rect, active_piece, 1.0 - _turn_blend)
 
 		# 显示旋转中心点（红色圆圈）
 		if show_center_point:
@@ -236,7 +252,10 @@ func _draw() -> void:
 		for row_idx in _clear_flash_rows:
 			if row_idx >= 0 and row_idx < rows:
 				var fy := board_rect.position.y + float(row_idx) * cell
-				draw_rect(Rect2(board_rect.position.x, fy, board_rect.size.x, cell), flash_color)
+				if _light_clear:
+					LineClearEffect.draw_light_band(self, Vector2(board_rect.position.x, fy + cell * 0.5), board_rect.size.x, cell, Color.WHITE, _clear_flash_timer / LineClearEffect.LIGHT_TIME)
+				else:
+					draw_rect(Rect2(board_rect.position.x, fy, board_rect.size.x, cell), flash_color)
 
 	# 消行粒子
 	for p in _clear_particles:
@@ -247,7 +266,7 @@ func _draw() -> void:
 		var current_size: float = p["size"] * (0.3 + 0.7 * life_ratio)
 		var pc: Color = p["color"]
 		pc.a = alpha
-		var ppos: Vector2 = p["pos"]
+		var ppos: Vector2 = board_rect.position + p["cell"] * cell + p["pos"]
 		var half: float = current_size * 0.5
 		var prot: float = p["rot"]
 		var corners: Array = [
@@ -283,15 +302,15 @@ func _draw() -> void:
 
 
 func _board_rect() -> Rect2:
-	var margin := 10.0
-	var available := size - Vector2(margin * 2.0, margin * 2.0)
+	var margin := ceilf(FRAME_PADDING + FOCUSED_FRAME_WIDTH * 0.5)
+	var available := (size - Vector2.ONE * margin * 2.0).max(Vector2.ZERO)
 	var cell := minf(available.x / float(columns), available.y / float(rows))
 	var board_size := Vector2(cell * columns, cell * rows)
 	var origin := (size - board_size) * 0.5
 	return Rect2(origin, board_size)
 
 
-func _draw_piece(board_rect: Rect2, piece: Dictionary, alpha: float) -> void:
+func _draw_piece(board_rect: Rect2, piece: Dictionary, alpha: float, ghost: bool = false) -> void:
 	var type := int(piece.get("type", PieceData.Type.T))
 	var rot := int(piece.get("rot", PieceData.RotationState.SPAWN))
 	var col := float(piece.get("col", 4.0))
@@ -300,7 +319,7 @@ func _draw_piece(board_rect: Rect2, piece: Dictionary, alpha: float) -> void:
 		var cell_col := col + float(offset.x)
 		var cell_row := row + float(offset.y)
 		if cell_row > -1.0 and cell_row < float(rows) and cell_col > -1.0 and cell_col < float(columns):
-			if alpha < 0.35:
+			if ghost:
 				_draw_ghost_cell_at(board_rect, cell_col, cell_row, type + 1, alpha)
 			else:
 				_draw_cell_at(board_rect, cell_col, cell_row, type + 1, alpha)
@@ -374,14 +393,18 @@ func _piece_color(value: int) -> Color:
 
 func _draw_effect_text(board_rect: Rect2) -> void:
 	var font := get_theme_default_font()
-	var font_size := mini(34, maxi(22, int(board_rect.size.x / maxf(1.0, float(effect_text.length())) * 1.55)))
+	const MAX_FONT_SIZE := 34
+	const OUTLINE := 8
+	var full_width := font.get_string_size(effect_text, HORIZONTAL_ALIGNMENT_LEFT, -1, MAX_FONT_SIZE).x
+	var fit := (board_rect.size.x - 2.0 * OUTLINE) / maxf(1.0, full_width)
+	var font_size := clampi(floori(MAX_FONT_SIZE * fit), 1, MAX_FONT_SIZE)
 	var text_size := font.get_string_size(effect_text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size)
 	# draw_string 的 y 是基线；用字体 ascent/descent 将字形真正居中。
 	var pos := Vector2(
 		board_rect.get_center().x - text_size.x * 0.5,
 		board_rect.get_center().y + (font.get_ascent(font_size) - font.get_descent(font_size)) * 0.5
 	)
-	draw_string_outline(font, pos, effect_text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, 8, Color(0.02, 0.04, 0.08, 0.92))
+	draw_string_outline(font, pos, effect_text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, OUTLINE, Color(0.02, 0.04, 0.08, 0.92))
 	draw_string(font, pos, effect_text, HORIZONTAL_ALIGNMENT_LEFT, -1, font_size, effect_color)
 
 
@@ -390,7 +413,7 @@ func _find_ghost_row() -> int:
 		return -1
 	var type := int(active_piece.get("type", PieceData.Type.T))
 	var rot := int(active_piece.get("rot", PieceData.RotationState.SPAWN))
-	var col := int(active_piece.get("col", 4))
+	var col := roundi(active_piece.get("col", 4))
 	var row := int(active_piece.get("row", 0))
 	while _is_valid(type, rot, col, row + 1):
 		row += 1

@@ -4,7 +4,9 @@ extends Node2D
 @export_group("Board")
 @export var columns: int = 10
 @export var visible_rows: int = 20
+@export_range(0, 20) var shown_buffer_rows: int = 0
 var buffer_rows: int = 20
+var view_top_row: int = buffer_rows
 var total_rows: int:
 	get: return visible_rows + buffer_rows
 @export var cell_size: float = 30.0
@@ -27,9 +29,6 @@ var danger_warning_active: bool:
 var danger_level: float = 0.0
 var _danger_vis: float = 0.0 ## 平滑后的显示强度
 var _beat_time: float = 0.0
-var _spawn_warn_type: int = -1
-var _spawn_warn_col: int = 0
-var _spawn_warn_row: int = 0
 
 # 垃圾行上升动画：已入场的格子从低处滑到正确位置
 var _rise_offset: float = 0.0
@@ -89,6 +88,7 @@ func _process(delta: float) -> void:
 		set_process(false)
 
 func _init_grid() -> void:
+	view_top_row = buffer_rows
 	grid.clear()
 	for _r in range(total_rows):
 		grid.append(_create_empty_row())
@@ -100,6 +100,9 @@ func _create_empty_row() -> Array:
 	return row
 
 func is_valid_position(type: PieceData.Type, rot_state: PieceData.RotationState, center_col: int, center_row: int) -> bool:
+	return _fits(grid, type, rot_state, center_col, center_row)
+
+func _fits(cells: Array, type: PieceData.Type, rot_state: PieceData.RotationState, center_col: int, center_row: int) -> bool:
 	var shape = PieceData.SHAPES[type][rot_state]
 	for offset in shape:
 		var col: int = center_col + int(offset.x)
@@ -110,18 +113,55 @@ func is_valid_position(type: PieceData.Type, rot_state: PieceData.RotationState,
 			return false
 		if row < 0:
 			continue
-		if grid[row][col] != null:
+		if cells[row][col] != null:
 			return false
 	return true
 
 func lock_piece(type: PieceData.Type, rot_state: PieceData.RotationState, center_col: int, center_row: int, color: Color) -> void:
+	_stamp_piece(grid, type, rot_state, center_col, center_row, color)
+	queue_redraw()
+
+func _stamp_piece(cells: Array, type: PieceData.Type, rot_state: PieceData.RotationState, center_col: int, center_row: int, color: Color) -> void:
 	var shape = PieceData.SHAPES[type][rot_state]
 	for offset in shape:
 		var col: int = center_col + int(offset.x)
 		var row: int = center_row + int(offset.y)
 		if row >= 0 and row < total_rows and col >= 0 and col < columns:
-			grid[row][col] = color
-	queue_redraw()
+			cells[row][col] = color
+
+## 七种出生姿态的底边都在轴心行。普通出块可再上移一行，消行后可继续在缓冲区寻找完整空间。
+func find_spawn_row(type: PieceData.Type, col: int, cells: Array, after_clear: bool = false, garbage_rise: int = 0) -> int:
+	var spawn_row := buffer_rows - 1
+	var highest_row := spawn_row - 1
+	if after_clear:
+		highest_row = 0
+		for offset: Vector2 in PieceData.SHAPES[type][PieceData.RotationState.SPAWN]:
+			highest_row = maxi(highest_row, -int(offset.y))
+	for row in range(spawn_row, highest_row - 1, -1):
+		if _fits(cells, type, PieceData.RotationState.SPAWN, col, row + garbage_rise):
+			return row
+	return -1
+
+## 在副本上按真实落锁顺序预测。新垃圾每行只有一个洞，任何出生姿态的底行都至少两格宽，
+## 所以检查上升前的对应行即可，越过底边必定碰撞，也无需提前抽取垃圾洞。
+func would_block_next_spawn(type: PieceData.Type, rotation: PieceData.RotationState, landing: Vector2i, next_type: PieceData.Type, spawn_col: int, ready_garbage: int) -> bool:
+	var projected := grid.duplicate(true)
+	_stamp_piece(projected, type, rotation, landing.x, landing.y, PieceData.COLORS[type])
+	var cleared := not _remove_full_rows(projected).is_empty()
+	var rise := 0 if cleared else mini(ready_garbage, total_rows)
+	return find_spawn_row(next_type, spawn_col, projected, cleared, rise) < 0
+
+## 救场或踢墙超过井口预留空间时，显示更高的棋盘行，保持方块原有大小。
+func frame_active_piece(type: PieceData.Type, rotation: PieceData.RotationState, row: int) -> void:
+	var top := buffer_rows
+	for offset: Vector2 in PieceData.SHAPES[type][rotation]:
+		top = mini(top, row + int(offset.y) + shown_buffer_rows)
+	if top != view_top_row:
+		view_top_row = top
+		queue_redraw()
+
+func cell_position(col: int, row: int) -> Vector2:
+	return Vector2(col, row - view_top_row) * cell_size
 
 func clear_lines() -> int:
 	var result: Dictionary = clear_lines_with_data()
@@ -130,33 +170,19 @@ func clear_lines() -> int:
 ## 执行消行并返回详细数据，用于粒子特效等视觉反馈。
 ## 返回: { "cleared": int, "rows_data": Array[{ "row_index": int, "colors": Array }] }
 func clear_lines_with_data() -> Dictionary:
-	var new_grid: Array = []
-	var cleared: int = 0
-	var rows_data: Array = []
-
-	for row in range(total_rows):
-		if _is_row_full(row):
-			cleared += 1
-			# 记录被消除行的颜色信息（在移除前）
-			var colors: Array = []
-			for col in range(columns):
-				colors.append(grid[row][col])
-			rows_data.append({"row_index": row, "colors": colors})
-		else:
-			new_grid.append(grid[row])
-
-	for _i in range(cleared):
-		new_grid.insert(0, _create_empty_row())
-
-	grid = new_grid
+	var rows_data := _remove_full_rows(grid)
 	queue_redraw()
-	return {"cleared": cleared, "rows_data": rows_data}
+	return {"cleared": rows_data.size(), "rows_data": rows_data}
 
-func _is_row_full(row: int) -> bool:
-	for col in range(columns):
-		if grid[row][col] == null:
-			return false
-	return true
+func _remove_full_rows(cells: Array) -> Array:
+	var rows_data: Array = []
+	for row in range(cells.size() - 1, -1, -1):
+		if not cells[row].has(null):
+			rows_data.push_front({"row_index": row, "colors": cells[row]})
+			cells.remove_at(row)
+	for _line in rows_data:
+		cells.push_front(_create_empty_row())
+	return rows_data
 
 # ==============================================================================
 # 绘制
@@ -185,25 +211,26 @@ func _draw() -> void:
 		draw_line(Vector2(0, y), Vector2(board_w, y), grid_color, 1.0)
 
 	var rise := _rise_offset
-	for row in range(buffer_rows, total_rows):
+	for row in range(maxi(0, view_top_row - shown_buffer_rows), view_top_row + visible_rows):
 		for col in range(columns):
 			var color = grid[row][col]
 			if color != null:
-				var vis_row: int = row - buffer_rows
-				var y := vis_row * cell_size + rise
+				var y := (row - view_top_row) * cell_size + rise
 				if y >= board_h:
 					continue
 				var rect := Rect2(Vector2(col * cell_size, y), Vector2(cell_size, cell_size))
 				_draw_block_cell(rect, color)
 
 	if _rise_flash > 0.0 and _rise_rows > 0:
-		var top := (visible_rows - _rise_rows) * cell_size + rise
-		draw_rect(Rect2(0, top, board_w, board_h - top), Color(1, 1, 1, _rise_flash * 0.35))
-
-	if d > 0.001 and _spawn_warn_type >= 0:
-		_draw_spawn_warning(d, beat)
+		var top := (total_rows - view_top_row - _rise_rows) * cell_size + rise
+		if top < board_h:
+			draw_rect(Rect2(0, top, board_w, board_h - top), Color(1, 1, 1, _rise_flash * 0.35))
 
 	var border := BORDER_COLOR.lerp(DANGER_COLOR, clampf(d * (0.55 + 0.45 * beat), 0.0, 1.0))
+	if view_top_row < buffer_rows:
+		var rim_y := (buffer_rows - view_top_row) * cell_size
+		if rim_y < board_h:
+			draw_line(Vector2(0, rim_y), Vector2(board_w, rim_y), border, 2.0)
 	draw_rect(Rect2(Vector2(-1, -1), Vector2(board_w + 2, board_h + 2)), border, false, 2.0)
 
 ## 双拍心跳曲线（lub-dub），返回 0~1
@@ -225,7 +252,7 @@ func _draw_danger_halo(w: float, h: float, d: float, beat: float) -> void:
 
 ## 井口红色渐变 + 缓慢滚动的警示斜纹，只覆盖堆叠上方的空区域，透明度很低
 func _draw_danger_well(w: float, d: float, beat: float) -> void:
-	var stack_top := (visible_rows - get_stack_height()) * cell_size
+	var stack_top := (total_rows - view_top_row - get_stack_height()) * cell_size
 	var depth := minf(stack_top, cell_size * 6.0)
 	if depth <= 1.0:
 		return
@@ -255,22 +282,6 @@ static func poly_area(p: PackedVector2Array) -> float:
 	for i in range(p.size()):
 		a += p[i].cross(p[(i + 1) % p.size()])
 	return absf(a) * 0.5
-
-## 下一块的出生位置轮廓：若会和堆叠重叠，则该格画成实心警示
-func _draw_spawn_warning(d: float, beat: float) -> void:
-	var shape: Array = PieceData.SHAPES[_spawn_warn_type][PieceData.RotationState.SPAWN]
-	var a := lerpf(0.35, 0.9, beat) * d
-	for offset in shape:
-		var col: int = _spawn_warn_col + int(offset.x)
-		var row: int = _spawn_warn_row + int(offset.y)
-		var vis_row := row - buffer_rows
-		if vis_row < 0 or col < 0 or col >= columns:
-			continue
-		var rect := Rect2(col * cell_size, vis_row * cell_size, cell_size, cell_size).grow(-3.0)
-		var blocked: bool = row < total_rows and grid[row][col] != null
-		if blocked:
-			draw_rect(rect, Color(DANGER_COLOR, a * 0.55))
-		draw_rect(rect, Color(DANGER_COLOR, a), false, 2.0)
 
 # ==============================================================================
 # 状态与查询
@@ -370,9 +381,9 @@ func bump(impulse: Vector2) -> void:
 	_bump_velocity += impulse * 34.0
 	set_process(true)
 
-## 可见区内堆叠的最高高度（行数）
+## 从井底计算堆高，包括已经越过井口的格子。
 func get_stack_height() -> int:
-	for r in range(buffer_rows, total_rows):
+	for r in range(total_rows):
 		for c in range(columns):
 			if grid[r][c] != null:
 				return total_rows - r
@@ -409,15 +420,6 @@ func set_danger_level(level: float) -> void:
 
 func set_danger_warning(active: bool) -> void:
 	set_danger_level(1.0 if active else 0.0)
-
-func set_spawn_warning(piece_type: int, col: int, row: int) -> void:
-	if piece_type == _spawn_warn_type and col == _spawn_warn_col and row == _spawn_warn_row:
-		return
-	_spawn_warn_type = piece_type
-	_spawn_warn_col = col
-	_spawn_warn_row = row
-	queue_redraw()
-
 
 func _on_block_style_changed(_style_id: String) -> void:
 	queue_redraw()

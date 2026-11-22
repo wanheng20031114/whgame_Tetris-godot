@@ -51,7 +51,6 @@ var _action_text_tween: Tween
 var _label_combo_text: Label
 var _combo_text_tween: Tween
 var pending_attacks: Array = []
-var ready_garbage: int = 0
 
 var _data_collector: PlayerDataCollector
 var _structure_evaluator: Node
@@ -385,6 +384,7 @@ func _process(delta: float) -> void:
 	process_logic(delta)
 	if not game_over and not paused:
 		_update_multiplayer_garbage(delta)
+		_update_danger_warning_state()
 
 func _update_multiplayer_garbage(delta: float) -> void:
 	var new_pending: Array = []
@@ -525,10 +525,9 @@ func _lock_piece() -> void:
 	score_changed.emit(scoring.score, scoring.level, scoring.lines)
 	piece_locked.emit(cur_type, board.get_grid_state())
 
-	var garbage_topped_out := false
 	var did_clear_lines: bool = scoring.lines > lines_before_lock
 	if will_receive_garbage and not did_clear_lines and board:
-		garbage_topped_out = board.add_garbage_lines(ready_garbage)
+		board.add_garbage_lines(ready_garbage)
 		ready_garbage = 0
 		if player_garbage_bar:
 			player_garbage_bar.mark_entered()
@@ -544,10 +543,7 @@ func _lock_piece() -> void:
 		locked_row,
 		next_pieces_at_lock
 	)
-	if garbage_topped_out:
-		_trigger_game_over()
-	else:
-		_spawn_next_piece()
+	_spawn_next_piece(cleared > 0)
 
 func _try_hold() -> void:
 	if not hold_used:
@@ -615,6 +611,7 @@ func _on_rematch_game_started(_opp_name: String, _seed: int) -> void:
 ## 显示静态结算面板，传入结果翻译 key。
 func _show_game_over_panel(msg_key: String) -> void:
 	if game_over_panel:
+		_lock_result_input()
 		game_over_panel.show_result(msg_key, NetworkManager.opponent_name)
 
 

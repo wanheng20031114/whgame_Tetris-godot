@@ -68,8 +68,18 @@ text = "START TETRIS33"
 [node name="ScrollContainer" type="ScrollContainer" parent="CenterContainer/LobbyPanel/VBox" unique_id=1873152687]
 layout_mode = 2
 size_flags_vertical = 3
+horizontal_scroll_mode = 0
+follow_focus = true
 
-[node name="RoomList" type="VBoxContainer" parent="CenterContainer/LobbyPanel/VBox/ScrollContainer" unique_id=594983265]
+[node name="RoomMargin" type="MarginContainer" parent="CenterContainer/LobbyPanel/VBox/ScrollContainer"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 8
+
+[node name="RoomList" type="VBoxContainer" parent="CenterContainer/LobbyPanel/VBox/ScrollContainer/RoomMargin" unique_id=594983265]
 unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3

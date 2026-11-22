@@ -84,7 +84,6 @@ var _server_disconnected := false
 var _last_vote_statuses: Array = []
 
 var pending_attacks: Array = []
-var ready_garbage: int = 0
 
 var _data_collector: PlayerDataCollector
 var _structure_evaluator: Node
@@ -164,6 +163,7 @@ func _process(delta: float) -> void:
 	process_logic(delta)
 	if not game_over and not paused:
 		_update_player_garbage(delta)
+		_update_danger_warning_state()
 	# 本地淘汰只冻结自己的操作，离线对手仍需推进到最终结算。
 	if not _is_network_match() and not _match_finished and (not paused or _local_eliminated):
 		_update_opponent_samples(delta)
@@ -174,6 +174,10 @@ func _process(delta: float) -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel"):
+		if not game_over and not paused:
+			for action in SettingsMenu.ACTIONS:
+				if action != "pause" and event.is_action_pressed(action):
+					return
 		_save_and_cleanup_data()
 		if _is_network_match():
 			NetworkManager.leave_room()
@@ -713,10 +717,9 @@ func _lock_piece() -> void:
 	score_changed.emit(scoring.score, scoring.level, scoring.lines)
 	piece_locked.emit(cur_type, board.get_grid_state())
 
-	var garbage_topped_out := false
 	var did_clear_lines := scoring.lines > lines_before_lock
 	if will_receive_garbage and not did_clear_lines and board:
-		garbage_topped_out = board.add_garbage_lines(ready_garbage)
+		board.add_garbage_lines(ready_garbage)
 		ready_garbage = 0
 		if player_garbage_bar:
 			player_garbage_bar.mark_entered()
@@ -736,10 +739,8 @@ func _lock_piece() -> void:
 	_resolving_lock = false
 	if _alive_count <= 1 and not _local_eliminated:
 		_on_victory()
-	elif garbage_topped_out:
-		_trigger_game_over()
 	else:
-		_spawn_next_piece()
+		_spawn_next_piece(cleared > 0)
 
 
 func _try_hold() -> void:
@@ -800,6 +801,7 @@ func _show_result(text: String, allow_rematch: bool = false) -> void:
 	if btn_restart:
 		btn_restart.disabled = not allow_rematch
 	if result_overlay:
+		_lock_result_input()
 		result_overlay.visible = true
 		if btn_restart and not btn_restart.disabled:
 			btn_restart.grab_focus()
@@ -836,15 +838,13 @@ func _compose_result_text(rank: int, subtitle: String) -> String:
 
 
 func _freeze_local_play(hide_active_piece: bool) -> void:
+	if not paused:
+		_lock_result_input()
 	game_over = true
 	paused = true
 	das.stop()
-	board.set_danger_level(0.0)
-	board.set_spawn_warning(-1, 0, 0)
 	if lock_timer:
 		lock_timer.stop()
-	if ghost_piece:
-		ghost_piece.visible = false
 	if current_piece and hide_active_piece:
 		current_piece.visible = false
 

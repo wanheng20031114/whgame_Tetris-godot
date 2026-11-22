@@ -256,8 +256,8 @@ func _apply_shell_texts() -> void:
 	(get_node("Page/Header/Margin/Row/Tabs/ReadTab") as Label).text = "  1  %s  " % tr("TXT_GUIDE_READ")
 	(get_node("Page/Header/Margin/Row/Tabs/DemoTab") as Label).text = "  2  %s  " % tr("TXT_GUIDE_DEMO")
 	(get_node("Page/Header/Margin/Row/Tabs/TryTab") as Label).text = "  3  %s  " % tr("TXT_GUIDE_SIM")
-	(get_node("Page/BodyMargin/Body/SidebarPanel/SidebarMargin/Sidebar/BasicsSectionLabel") as Label).text = tr("TXT_GUIDE_BASICS")
-	(get_node("Page/BodyMargin/Body/SidebarPanel/SidebarMargin/Sidebar/SectionLabel") as Label).text = tr("TXT_GUIDE_CHAPTERS")
+	(%BasicsSectionLabel as Label).text = tr("TXT_GUIDE_BASICS")
+	(%SectionLabel as Label).text = tr("TXT_GUIDE_CHAPTERS")
 
 
 func _rebuild_sidebar() -> void:
@@ -698,12 +698,15 @@ func _demo_operations(scene_id: String, phase: int) -> Array:
 func _demo_interpolate_piece(value: float, grid: Array, from_piece: Dictionary, to_piece: Dictionary, targets: Array, rows: Array, focus: Array) -> void:
 	if board_view == null:
 		return
-	var piece := {
-		"type": int(from_piece.get("type", PieceData.Type.T)),
-		"rot": int(to_piece.get("rot", from_piece.get("rot", PieceData.RotationState.SPAWN))) if value >= 0.55 else int(from_piece.get("rot", PieceData.RotationState.SPAWN)),
-		"col": lerpf(float(from_piece.get("col", 4.0)), float(to_piece.get("col", 4.0)), value),
-		"row": lerpf(float(from_piece.get("row", 4.0)), float(to_piece.get("row", 4.0)), value)
-	}
+	if from_piece.rot != to_piece.rot:
+		# 踢墙的位置和朝向是一次操作。用两个合法姿态叠化，避免把旧朝向画在新坐标上。
+		var after_turn := value >= 0.5
+		board_view.set_state(grid, to_piece if after_turn else from_piece, targets, rows, focus)
+		board_view.blend_turn_pose(from_piece if after_turn else to_piece, 1.0 - value if after_turn else value)
+		return
+	var piece := from_piece.duplicate()
+	piece.col = lerpf(from_piece.col, to_piece.col, value)
+	piece.row = lerpf(from_piece.row, to_piece.row, value)
 	board_view.set_state(grid, piece, targets, rows, focus)
 
 

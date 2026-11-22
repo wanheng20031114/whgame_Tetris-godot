@@ -63,7 +63,7 @@ size_flags_vertical = 3
 
 [node name="General" type="VBoxContainer" parent="MenuLayer/SettingsPanel/Content/Body"]
 layout_mode = 2
-theme_override_constants/separation = 18
+theme_override_constants/separation = 12
 custom_minimum_size = Vector2(320, 0)
 
 
@@ -125,6 +125,26 @@ size_flags_horizontal = 0
 script = ExtResource("4")
 metadata/ui_no_motion = true
 
+[node name="LandingPreviewField" type="VBoxContainer" parent="MenuLayer/SettingsPanel/Content/Body/General/Toggles"]
+layout_mode = 2
+theme_override_constants/separation = 8
+size_flags_horizontal = 3
+
+[node name="LandingPreviewLabel" type="Label" parent="MenuLayer/SettingsPanel/Content/Body/General/Toggles/LandingPreviewField"]
+layout_mode = 2
+theme_type_variation = &"EyebrowLabel"
+text = "TXT_LANDING_PREVIEW"
+
+[node name="LandingPreviewSwitch" type="Button" parent="MenuLayer/SettingsPanel/Content/Body/General/Toggles/LandingPreviewField"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 0
+tooltip_text = "TXT_LANDING_PREVIEW"
+toggle_mode = true
+button_pressed = true
+script = ExtResource("4")
+metadata/ui_no_motion = true
+
 [node name="ResolutionField" type="VBoxContainer" parent="MenuLayer/SettingsPanel/Content/Body/General"]
 layout_mode = 2
 theme_override_constants/separation = 8
@@ -174,6 +194,57 @@ custom_minimum_size = Vector2(52, 32)
 horizontal_alignment = 2
 vertical_alignment = 1
 
+
+[node name="EffectsField" type="VBoxContainer" parent="MenuLayer/SettingsPanel/Content/Body/General"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="Title" type="Label" parent="MenuLayer/SettingsPanel/Content/Body/General/EffectsField"]
+layout_mode = 2
+theme_type_variation = &"EyebrowLabel"
+text = "TXT_FX_SETTINGS"
+
+[node name="EffectsGrid" type="GridContainer" parent="MenuLayer/SettingsPanel/Content/Body/General/EffectsField"]
+layout_mode = 2
+columns = 3
+theme_override_constants/h_separation = 8
+theme_override_constants/v_separation = 4
+
+[node name="DropTrailLabel" type="Label" parent="MenuLayer/SettingsPanel/Content/Body/General/EffectsField/EffectsGrid"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"MutedLabel"
+theme_override_font_sizes/font_size = 14
+text = "TXT_FX_DROP_TRAIL"
+
+[node name="LineClearLabel" type="Label" parent="MenuLayer/SettingsPanel/Content/Body/General/EffectsField/EffectsGrid"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"MutedLabel"
+theme_override_font_sizes/font_size = 14
+text = "TXT_FX_LINE_CLEAR"
+
+[node name="AttackTrailLabel" type="Label" parent="MenuLayer/SettingsPanel/Content/Body/General/EffectsField/EffectsGrid"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_type_variation = &"MutedLabel"
+theme_override_font_sizes/font_size = 14
+text = "TXT_FX_ATTACK_TRAIL"
+
+[node name="DropTrailOption" type="OptionButton" parent="MenuLayer/SettingsPanel/Content/Body/General/EffectsField/EffectsGrid"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="LineClearOption" type="OptionButton" parent="MenuLayer/SettingsPanel/Content/Body/General/EffectsField/EffectsGrid"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="AttackTrailOption" type="OptionButton" parent="MenuLayer/SettingsPanel/Content/Body/General/EffectsField/EffectsGrid"]
+unique_name_in_owner = true
+layout_mode = 2
+size_flags_horizontal = 3
 
 [node name="Spacer" type="Control" parent="MenuLayer/SettingsPanel/Content/Body/General"]
 layout_mode = 2

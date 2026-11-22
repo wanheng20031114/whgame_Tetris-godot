@@ -27,6 +27,7 @@ theme_override_constants/separation = 14
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_font_sizes/font_size = 22
+autowrap_mode = 3
 
 [node name="FeedbackLabel" type="Label" parent="SidePanel/SideMargin/SideBox"]
 unique_name_in_owner = true
@@ -71,6 +72,7 @@ size_flags_horizontal = 3
 size_flags_vertical = 3
 
 [node name="BoardMargin" type="MarginContainer" parent="BoardPanel"]
+clip_contents = true
 layout_mode = 2
 theme_override_constants/margin_left = 16
 theme_override_constants/margin_top = 16
@@ -82,5 +84,4 @@ unique_name_in_owner = true
 layout_mode = 2
 size_flags_horizontal = 3
 size_flags_vertical = 3
-custom_minimum_size = Vector2(200, 400)
 script = ExtResource("1_board")

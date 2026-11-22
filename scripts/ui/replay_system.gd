@@ -5,6 +5,7 @@ extends Control
 ## 加载历史 session JSON，逐步回放棋盘状态，展示 AI 评分。
 
 const TimelineRowScene := preload("res://scenes/ui/replay_timeline_row.tscn")
+const SessionEntryScene := preload("res://scenes/ui/replay_session_entry.tscn")
 
 const BOARD_ROWS: int = 20
 const BOARD_COLS: int = 10
@@ -107,6 +108,7 @@ const CC_SHAPES: Dictionary = {
 @onready var replay_board: ReplayBoardSurface = %ReplayBoard
 @onready var timeline_list: VBoxContainer = %TimelineList
 @onready var session_list_popup: PanelContainer = %SessionListPopup
+@onready var session_scroll: ScrollContainer = %SessionScroll
 @onready var session_list: VBoxContainer = %SessionList
 @onready var data_vbox: VBoxContainer = %DataVBox
 
@@ -655,28 +657,23 @@ func _ai_summary_score() -> float:
 # ==============================================================================
 
 func _show_session_list() -> void:
-	# 清空现有列表
 	for child in session_list.get_children():
+		session_list.remove_child(child)
 		child.queue_free()
 
 	var files: Array = PlayerDataStore.get_all_session_files()
+	files = files.filter(func(name): return not str(name).ends_with("_analyzed.json"))
 	if files.is_empty():
 		var lbl := Label.new()
 		lbl.text = tr("TXT_NO_SESSIONS_FOUND")
 		lbl.theme_type_variation = &"MutedLabel"
+		lbl.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		session_list.add_child(lbl)
-		session_list_popup.visible = true
-		call_deferred("_focus_default_control")
-		return
 
-	# 过滤掉 _analyzed.json 文件，按时间倒序显示（最新在前）
-	var filtered: Array = []
-	for f in files:
-		if not str(f).ends_with("_analyzed.json"):
-			filtered.append(f)
-	filtered.reverse()
-	for fname in filtered:
-		var btn := Button.new()
+	files.reverse()
+	for fname in files:
+		var entry: MarginContainer = SessionEntryScene.instantiate()
+		var btn: Button = entry.get_node("SessionButton")
 		# 从文件名提取时间戳：session_2026-04-23T20-50-26.json -> 2026-04-23 20:50:26
 		var raw: String = fname.replace("session_", "").replace(".json", "")
 		# raw = "2026-04-23T20-50-26"  →  用 T 分割日期和时间
@@ -685,27 +682,29 @@ func _show_session_list() -> void:
 		if parts.size() == 2:
 			display_name = parts[0] + " " + parts[1].replace("-", ":")
 		btn.text = display_name
-		btn.alignment = HORIZONTAL_ALIGNMENT_LEFT
-		btn.focus_mode = Control.FOCUS_ALL
-		_style_session_button(btn)
+		btn.tooltip_text = display_name
+		btn.resized.connect(_fit_session_row.bind(entry, btn))
+		# 键盘翻页时把整行留白一起滚入视野，焦点环和回弹始终有空间。
+		btn.focus_entered.connect(session_scroll.ensure_control_visible.bind(entry), CONNECT_DEFERRED)
 		btn.pressed.connect(_on_session_selected.bind(fname))
-		session_list.add_child(btn)
+		session_list.add_child(entry)
 
 	session_list_popup.visible = true
 	call_deferred("_focus_default_control")
 
-func _style_session_button(button: Button) -> void:
-	button.custom_minimum_size = Vector2(0, 36)
-	button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	button.theme_type_variation = &"GhostButton"
+
+func _fit_session_row(entry: MarginContainer, button: Button) -> void:
+	# 每侧 3% 覆盖悬停放大和按压回弹，另留 4px 给焦点描边。
+	var space := maxi(7, ceili(button.size.y * 0.03) + 4)
+	if space != entry.get_theme_constant("margin_top"):
+		entry.add_theme_constant_override("margin_top", space)
+		entry.add_theme_constant_override("margin_bottom", space)
 
 
 func _focus_default_control() -> void:
-	if session_list_popup.visible:
-		for child in session_list.get_children():
-			if child is Button and not (child as Button).disabled:
-				(child as Button).grab_focus()
-				return
+	if session_list_popup.visible and session_list.get_child(0) is MarginContainer:
+		(session_list.get_child(0).get_node("SessionButton") as Button).grab_focus()
+		return
 	if btn_back:
 		btn_back.grab_focus()
 

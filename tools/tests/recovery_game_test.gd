@@ -53,8 +53,8 @@ func _run() -> void:
 		game.process_mode = Node.PROCESS_MODE_DISABLED
 		root.add_child(game)
 		game.board._init_grid()
-		game.board.grid[19][6] = Color.WHITE
-		game.board.grid[20][6] = Color.WHITE
+		for row in [game.board.buffer_rows - 1, game.board.buffer_rows - 2]:
+			game.board.grid[row][6] = Color.WHITE
 		game.cur_type = PieceData.Type.T
 		game.held_type = PieceData.Type.I
 		game.hold_used = false
@@ -68,7 +68,7 @@ func _run() -> void:
 		game.process_mode = Node.PROCESS_MODE_DISABLED
 		root.add_child(game)
 		game.board._init_grid()
-		for row in [19, 20]:
+		for row in [game.board.buffer_rows - 1, game.board.buffer_rows - 2]:
 			for col in [4, 5, 6]:
 				game.board.grid[row][col] = Color.WHITE
 		game.cur_type = PieceData.Type.O

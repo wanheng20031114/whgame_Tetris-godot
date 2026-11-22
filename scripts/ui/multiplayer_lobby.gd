@@ -24,6 +24,7 @@ enum LobbyState {
 @onready var lbl_info: Label = %InfoLabel
 
 var _rooms_cache: Array = []
+var _room_rows: Dictionary[String, HBoxContainer] = {}
 var _info_key: String = "TXT_LOBBY_FETCHING_ROOMS"
 var _info_args: Array = []
 var _my_room_id: String = ""
@@ -132,9 +133,7 @@ func _on_refresh_pressed() -> void:
 	if _is_transition_state():
 		return
 	if _lobby_state == LobbyState.IDLE:
-		_rooms_cache.clear()
 		_set_info_key("TXT_LOBBY_FETCHING_ROOMS")
-	_render_room_list()
 	NetworkManager.request_room_list()
 
 func _refresh_info_text() -> void:
@@ -179,26 +178,43 @@ func _on_back_pressed() -> void:
 func _on_room_list_received(rooms: Array) -> void:
 	_rooms_cache = rooms.duplicate(true)
 	if _lobby_state == LobbyState.IDLE:
-		if rooms.is_empty():
-			_set_info_key("TXT_NO_ROOMS")
-		else:
-			_set_info_key("TXT_FOUND_ROOMS", [rooms.size()])
+		_show_room_count()
 	elif _my_room_mode == "tetris33" and _is_in_room_state():
 		_set_tetris33_info()
 	_render_room_list()
+
+func _show_room_count() -> void:
+	if _rooms_cache.is_empty():
+		_set_info_key("TXT_NO_ROOMS")
+	else:
+		_set_info_key("TXT_FOUND_ROOMS", [_rooms_cache.size()])
 
 func _render_room_list() -> void:
 	if room_list_container == null:
 		return
 
-	for child in room_list_container.get_children():
-		room_list_container.remove_child(child)
-		child.queue_free()
+	var sorted_rooms := _rooms_cache.duplicate()
+	sorted_rooms.sort_custom(_sort_rooms_for_view)
+	# 同一个房间保留原按钮，让刷新前按下的点击可以在松开时完成。
+	var removed_rows := _room_rows.duplicate()
+	for index in sorted_rooms.size():
+		var room: Dictionary = sorted_rooms[index]
+		var room_id: String = room["id"]
+		var row: HBoxContainer = _room_rows.get(room_id)
+		if row == null:
+			row = _create_room_row(room_id)
+			room_list_container.add_child(row)
+			_room_rows[room_id] = row
+		removed_rows.erase(room_id)
+		_update_room_row(row, room)
+		if row.get_index() != index:
+			room_list_container.move_child(row, index)
 
-	var sorted_rooms := _rooms_cache.duplicate(true)
-	sorted_rooms.sort_custom(Callable(self, "_sort_rooms_for_view"))
-	for room in sorted_rooms:
-		room_list_container.add_child(_create_room_row(room))
+	for room_id in removed_rows:
+		var row := _room_rows[room_id]
+		_room_rows.erase(room_id)
+		room_list_container.remove_child(row)
+		row.queue_free()
 
 func _sort_rooms_for_view(a: Dictionary, b: Dictionary) -> bool:
 	var a_priority := _room_priority(a)
@@ -210,36 +226,30 @@ func _sort_rooms_for_view(a: Dictionary, b: Dictionary) -> bool:
 func _room_priority(room: Dictionary) -> int:
 	return 0 if _is_my_room(room) else 1
 
-func _create_room_row(room: Dictionary) -> HBoxContainer:
+func _create_room_row(room_id: String) -> HBoxContainer:
 	var row := ROOM_ROW_SCENE.instantiate() as HBoxContainer
+	row.get_node("RoomButton").pressed.connect(_on_join_room_clicked.bind(room_id))
+	row.get_node("StartButton").pressed.connect(_on_start_tetris33_pressed)
+	row.get_node("LeaveButton").pressed.connect(_on_room_action_pressed.bind(room_id))
+	return row
+
+func _update_room_row(row: HBoxContainer, room: Dictionary) -> void:
 	var info_button: Button = row.get_node("RoomButton")
 	info_button.text = _format_room_text(room)
 	info_button.tooltip_text = info_button.text
 	var is_current_room := _is_current_room(room)
 	info_button.disabled = _lobby_state != LobbyState.IDLE or is_current_room
-	if not info_button.disabled:
-		info_button.pressed.connect(_on_join_room_clicked.bind(str(room.get("id", ""))))
 
-	if is_current_room:
-		var is_owner := _is_host_room(room)
-		var mode := str(room.get("mode", "versus"))
-		if is_owner and mode == "tetris33":
-			var start_button: Button = row.get_node("StartButton")
-			start_button.show()
-			start_button.text = tr("TXT_START_TETRIS33")
-			start_button.disabled = _lobby_state == LobbyState.STARTING_GAME or _tetris33_player_count < _tetris33_min_players
-			start_button.pressed.connect(_on_start_tetris33_pressed)
+	var is_owner := _is_host_room(room)
+	var start_button: Button = row.get_node("StartButton")
+	start_button.visible = is_owner and room.get("mode", "versus") == "tetris33"
+	start_button.text = tr("TXT_START_TETRIS33")
+	start_button.disabled = not _is_in_room_state() or _tetris33_player_count < _tetris33_min_players
 
-		var close_button: Button = row.get_node("LeaveButton")
-		close_button.show()
-		close_button.tooltip_text = tr("TXT_CLOSE_ROOM") if is_owner else tr("TXT_LEAVE_ROOM")
-		close_button.disabled = _lobby_state == LobbyState.CLOSING_ROOM or _lobby_state == LobbyState.STARTING_GAME
-		if is_owner:
-			close_button.pressed.connect(_on_close_current_room_pressed.bind(str(room.get("id", ""))))
-		else:
-			close_button.pressed.connect(_on_leave_current_room_pressed.bind(str(room.get("id", ""))))
-
-	return row
+	var close_button: Button = row.get_node("LeaveButton")
+	close_button.visible = is_current_room
+	close_button.tooltip_text = tr("TXT_CLOSE_ROOM") if is_owner else tr("TXT_LEAVE_ROOM")
+	close_button.disabled = not _is_in_room_state()
 
 func _format_room_text(room: Dictionary) -> String:
 	var mode: String = str(room.get("mode", "versus"))
@@ -286,7 +296,6 @@ func _on_room_created(room_id: String) -> void:
 		_set_tetris33_info()
 	else:
 		_set_info_key("TXT_ROOM_CREATED_WAIT", [room_id])
-	_render_room_list()
 
 func _on_room_joined(room_id: String) -> void:
 	_my_room_id = room_id
@@ -297,7 +306,6 @@ func _on_room_joined(room_id: String) -> void:
 		_set_tetris33_info()
 	else:
 		_set_info_key("TXT_ROOM_JOINED_PREP", [room_id])
-	_render_room_list()
 
 func _on_room_closed(payload: Dictionary) -> void:
 	var reason := str(payload.get("reason", "room_closed"))
@@ -314,6 +322,10 @@ func _on_room_left() -> void:
 	NetworkManager.request_room_list()
 
 func _on_server_error(message: String, _payload: Dictionary) -> void:
+	if message == "refresh_too_fast":
+		if _lobby_state == LobbyState.IDLE and _info_key == "TXT_LOBBY_FETCHING_ROOMS":
+			_show_room_count()
+		return
 	if message == "already_in_room":
 		_set_info_key("TXT_ALREADY_IN_ROOM")
 	else:
@@ -356,18 +368,15 @@ func _on_start_tetris33_pressed() -> void:
 	_set_lobby_state(LobbyState.STARTING_GAME)
 	_set_tetris33_info(_trf("TXT_TETRIS33_STARTING_REQUEST"))
 
-func _on_close_current_room_pressed(room_id: String) -> void:
-	if room_id != _my_room_id or not _is_room_owner:
+func _on_room_action_pressed(room_id: String) -> void:
+	if room_id != _my_room_id or not _is_in_room_state():
 		return
-	NetworkManager.close_room()
-	_set_info_key("TXT_CLOSING_ROOM")
-	_set_lobby_state(LobbyState.CLOSING_ROOM)
-
-func _on_leave_current_room_pressed(room_id: String) -> void:
-	if room_id != _my_room_id or _is_room_owner:
-		return
-	NetworkManager.leave_room()
-	_set_info_key("TXT_LEAVING_ROOM")
+	if _is_room_owner:
+		NetworkManager.close_room()
+		_set_info_key("TXT_CLOSING_ROOM")
+	else:
+		NetworkManager.leave_room()
+		_set_info_key("TXT_LEAVING_ROOM")
 	_set_lobby_state(LobbyState.CLOSING_ROOM)
 
 func _on_tetris33_game_started(_seed: int, _local_slot: int, _player_count: int, _players: Array) -> void:

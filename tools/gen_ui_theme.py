@@ -348,7 +348,14 @@ def build(mode):
         b.set(f"{name}/colors/font_selected_color", col(p["accent_text"]))
 
     b.set("ScrollContainer/styles/panel", b.empty())
-    _ = focus_card
+
+    # 长存档名允许换行；固定圆角让第一行和最后一行都留在焦点环内。
+    b.set("ReplaySessionButton/base_type", '&"GhostButton"')
+    b.set("ReplaySessionButton/styles/focus", focus_card)
+    b.set("ReplaySessionButton/styles/hover", b.box(col(p["surface2"]), CARD_R, (14, 9)))
+    session_pressed = b.box(col(p["surface3"]), CARD_R, (14, 9))
+    b.set("ReplaySessionButton/styles/pressed", session_pressed)
+    b.set("ReplaySessionButton/styles/hover_pressed", session_pressed)
 
     header = ('[gd_resource type="Theme" format=3]\n\n'
               '[ext_resource type="FontFile" uid="uid://bdubfn3esh6n1" path="res://assets/fonts/NotoSansSC-wght.ttf" id="1_font"]\n'

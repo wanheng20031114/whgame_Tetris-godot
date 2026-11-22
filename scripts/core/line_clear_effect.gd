@@ -12,6 +12,7 @@ const FLASH_TIME: float = 0.05
 const SLICE_TIME: float = 0.32
 const SHARD_LIFE: float = 0.55
 const SHARD_GRAVITY: float = 900.0
+const LIGHT_TIME := 0.15
 
 var _rows: Array = []      # [{y: float, colors: Array}]
 var _shards: Array = []    # [{pos, vel, color, life, max_life, size, rot, spin}]
@@ -21,6 +22,7 @@ var _cell: float = 30.0
 var _width: float = 300.0
 var _tint: Color = Color.WHITE
 var _power: float = 0.0
+var _light := false
 
 
 func _ready() -> void:
@@ -33,9 +35,10 @@ func _ready() -> void:
 ## cleared_rows_data: Array of { row_index: int, colors: Array[Color or null] }
 ## tint: 光带主色（普通消行为白色，四消/T-Spin 用对应方块色）
 ## power: 0~1，强度（行数、连击越高越强）
-func setup(cleared_rows_data: Array, cell_size: float, buffer_rows: int, tint: Color = Color.WHITE, power: float = -1.0) -> void:
+func setup(cleared_rows_data: Array, cell_size: float, buffer_rows: int, tint: Color = Color.WHITE, power: float = -1.0, light: bool = false) -> void:
 	_cell = cell_size
 	_tint = tint
+	_light = light
 	var count := cleared_rows_data.size()
 	_power = clampf(float(count - 1) / 3.0, 0.0, 1.0) if power < 0.0 else clampf(power, 0.0, 1.0)
 
@@ -47,6 +50,8 @@ func setup(cleared_rows_data: Array, cell_size: float, buffer_rows: int, tint: C
 		var y := (vis_row + 0.5) * cell_size
 		sum_y += y
 		_rows.append({"y": y, "colors": colors})
+		if _light:
+			continue
 
 		var per_cell := 1 + int(round(_power * 2.0))
 		for col in range(colors.size()):
@@ -70,7 +75,7 @@ func setup(cleared_rows_data: Array, cell_size: float, buffer_rows: int, tint: C
 					"spin": randf_range(-14.0, 14.0),
 				})
 
-	if count >= 4 or _power >= 0.99 or tint != Color.WHITE:
+	if not _light and (count >= 4 or _power >= 0.99 or tint != Color.WHITE):
 		_rings.append({"center": Vector2(_width * 0.5, sum_y / maxf(count, 1)), "t": 0.0, "max_r": _width * (0.45 + _power * 0.15), "color": tint})
 
 	set_process(true)
@@ -79,6 +84,12 @@ func setup(cleared_rows_data: Array, cell_size: float, buffer_rows: int, tint: C
 
 func _process(delta: float) -> void:
 	_t += delta
+	if _light:
+		if _t >= LIGHT_TIME:
+			queue_free()
+		else:
+			queue_redraw()
+		return
 	var alive := false
 	for s in _shards:
 		if s["life"] <= 0.0:
@@ -97,9 +108,17 @@ func _process(delta: float) -> void:
 
 
 func _draw() -> void:
+	if _light:
+		for row in _rows:
+			draw_light_band(self, Vector2(0, row["y"]), _width, _cell, _tint, 1.0 - _t / LIGHT_TIME)
+		return
 	_draw_rows()
 	_draw_rings()
 	_draw_shards()
+
+static func draw_light_band(canvas: CanvasItem, left_center: Vector2, width: float, cell: float, tint: Color, remaining: float) -> void:
+	var height := cell * 0.18
+	canvas.draw_rect(Rect2(left_center - Vector2(0, height * 0.5), Vector2(width, height)), Color(tint, 0.32 * clampf(remaining, 0.0, 1.0)))
 
 
 func _draw_rows() -> void:

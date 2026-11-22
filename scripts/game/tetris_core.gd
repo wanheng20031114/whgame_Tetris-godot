@@ -25,6 +25,7 @@ const T99_DAS_DELAY: float = 10.0 / 60.0
 const T99_ARR_INTERVAL: float = 2.0 / 60.0
 const T99_LOCK_DELAY: float = 0.5
 const T99_SOFT_DROP_SPEED: float = 20.0
+const RESULT_INPUT_LOCK_MSEC: int = 800
 
 @export_group("核心参数")
 @export var spawn_col: int = 4
@@ -62,7 +63,12 @@ var cur_rot: PieceData.RotationState
 var cur_col: int = 0
 var cur_row: int = 0
 
-var game_over: bool = false
+var game_over: bool = false:
+	set(ended):
+		game_over = ended
+		if ended:
+			ghost_piece.hide()
+			board.set_danger_level(0.0)
 var paused: bool = false
 var held_type: int = -1
 var hold_used: bool = false
@@ -78,12 +84,21 @@ var last_spin_mini: bool = false ## 最近一次锁定判定出的 Spin 是否�
 var _last_spin_full: bool = false
 var _lock_elapsed: float = 0.0
 var danger_level: float = 0.0 ## 0~1，堆叠高度 + 待入场垃圾的危险程度
+var _landing_preview_dirty := true
+var ready_garbage: int = 0:
+	set(amount):
+		if ready_garbage != amount:
+			ready_garbage = amount
+			_landing_preview_dirty = true
+var _result_input_ready_msec: int = 0
+var _result_pressed_keys: Dictionary[Key, bool] = {}
 
 # ==============================================================================
 # 生命周期
 # ==============================================================================
 
 func _ready() -> void:
+	set_process_input(false)
 	Diagnostics.fatal_shutdown_requested.connect(_trigger_game_over)
 	_ensure_default_input_actions()
 
@@ -108,6 +123,8 @@ func _ready() -> void:
 			next_displays.append(child)
 
 	lock_timer.timeout.connect(_on_lock_timer_timeout)
+	ghost_piece.hide()
+	SettingsMenu.landing_preview_changed.connect(_update_ghost)
 	hard_dropped.connect(_on_hard_drop_fx)
 	lines_cleared.connect(_remember_clear_kind)
 	rows_cleared.connect(_remember_clear_rows)
@@ -145,10 +162,26 @@ func process_logic(delta: float) -> void:
 		return
 	_update_gravity(delta)
 	_update_lock_delay(delta)
-	if game_over:
+
+## 多人结算切换时，在 GUI 导航、按钮和返回房间的快捷键之前拦截输入。
+func _lock_result_input() -> void:
+	_result_input_ready_msec = Time.get_ticks_msec() + RESULT_INPUT_LOCK_MSEC
+	_result_pressed_keys.clear()
+	set_process_input(true)
+
+func _input(event: InputEvent) -> void:
+	if Time.get_ticks_msec() < _result_input_ready_msec:
+		get_viewport().set_input_as_handled()
 		return
-	_update_ghost()
-	_update_danger_warning_state()
+	if event is InputEventKey:
+		var key: Key = event.physical_keycode if event.physical_keycode != KEY_NONE else event.keycode
+		if event.is_echo():
+			if not _result_pressed_keys.has(key):
+				get_viewport().set_input_as_handled()
+		elif event.pressed:
+			_result_pressed_keys[key] = true
+		else:
+			_result_pressed_keys.erase(key)
 
 func _sync_handling() -> void:
 	das.das_delay = Handling.das_seconds()
@@ -310,10 +343,9 @@ func _try_rotate(direction: int) -> bool:
 	return false
 
 func _hard_drop() -> void:
-	var cells: int = 0
-	while board.is_valid_position(cur_type, cur_rot, cur_col, cur_row + 1):
-		cur_row += 1
-		cells += 1
+	var landing_row := _get_landing_row()
+	var cells := landing_row - cur_row
+	cur_row = landing_row
 	# 硬降属于明显位移动作，落锁前必须清除“上一手是旋转”的状态。
 	if cells > 0:
 		last_was_rotation = false
@@ -372,7 +404,7 @@ func _lock_piece() -> void:
 	piece_locked.emit(cur_type, board.get_grid_state())
 	
 	hold_used = false
-	_spawn_next_piece()
+	_spawn_next_piece(cleared > 0)
 
 ## 限定可参与 Spin 判定的方块类型。
 ## O 方块不具备有效旋转中心与踢墙特征，剔除可减少误判。
@@ -473,24 +505,24 @@ func _try_hold() -> void:
 		_update_hold_display()
 		_activate_piece(temp as PieceData.Type)
 
-func _spawn_next_piece() -> void:
-	_activate_piece(bag.next())
+func _spawn_next_piece(after_clear: bool = false) -> void:
+	_activate_piece(bag.next(), after_clear)
 
-## Normal spawn and Hold must obey the same collision and top-out rules.
-func _activate_piece(piece_type: PieceData.Type) -> bool:
+## 普通出块和暂存换块共用出生位置与碰撞判定。
+func _activate_piece(piece_type: PieceData.Type, after_clear: bool = false) -> bool:
 	lock_sound_played_for_current_lock = false
 	cur_type = piece_type
 	cur_rot = PieceData.RotationState.SPAWN
 	cur_col = spawn_col
-	cur_row = board.buffer_rows
-	_reset_piece_state()
-	if not board.is_valid_position(cur_type, cur_rot, cur_col, cur_row):
-		if board.is_valid_position(cur_type, cur_rot, cur_col, cur_row - 1):
-			cur_row -= 1
-		else:
-			_trigger_game_over()
-			return false
+	cur_row = board.find_spawn_row(cur_type, cur_col, board.grid, after_clear)
 	current_piece.initialize(cur_type)
+	if cur_row < 0:
+		cur_row = board.buffer_rows - 1
+		current_piece.set_as_ghost(true)
+		_sync_piece_position()
+		_trigger_game_over()
+		return false
+	_reset_piece_state()
 	_sync_piece_position()
 	_update_next_display()
 	_update_danger_warning_state()
@@ -500,8 +532,6 @@ func _trigger_game_over() -> void:
 	if game_over:
 		return
 	game_over = true
-	board.set_danger_level(0.0)
-	board.set_spawn_warning(-1, 0, 0)
 	game_over_triggered.emit()
 
 func _reset_piece_state() -> void:
@@ -521,23 +551,33 @@ func _reset_piece_state() -> void:
 # ==============================================================================
 
 func _sync_piece_position() -> void:
-	current_piece.position = Vector2(
-		cur_col * board.cell_size,
-		(cur_row - board.buffer_rows) * board.cell_size
-	)
-	board_updated.emit() # 用于同步幽灵块等视觉表现
+	board.frame_active_piece(cur_type, cur_rot, cur_row)
+	current_piece.global_position = board.to_global(board.cell_position(cur_col, cur_row))
+	_landing_preview_dirty = true
+	board_updated.emit()
 
-func _update_ghost() -> void:
-	var ghost_row: int = cur_row
-	while board.is_valid_position(cur_type, cur_rot, cur_col, ghost_row + 1):
-		ghost_row += 1
+func _get_landing_row() -> int:
+	var row := cur_row
+	while board.is_valid_position(cur_type, cur_rot, cur_col, row + 1):
+		row += 1
+	return row
+
+func _update_ghost(enabled: bool) -> void:
+	_landing_preview_dirty = false
+	if game_over or paused or (not enabled and danger_level <= 0.0):
+		ghost_piece.hide()
+		return
+	var ghost_row := _get_landing_row()
+	var lethal := false
+	if danger_level > 0.0:
+		lethal = board.would_block_next_spawn(cur_type, cur_rot, Vector2i(cur_col, ghost_row), bag.peek(1)[0], spawn_col, ready_garbage)
+	ghost_piece.visible = lethal or (enabled and ghost_row > cur_row)
+	if not ghost_piece.visible:
+		return
 	ghost_piece.initialize(cur_type)
 	ghost_piece.apply_rotation(cur_rot)
-	ghost_piece.set_as_ghost()
-	ghost_piece.position = Vector2(
-		cur_col * board.cell_size,
-		(ghost_row - board.buffer_rows) * board.cell_size
-	)
+	ghost_piece.set_as_ghost(lethal)
+	ghost_piece.global_position = board.to_global(board.cell_position(cur_col, ghost_row))
 
 func _update_hold_display() -> void:
 	if held_type >= 0:
@@ -555,12 +595,10 @@ func _update_next_display() -> void:
 func _update_danger_warning_state() -> void:
 	var effective: int = board.get_stack_height() + mini(_incoming_garbage_total(), board.visible_rows)
 	var free_rows: int = board.visible_rows - effective
-	danger_level = clampf(float(7 - free_rows) / 4.0, 0.0, 1.0)
+	danger_level = clampf(float(8 - free_rows) / 5.0, 0.0, 1.0)
 	board.set_danger_level(danger_level)
-	if danger_level > 0.0 and bag != null:
-		board.set_spawn_warning(int(bag.peek(1)[0]), spawn_col, board.buffer_rows)
-	else:
-		board.set_spawn_warning(-1, 0, 0)
+	if _landing_preview_dirty:
+		_update_ghost(SettingsMenu.landing_preview_enabled)
 
 ## 子类返回尚未入场的垃圾总行数，用于危险提示。
 func _incoming_garbage_total() -> int:
@@ -602,7 +640,7 @@ func _remember_clear_rows(rows_data: Array) -> void:
 		return
 	var sum := 0.0
 	for row_data in rows_data:
-		sum += (float(int(row_data["row_index"]) - board.buffer_rows) + 0.5) * board.cell_size
+		sum += (float(int(row_data["row_index"]) - board.view_top_row) + 0.5) * board.cell_size
 	_fx_clear_y = sum / rows_data.size()
 
 ## 本次消除的代表色：T-Spin 紫、四消青、其他 Spin 取方块色、普通消行暖白
@@ -623,10 +661,12 @@ func _attack_color() -> Color:
 func _spawn_line_clear_fx(rows_data: Array) -> void:
 	if board == null or rows_data.is_empty():
 		return
-	var power := clampf(float(rows_data.size() - 1) / 3.0 + maxi(scoring.combo, 0) * 0.08, 0.0, 1.0)
-	var fx := LineClearEffect.new()
-	board.add_child(fx)
-	fx.setup(rows_data, board.cell_size, board.buffer_rows, _clear_tint(), power)
+	var level := VisualEffects.get_level(VisualEffects.LINE_CLEAR)
+	if level != VisualEffects.Level.OFF:
+		var power := clampf(float(rows_data.size() - 1) / 3.0 + maxi(scoring.combo, 0) * 0.08, 0.0, 1.0)
+		var fx := LineClearEffect.new()
+		board.add_child(fx)
+		fx.setup(rows_data, board.cell_size, board.view_top_row, _clear_tint(), power, level == VisualEffects.Level.LIGHT)
 	board.bump(Vector2(0, 1.5 + rows_data.size() * 0.8))
 
 func _on_hard_drop_fx(cells: int) -> void:

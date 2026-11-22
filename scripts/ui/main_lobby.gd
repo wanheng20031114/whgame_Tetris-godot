@@ -207,7 +207,7 @@ func _set_card_glow(card: PanelContainer, active: bool) -> void:
 		(card as ModeCard).active = active
 	else:
 		card.theme_type_variation = CARD_STYLE_ACTIVE if active else CARD_STYLE
-	var glyph := card.get_node("VBoxContainer/Glyph") as ModeGlyph
+	var glyph := card.get_node("VBoxContainer/Preview/Glyph") as ModeGlyph
 	glyph.active = active
 
 

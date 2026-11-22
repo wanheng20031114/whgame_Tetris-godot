@@ -18,6 +18,7 @@ var current_rotation: PieceData.RotationState = PieceData.RotationState.SPAWN
 ## 当前方块基础颜色 (取自 PieceData)
 var piece_color: Color
 var _initialized: bool = false
+var lethal_outline: bool = false
 
 ## 单个格子的实际像素大小（通过检查器或场景树设置）
 @export var cell_size: float = 30.0
@@ -39,6 +40,7 @@ func initialize(type: PieceData.Type) -> void:
 	self.piece_type = type
 	self.current_rotation = PieceData.RotationState.SPAWN
 	self.piece_color = PieceData.COLORS[type]
+	lethal_outline = false
 	_initialized = true
 	queue_redraw()
 
@@ -63,7 +65,12 @@ func _draw() -> void:
 		# 使用 Rect2 限定出这个小方格的位置和尺寸
 		var rect = Rect2(Vector2(x, y), Vector2(cell_size, cell_size))
 		
-		_draw_block_cell(rect, piece_color)
+		if lethal_outline:
+			var outline := rect.grow(-2.5)
+			draw_rect(outline, Color("420c17"), false, 5.0)
+			draw_rect(outline, Board.DANGER_COLOR, false, 3.0)
+		else:
+			_draw_block_cell(rect, piece_color)
 		
 		# 如果之后需要加发光外发散，我们可以加入基于 Shader 材质的 Bloom
 		# 不过目前依靠不同色彩深度的互相印衬，就足以生成“非常酷”的视觉表现了
@@ -79,7 +86,10 @@ func apply_rotation(new_rot: PieceData.RotationState) -> void:
 
 ## 修改颜色以变身幽灵方块 (Ghost Piece)
 ## 透明化并大幅提高明度边缘。用来让玩家预知坠落点
-func set_as_ghost() -> void:
+func set_as_ghost(lethal: bool = false) -> void:
+	lethal_outline = lethal
+	# 着地时活动块和预警重合，让红线仍然可见。
+	z_index = 1 if lethal else 0
 	var base = PieceData.COLORS[piece_type]
 	# 面漆设为超低透明 (只留下一丝魂气)
 	piece_color = Color(base.r, base.g, base.b, 0.2)

@@ -1,0 +1,11 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/landing_preview_toggle.gd" id="1_switch"]
+
+[node name="LandingPreviewToggle" type="CheckButton"]
+custom_minimum_size = Vector2(0, 32)
+focus_mode = 0
+mouse_default_cursor_shape = 2
+button_pressed = true
+text = "TXT_LANDING_PREVIEW"
+script = ExtResource("1_switch")

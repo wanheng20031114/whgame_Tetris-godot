@@ -23,7 +23,6 @@ extends TetrisCore
 var garbage_bar: GarbageBar
 var single_player_attack_timer: float = 0.0
 var pending_attacks: Array = []
-var ready_garbage: int = 0
 
 @onready var game_over_panel: PanelContainer = %GameOverOverlay
 @onready var btn_restart: Button = %RestartButton
@@ -97,6 +96,7 @@ func _process(delta: float) -> void:
 	# 更新单人受攻击条与入场计时。
 	if not game_over and not paused:
 		_update_single_player_garbage(delta)
+		_update_danger_warning_state()
 
 func _unhandled_input(event: InputEvent) -> void:
 	# 仅在结算面板显示时拦截取消键，避免误退出。
@@ -273,10 +273,9 @@ func _lock_piece() -> void:
 
 	_play_piece_lock_sound_once()
 
-	var garbage_topped_out := false
 	var did_clear_lines: bool = scoring.lines > lines_before_lock
 	if will_receive_garbage and not did_clear_lines:
-		garbage_topped_out = board.add_garbage_lines(ready_garbage)
+		board.add_garbage_lines(ready_garbage)
 		ready_garbage = 0
 		if garbage_bar:
 			garbage_bar.mark_entered()
@@ -292,10 +291,7 @@ func _lock_piece() -> void:
 		locked_row,
 		next_pieces_at_lock
 	)
-	if garbage_topped_out:
-		_trigger_game_over()
-	else:
-		_spawn_next_piece()
+	_spawn_next_piece(cleared > 0)
 
 func _on_game_over() -> void:
 	if label_game_over:

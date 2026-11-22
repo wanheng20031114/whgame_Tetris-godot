@@ -98,42 +98,50 @@ theme_override_constants/separation = 18
 
 [node name="SidebarPanel" type="PanelContainer" parent="Page/BodyMargin/Body"]
 layout_mode = 2
-custom_minimum_size = Vector2(250, 0)
+custom_minimum_size = Vector2(270, 0)
 
-[node name="SidebarMargin" type="MarginContainer" parent="Page/BodyMargin/Body/SidebarPanel"]
+[node name="SidebarScroll" type="ScrollContainer" parent="Page/BodyMargin/Body/SidebarPanel"]
 layout_mode = 2
-theme_override_constants/margin_left = 0
-theme_override_constants/margin_top = 0
-theme_override_constants/margin_right = 0
-theme_override_constants/margin_bottom = 0
+horizontal_scroll_mode = 0
+follow_focus = true
 
-[node name="Sidebar" type="VBoxContainer" parent="Page/BodyMargin/Body/SidebarPanel/SidebarMargin"]
+[node name="SidebarMargin" type="MarginContainer" parent="Page/BodyMargin/Body/SidebarPanel/SidebarScroll"]
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 8
+
+[node name="Sidebar" type="VBoxContainer" parent="Page/BodyMargin/Body/SidebarPanel/SidebarScroll/SidebarMargin"]
 layout_mode = 2
 theme_override_constants/separation = 8
 
-[node name="OverviewButton" type="Button" parent="Page/BodyMargin/Body/SidebarPanel/SidebarMargin/Sidebar"]
+[node name="OverviewButton" type="Button" parent="Page/BodyMargin/Body/SidebarPanel/SidebarScroll/SidebarMargin/Sidebar"]
 unique_name_in_owner = true
 layout_mode = 2
 custom_minimum_size = Vector2(0, 42)
 text = "  总览"
 alignment = 0
 
-[node name="BasicsSectionLabel" type="Label" parent="Page/BodyMargin/Body/SidebarPanel/SidebarMargin/Sidebar"]
+[node name="BasicsSectionLabel" type="Label" parent="Page/BodyMargin/Body/SidebarPanel/SidebarScroll/SidebarMargin/Sidebar"]
+unique_name_in_owner = true
 layout_mode = 2
 theme_type_variation = &"EyebrowLabel"
 text = "基础知识"
 
-[node name="BasicsList" type="VBoxContainer" parent="Page/BodyMargin/Body/SidebarPanel/SidebarMargin/Sidebar"]
+[node name="BasicsList" type="VBoxContainer" parent="Page/BodyMargin/Body/SidebarPanel/SidebarScroll/SidebarMargin/Sidebar"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 8
 
-[node name="SectionLabel" type="Label" parent="Page/BodyMargin/Body/SidebarPanel/SidebarMargin/Sidebar"]
+[node name="SectionLabel" type="Label" parent="Page/BodyMargin/Body/SidebarPanel/SidebarScroll/SidebarMargin/Sidebar"]
+unique_name_in_owner = true
 layout_mode = 2
 theme_type_variation = &"EyebrowLabel"
 text = "学习章节"
 
-[node name="ChaptersList" type="VBoxContainer" parent="Page/BodyMargin/Body/SidebarPanel/SidebarMargin/Sidebar"]
+[node name="ChaptersList" type="VBoxContainer" parent="Page/BodyMargin/Body/SidebarPanel/SidebarScroll/SidebarMargin/Sidebar"]
 unique_name_in_owner = true
 layout_mode = 2
 theme_override_constants/separation = 8

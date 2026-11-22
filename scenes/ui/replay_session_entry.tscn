@@ -1,0 +1,16 @@
+[gd_scene format=3]
+
+[node name="SessionEntry" type="MarginContainer"]
+size_flags_horizontal = 3
+mouse_filter = 2
+theme_override_constants/margin_left = 20
+theme_override_constants/margin_top = 7
+theme_override_constants/margin_right = 20
+theme_override_constants/margin_bottom = 7
+
+[node name="SessionButton" type="Button" parent="."]
+custom_minimum_size = Vector2(0, 36)
+layout_mode = 2
+theme_type_variation = &"ReplaySessionButton"
+alignment = 0
+autowrap_mode = 3

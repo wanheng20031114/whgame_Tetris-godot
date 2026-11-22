@@ -62,8 +62,8 @@ func _popup_center_in_board(board: Board, board_size: Vector2, rows_data: Array)
 		for row_data in rows_data:
 			if not (row_data is Dictionary):
 				continue
-			var row_index := int(row_data.get("row_index", board.buffer_rows))
-			var visible_row := clampi(row_index - board.buffer_rows, 0, board.visible_rows - 1)
+			var row_index := int(row_data.get("row_index", board.view_top_row))
+			var visible_row := clampi(row_index - board.view_top_row, 0, board.visible_rows - 1)
 			total_y += (float(visible_row) + 0.5) * board.cell_size
 		if total_y > 0.0:
 			y = total_y / float(rows_data.size())

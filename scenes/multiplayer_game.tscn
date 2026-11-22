@@ -8,6 +8,7 @@
 [ext_resource type="PackedScene" uid="uid://drnwu2mscsah3" path="res://scenes/ui/game_over_panel.tscn" id="5_gopanel"]
 [ext_resource type="Script" path="res://scripts/core/structure_evaluator_node.gd" id="6_eval"]
 [ext_resource type="PackedScene" path="res://scenes/ui/ui_background.tscn" id="ui_bg_scene"]
+[ext_resource type="PackedScene" path="res://scenes/ui/landing_preview_toggle.tscn" id="landing_preview"]
 [ext_resource type="AudioStream" path="res://audio/move_scrape.wav" id="audio_move"]
 
 [node name="MultiplayerGame" type="Node2D" unique_id=184268838]
@@ -56,9 +57,9 @@ cell_size = 21.0
 
 [node name="NextPanel" type="Panel" parent="." unique_id=305796386]
 offset_left = 510.0
-offset_top = 82.0
+offset_top = 28.0
 offset_right = 650.0
-offset_bottom = 492.0
+offset_bottom = 438.0
 metadata/_edit_group_ = true
 
 [node name="NextLabel" type="Label" parent="NextPanel" unique_id=2120261123]
@@ -139,62 +140,74 @@ theme_override_font_sizes/font_size = 48
 text = "V S"
 horizontal_alignment = 1
 
-[node name="OpponentSide" type="VBoxContainer" parent="." unique_id=422575315]
-offset_left = 800.0
-offset_top = 40.0
-offset_right = 1100.0
+[node name="OpponentSide" type="Control" parent="." unique_id=422575315]
+offset_left = 810.0
+offset_right = 1090.0
 offset_bottom = 680.0
-alignment = 1
 metadata/_edit_group_ = true
 
 [node name="OpponentNameLabel" type="Label" parent="OpponentSide" unique_id=1851064837]
 unique_name_in_owner = true
-layout_mode = 2
+anchor_right = 1.0
+offset_bottom = 34.0
 theme_override_font_sizes/font_size = 24
 text = "等待连接..."
 horizontal_alignment = 1
 
 [node name="BoardArea" type="Control" parent="OpponentSide" unique_id=1190387547]
-custom_minimum_size = Vector2(300, 600)
-layout_mode = 2
+anchor_right = 1.0
+offset_top = 120.0
+offset_bottom = 680.0
 
 [node name="OpponentBoard" parent="OpponentSide/BoardArea" unique_id=908733715 instance=ExtResource("2_board")]
 unique_name_in_owner = true
+cell_size = 28.0
+shown_buffer_rows = 3
 
-[node name="PlayerSide" type="VBoxContainer" parent="." unique_id=2091124495]
-offset_left = 180.0
-offset_top = 40.0
-offset_right = 480.0
+[node name="PlayerSide" type="Control" parent="." unique_id=2091124495]
+offset_left = 190.0
+offset_right = 470.0
 offset_bottom = 680.0
-alignment = 1
 metadata/_edit_group_ = true
 
 [node name="PlayerNameLabel" type="Label" parent="PlayerSide" unique_id=563688540]
 unique_name_in_owner = true
-layout_mode = 2
+anchor_right = 1.0
+offset_bottom = 34.0
 theme_override_font_sizes/font_size = 24
 text = "你 (本地玩家)"
 horizontal_alignment = 1
 
 [node name="BoardArea" type="Control" parent="PlayerSide" unique_id=1038537583]
-custom_minimum_size = Vector2(300, 600)
-layout_mode = 2
+anchor_right = 1.0
+offset_top = 120.0
+offset_bottom = 680.0
 
 [node name="Board" parent="PlayerSide/BoardArea" unique_id=1942312580 instance=ExtResource("2_board")]
 unique_name_in_owner = true
+cell_size = 28.0
+shown_buffer_rows = 3
 
 [node name="PieceClip" type="Control" parent="PlayerSide/BoardArea/Board"]
 clip_contents = true
-layout_mode = 0
-offset_right = 300.0
-offset_bottom = 600.0
+offset_top = -84.0
+offset_right = 280.0
+offset_bottom = 560.0
 mouse_filter = 2
-
-[node name="CurrentPiece" parent="PlayerSide/BoardArea/Board/PieceClip" unique_id=237738877 instance=ExtResource("3_piece")]
-unique_name_in_owner = true
 
 [node name="GhostPiece" parent="PlayerSide/BoardArea/Board/PieceClip" unique_id=765790715 instance=ExtResource("3_piece")]
 unique_name_in_owner = true
+cell_size = 28.0
+
+[node name="CurrentPiece" parent="PlayerSide/BoardArea/Board/PieceClip" unique_id=237738877 instance=ExtResource("3_piece")]
+unique_name_in_owner = true
+cell_size = 28.0
+
+[node name="LandingPreviewToggle" parent="PlayerSide/BoardArea" instance=ExtResource("landing_preview")]
+offset_left = 40.0
+offset_top = 566.0
+offset_right = 240.0
+offset_bottom = 598.0
 
 [node name="UIOverlay" type="CanvasLayer" parent="." unique_id=1695462255]
 layer = 100
