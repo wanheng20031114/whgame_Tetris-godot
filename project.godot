@@ -11,7 +11,7 @@ config_version=5
 [application]
 
 config/name="TETRIS"
-config/version="1.4.3"
+config/version="1.4.4"
 run/main_scene="res://scenes/ui/main.tscn"
 config/features=PackedStringArray("4.6", "GL Compatibility")
 run/low_processor_mode_sleep_usec=0
