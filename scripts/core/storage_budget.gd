@@ -5,31 +5,13 @@ extends RefCounted
 # Existing files are retained. A full budget rejects new writes.
 const SESSION_BYTES: int = 1_000_000_000
 const TOTAL_BYTES: int = 20_000_000_000
-const LOCK_OWNER_LIMIT: int = 256
 const RESERVATION_LIMIT: int = 2048
 static var _mutex := Mutex.new()
-static var _root_override: String = ""
-static var _started: bool = false
 static var _error_message: String = ""
-static var _total_limit: int = TOTAL_BYTES
-static var _session_limit: int = SESSION_BYTES
 
 static func data_root() -> String:
 	_mutex.lock()
 	var result := _root()
-	_mutex.unlock()
-	return result
-
-static func configure_root_for_tests(path: String, total_limit: int = TOTAL_BYTES, session_limit: int = SESSION_BYTES) -> Error:
-	_mutex.lock()
-	var result: Error = OK
-	var isolated_test := _is_isolated_test_path(path)
-	if (_started and not isolated_test) or not path.is_absolute_path() or total_limit <= LOCK_OWNER_LIMIT or total_limit > TOTAL_BYTES or session_limit <= 0 or session_limit > SESSION_BYTES:
-		result = _fail(ERR_INVALID_PARAMETER, "Test storage root must be absolute and configured before storage is used.")
-	else:
-		_root_override = path.simplify_path().trim_suffix("/").trim_suffix("\\")
-		_total_limit = total_limit
-		_session_limit = session_limit
 	_mutex.unlock()
 	return result
 
@@ -139,7 +121,7 @@ static func reserve_output(path: String, max_bytes: int) -> Dictionary:
 			token = _unique()
 			var marker := _root().path_join(".reservations").path_join(token + ".json")
 			var bytes := JSON.stringify({"protocol": 1, "path": _absolute(path), "max_bytes": max_bytes, "parent_pid": OS.get_process_id()}).to_utf8_buffer()
-			err = _check_capacity(path, max_bytes + bytes.size(), true) if max_bytes <= _total_limit else _fail(ERR_OUT_OF_MEMORY, "Analysis reservation exceeds the userdata directory budget.")
+			err = _check_capacity(path, max_bytes + bytes.size(), true) if max_bytes <= TOTAL_BYTES else _fail(ERR_OUT_OF_MEMORY, "Analysis reservation exceeds the userdata directory budget.")
 			if err == OK:
 				err = _store_new(marker, bytes)
 		_release()
@@ -212,23 +194,7 @@ static func commit_reserved(token: String, destination: String) -> Error:
 	return err
 
 static func _root() -> String:
-	if not _root_override.is_empty():
-		return _root_override
 	return ProjectSettings.globalize_path("res://userdata") if OS.has_feature("editor") else OS.get_executable_path().get_base_dir().path_join("userdata")
-
-static func _is_isolated_test_path(path: String) -> bool:
-	if OS.get_environment("TETRIS_SAFE_RUN") != "1" or not OS.has_feature("editor"):
-		return false
-	var run_dir := OS.get_environment("TETRIS_RUN_DIR").replace("\\", "/").simplify_path().trim_suffix("/")
-	var marker := FileAccess.open("res://.safe-run-isolated.json", FileAccess.READ)
-	if marker == null or marker.get_length() > 4096 or not run_dir.is_absolute_path():
-		return false
-	var info = _json_value(marker.get_as_text())
-	marker.close()
-	if not (info is Dictionary) or info.get("kind") != "tetris-isolated-test":
-		return false
-	var project_root := ProjectSettings.globalize_path("res://").replace("\\", "/").simplify_path().trim_suffix("/")
-	return run_dir.to_lower().begins_with(project_root.to_lower() + "/") and path.replace("\\", "/").simplify_path().to_lower().begins_with(run_dir.to_lower() + "/")
 
 static func _absolute(path: String) -> String:
 	return ProjectSettings.globalize_path(path).replace("\\", "/").simplify_path()
@@ -290,7 +256,6 @@ static func _read(path: String, limit: int) -> Dictionary:
 	return {"error": OK, "data": bytes}
 
 static func _acquire() -> Error:
-	_started = true
 	if _path_has_link(_root()):
 		return _fail(ERR_INVALID_PARAMETER, "Refusing a storage root or ancestor that is a link or junction.")
 	var err := DirAccess.make_dir_recursive_absolute(_root())
@@ -303,7 +268,7 @@ static func _acquire() -> Error:
 		# new owner's lock. An interrupted write lock requires explicit recovery.
 		return _fail(ERR_BUSY, "Storage is busy in another game process, or an interrupted write lock requires explicit recovery. Pending saves were retained.")
 	var owner_bytes := JSON.stringify({"pid": OS.get_process_id()}).to_utf8_buffer()
-	if _usage() + owner_bytes.size() > _total_limit:
+	if _usage() + owner_bytes.size() > TOTAL_BYTES:
 		DirAccess.remove_absolute(lock_dir)
 		return _fail(ERR_OUT_OF_MEMORY, "The 20,000,000,000-byte userdata directory budget is full; existing data was retained.")
 	err = _store_new(lock_dir.path_join("owner.json"), owner_bytes)
@@ -355,10 +320,10 @@ static func _check_capacity(path: String, additional_bytes: int, new_reservation
 		return _fail(ERR_INVALID_DATA, "Cannot verify userdata storage usage; existing data was retained.")
 	if new_reservation and usage.reserved.has(_path_key(path)):
 		return _fail(ERR_ALREADY_EXISTS, "Analysis output already has an active reservation: " + path)
-	if additional_bytes < 0 or additional_bytes > _total_limit or int(usage.total) > _total_limit - additional_bytes:
+	if additional_bytes < 0 or additional_bytes > TOTAL_BYTES or int(usage.total) > TOTAL_BYTES - additional_bytes:
 		return _fail(ERR_OUT_OF_MEMORY, "The 20,000,000,000-byte userdata directory budget is full; existing data was retained.")
 	var session := _session_key(path)
-	if not session.is_empty() and (additional_bytes > _session_limit or int(usage.sessions.get(session, 0)) > _session_limit - additional_bytes):
+	if not session.is_empty() and (additional_bytes > SESSION_BYTES or int(usage.sessions.get(session, 0)) > SESSION_BYTES - additional_bytes):
 		return _fail(ERR_OUT_OF_MEMORY, "The 1,000,000,000-byte session budget is full for " + session + "; existing data was retained.")
 	return OK
 
@@ -384,7 +349,7 @@ static func _usage_breakdown() -> Dictionary:
 			if not (info is Dictionary) or not _inside(str(info.get("path", ""))):
 				return _invalid_usage()
 			var limit := int(info.get("max_bytes", TOTAL_BYTES + 1))
-			if limit <= 0 or limit > _total_limit:
+			if limit <= 0 or limit > TOTAL_BYTES:
 				return _invalid_usage()
 			var key := _path_key(str(info.path))
 			if reserved.has(key):

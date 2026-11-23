@@ -13,14 +13,11 @@ replay-ai-core/target/
 # 本地 MCP 客户端（虚拟环境与官方包）
 .mcp.json
 tools/mcp/blender/
-tools/shot/out/
-tools/shot/ref/
 
 # Isolated verification artifacts are never part of the game or exports.
 .safe-runs/
 .safe-run-isolated.json
 .rust-build/
-tools/shot/test-results/
 __pycache__/
 
 # Local assistant credentials must never be committed.
