@@ -49,7 +49,7 @@ const COLORS: Dictionary = {
 # ------------------------------------------------------------------------------
 ##
 ## 这个体系记录了每个方块 4 个朝向的局部坐标网格映射。
-## 基准：原点 (0, 0) 为旋转轴心。X 轴向右为正，Y 轴向下为正（Godot 屏幕坐标系）。
+## (0, 0) 是锚点格。X 轴向右为正，Y 轴向下为正。I 和 O 的旋转轴在格线交点。
 
 const SHAPES: Dictionary = {
 	Type.T: {
@@ -144,6 +144,13 @@ const WALL_KICK_I_180: Dictionary = {
 	"2->0": [Vector2(0, 0), Vector2(0, 1)],
 	"3->1": [Vector2(0, 0), Vector2(-1, 0)]
 }
+
+## 相对锚点格左上角的旋转中心，以格宽为单位。
+static func rotation_center(type: Type) -> Vector2:
+	match type:
+		Type.I: return Vector2(1.0, 1.0)
+		Type.O: return Vector2(1.0, 0.0)
+		_: return Vector2(0.5, 0.5)
 
 ## 获取踢墙检测序列参数封装
 static func get_wall_kicks(type: Type, from_state: RotationState, to_state: RotationState) -> Array:

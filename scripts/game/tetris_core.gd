@@ -26,6 +26,10 @@ const T99_ARR_INTERVAL: float = 2.0 / 60.0
 const T99_LOCK_DELAY: float = 0.5
 const T99_SOFT_DROP_SPEED: float = 20.0
 const RESULT_INPUT_LOCK_MSEC: int = 800
+const PIECE_ACTIONS: Array[StringName] = [
+	&"rotate_cw", &"rotate_ccw", &"rotate_180", &"hard_drop", &"hold",
+	&"move_left", &"move_right", &"soft_drop",
+]
 
 @export_group("核心参数")
 @export var spawn_col: int = 4
@@ -54,6 +58,7 @@ const RESULT_INPUT_LOCK_MSEC: int = 800
 var bag: BagRandomizer
 var das: DASHandler
 var scoring: Scoring
+var _data_collector: PlayerDataCollector
 
 # ==============================================================================
 # 运行状态
@@ -98,13 +103,13 @@ var _result_pressed_keys: Dictionary[Key, bool] = {}
 # ==============================================================================
 
 func _ready() -> void:
-	set_process_input(false)
 	Diagnostics.fatal_shutdown_requested.connect(_trigger_game_over)
 	_ensure_default_input_actions()
 
 	if board == null or current_piece == null or ghost_piece == null or hold_piece == null or next_container == null or lock_timer == null:
 		push_error("[TetrisCore] Required scene nodes are missing. Please verify unique_name_in_owner flags in scene.")
 		set_process(false)
+		set_process_input(false)
 		return
 
 	# 初始化逻辑组件
@@ -155,19 +160,22 @@ func process_logic(delta: float) -> void:
 		return
 		
 	_sync_handling()
-	_handle_core_input(delta)
-	if game_over or paused:
-		return
-	_update_gravity(delta)
-	_update_lock_delay(delta)
+	_update_auto_shift(delta)
+	var lock_delta := _update_gravity(delta)
+	_update_lock_delay(lock_delta)
 
 ## 多人结算切换时，在 GUI 导航、按钮和返回房间的快捷键之前拦截输入。
 func _lock_result_input() -> void:
 	_result_input_ready_msec = Time.get_ticks_msec() + RESULT_INPUT_LOCK_MSEC
 	_result_pressed_keys.clear()
-	set_process_input(true)
 
 func _input(event: InputEvent) -> void:
+	if _result_input_ready_msec > 0:
+		_handle_result_input(event)
+	elif not game_over and not paused and event.is_action_type() and not event.is_echo():
+		_handle_piece_input(event)
+
+func _handle_result_input(event: InputEvent) -> void:
 	if Time.get_ticks_msec() < _result_input_ready_msec:
 		get_viewport().set_input_as_handled()
 		return
@@ -188,77 +196,89 @@ func _sync_handling() -> void:
 # ==============================================================================
 # 输入与移动
 # ==============================================================================
-func _handle_core_input(delta: float) -> void:
-	var hold_just_pressed: bool = Input.is_action_just_pressed("hold")
-
-	if Input.is_action_just_pressed("rotate_cw"):
-		_try_rotate(1)
-	if Input.is_action_just_pressed("rotate_ccw"):
-		_try_rotate(-1)
-	if Input.is_action_just_pressed("rotate_180"):
-		_try_rotate(2)
-
-	if Input.is_action_just_pressed("hard_drop"):
-		_hard_drop()
-		# 当硬降和 Hold 在同一帧触发时，不要吞掉 Hold 输入。
-		if hold_just_pressed and not game_over and not paused:
-			_try_hold()
+## 按事件到达顺序执行。硬降同步锁定并出块，后一按自然作用于新方块。
+func _handle_piece_input(event: InputEvent) -> void:
+	if not event.is_pressed():
+		if event.is_action_released(&"move_left") or event.is_action_released(&"move_right"):
+			_update_released_direction()
 		return
 
-	if hold_just_pressed:
-		_try_hold()
-		if game_over:
+	for action in PIECE_ACTIONS:
+		if not event.is_action_pressed(action):
+			continue
+		get_viewport().set_input_as_handled()
+		if _data_collector and _data_collector.is_active():
+			_data_collector.key_presses_this_piece += 1
+		match action:
+			&"rotate_cw": _try_rotate(1)
+			&"rotate_ccw": _try_rotate(-1)
+			&"rotate_180": _try_rotate(2)
+			&"hard_drop": _hard_drop()
+			&"hold": _try_hold()
+			&"move_left": _start_horizontal_shift(-1)
+			&"move_right": _start_horizontal_shift(1)
+			&"soft_drop":
+				if Handling.is_instant_soft_drop():
+					_soft_drop_to_floor()
+				else:
+					_drop_one_row(true)
+					gravity_timer = 0.0
+		if game_over or paused:
 			return
 
-	if Input.is_action_just_pressed("move_left"):
-		_try_move(-1, 0)
-		das.start(-1)
-	if Input.is_action_just_pressed("move_right"):
-		_try_move(1, 0)
-		das.start(1)
+func _start_horizontal_shift(direction: int) -> void:
+	_try_move(direction, 0)
+	if das.direction != direction:
+		das.start(direction)
 
-	if Input.is_action_just_released("move_left") and das.direction == -1:
+## 同方向可绑定多个键。最后一个绑定松开后，才切回仍按住的另一方向。
+func _update_released_direction() -> void:
+	if das.direction == 0:
+		return
+	var left := Input.is_action_pressed(&"move_left")
+	var right := Input.is_action_pressed(&"move_right")
+	if (das.direction < 0 and left) or (das.direction > 0 and right):
+		return
+	if left or right:
+		_start_horizontal_shift(-das.direction)
+	else:
 		das.stop()
-		if Input.is_action_pressed("move_right"):
-			_try_move(1, 0)
-			das.start(1)
-	if Input.is_action_just_released("move_right") and das.direction == 1:
-		das.stop()
-		if Input.is_action_pressed("move_left"):
-			_try_move(-1, 0)
-			das.start(-1)
 
-	_stop_stale_das_direction()
+func _update_auto_shift(delta: float) -> void:
+	# 失焦或手柄断开也可能清除引擎的按住状态。
+	_update_released_direction()
 	var repeat_count: int = das.update(delta)
 	for i in range(mini(repeat_count, 20)):
 		if not _try_move(das.direction, 0):
 			break
 
-func _stop_stale_das_direction() -> void:
-	if das.direction == -1 and not Input.is_action_pressed("move_left"):
-		das.stop()
-	elif das.direction == 1 and not Input.is_action_pressed("move_right"):
-		das.stop()
-
-func _update_gravity(delta: float) -> void:
+## 返回本帧可计入锁定的时间。帧内刚落地时，从最后一次向下移动的时刻开始计时。
+func _update_gravity(delta: float) -> float:
 	var speed: float = scoring.get_gravity_speed()
-	if Input.is_action_pressed("soft_drop"):
+	var soft_drop := Input.is_action_pressed(&"soft_drop")
+	if soft_drop:
 		if Handling.is_instant_soft_drop():
 			_soft_drop_to_floor()
-			return
+			return delta
 		speed = Handling.soft_drop_speed(speed)
 
+	var lock_delta := delta
 	gravity_timer += delta * speed
 	while gravity_timer >= 1.0:
 		gravity_timer -= 1.0
-		if _try_move(0, 1):
-			last_was_rotation = false
-			if Input.is_action_pressed("soft_drop"):
-				scoring.add_soft_drop_score(1)
-				score_changed.emit(scoring.score, scoring.level, scoring.lines)
-		else:
+		if not _drop_one_row(soft_drop):
 			gravity_timer = 0.0
 			break
+		lock_delta = gravity_timer / speed
+	return lock_delta
+
+func _drop_one_row(soft_drop: bool) -> bool:
+	if not _try_move(0, 1):
+		return false
+	if soft_drop:
+		scoring.add_soft_drop_score(1)
+		score_changed.emit(scoring.score, scoring.level, scoring.lines)
+	return true
 
 func _soft_drop_to_floor() -> void:
 	var cells: int = 0
@@ -533,8 +553,6 @@ func _trigger_game_over() -> void:
 	game_over_triggered.emit()
 
 func _reset_piece_state() -> void:
-	if das != null:
-		_stop_stale_das_direction()
 	gravity_timer = 0.0
 	lock_timer.stop()
 	lock_resets = 0
@@ -549,7 +567,7 @@ func _reset_piece_state() -> void:
 # ==============================================================================
 
 func _sync_piece_position() -> void:
-	board.frame_active_piece(cur_type, cur_rot, cur_row)
+	board.frame_active_piece(cur_row)
 	current_piece.global_position = board.to_global(board.cell_position(cur_col, cur_row))
 	_landing_preview_dirty = true
 	board_updated.emit()

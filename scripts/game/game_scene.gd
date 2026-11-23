@@ -42,7 +42,6 @@ const ATTACK_DAMAGE_POPUP := preload("res://scripts/ui/attack_damage_popup.gd")
 const B2B_STREAK_BADGE := preload("res://scripts/ui/b2b_streak_badge.gd")
 
 # 单局数据采集与结构评分缓存。
-var _data_collector: PlayerDataCollector
 var _structure_evaluator: Node
 var _last_lines_cleared_this_lock: int = 0
 var _last_damage_this_lock: int = 0
@@ -86,11 +85,6 @@ func _notification(what: int) -> void:
 		_update_texts()
 
 func _process(delta: float) -> void:
-	# 输入先归入当前方块，再处理本帧锁定。
-
-	# 统计本块按键次数（用于 KPP）。
-	if _data_collector and _data_collector.is_active() and not game_over and not paused:
-		_count_key_presses()
 	process_logic(delta)
 
 	# 更新单人受攻击条与入场计时。
@@ -542,20 +536,6 @@ func _update_b2b_badge() -> void:
 		B2B_STREAK_BADGE.show_badge(badge_parent, board, scoring.b2b + 1)
 	else:
 		B2B_STREAK_BADGE.hide_existing(badge_parent)
-
-
-func _count_key_presses() -> void:
-	# 每帧累计本块操作键次数。
-	if _data_collector == null:
-		return
-
-	var actions: Array = [
-		"move_left", "move_right", "soft_drop", "hard_drop",
-		"rotate_cw", "rotate_ccw", "rotate_180", "hold"
-	]
-	for action in actions:
-		if Input.is_action_just_pressed(action):
-			_data_collector.key_presses_this_piece += 1
 
 
 func _record_piece_snapshot(

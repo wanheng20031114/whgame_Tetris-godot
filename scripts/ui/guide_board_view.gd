@@ -326,20 +326,19 @@ func _draw_piece(board_rect: Rect2, piece: Dictionary, alpha: float, ghost: bool
 
 
 func _draw_center_point(board_rect: Rect2, piece: Dictionary) -> void:
+	var type: PieceData.Type = piece.get("type", PieceData.Type.T)
 	var col := float(piece.get("col", 4.0))
 	var row := float(piece.get("row", 0.0))
 	var cell := board_rect.size.x / float(columns)
 
-	# 旋转中心点位置 = 方块的 col, row（即旋转轴心）
-	var center_x := board_rect.position.x + (col + 0.5) * cell
-	var center_y := board_rect.position.y + (row + 0.5) * cell
+	var center := board_rect.position + (Vector2(col, row) + PieceData.rotation_center(type)) * cell
 
 	# 红色圆圈，大小约格子的 40%
 	var radius := cell * 0.20
 	# 外圈红色
-	draw_arc(Vector2(center_x, center_y), radius, 0.0, TAU, 32, Color(1.0, 0.15, 0.15, 0.9), 2.5)
+	draw_arc(center, radius, 0.0, TAU, 32, Color(1.0, 0.15, 0.15, 0.9), 2.5)
 	# 内填充半透明红色
-	draw_circle(Vector2(center_x, center_y), radius * 0.6, Color(1.0, 0.15, 0.15, 0.45))
+	draw_circle(center, radius * 0.6, Color(1.0, 0.15, 0.15, 0.45))
 
 
 func _draw_cell(board_rect: Rect2, col: int, row: int, value: int, alpha: float) -> void:

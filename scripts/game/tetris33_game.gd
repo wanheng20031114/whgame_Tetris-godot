@@ -85,7 +85,6 @@ var _last_vote_statuses: Array = []
 
 var pending_attacks: Array = []
 
-var _data_collector: PlayerDataCollector
 var _structure_evaluator: Node
 var _last_lines_cleared_this_lock: int = 0
 var _last_damage_this_lock: int = 0
@@ -158,8 +157,6 @@ func _refresh_ui_texts() -> void:
 
 
 func _process(delta: float) -> void:
-	if _data_collector and _data_collector.is_active() and not game_over and not paused:
-		_count_key_presses()
 	process_logic(delta)
 	if not game_over and not paused:
 		_update_player_garbage(delta)
@@ -174,10 +171,6 @@ func _process(delta: float) -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("ui_cancel"):
-		if not game_over and not paused:
-			for action in SettingsMenu.ACTIONS:
-				if action != "pause" and event.is_action_pressed(action):
-					return
 		_save_and_cleanup_data()
 		if _is_network_match():
 			NetworkManager.leave_room()
@@ -881,14 +874,6 @@ func _update_b2b_badge() -> void:
 		B2B_STREAK_BADGE.show_badge(badge_parent, board, scoring.b2b + 1)
 	else:
 		B2B_STREAK_BADGE.hide_existing(badge_parent)
-
-
-func _count_key_presses() -> void:
-	if _data_collector == null:
-		return
-	for action in ["move_left", "move_right", "soft_drop", "hard_drop", "rotate_cw", "rotate_ccw", "rotate_180", "hold"]:
-		if Input.is_action_just_pressed(action):
-			_data_collector.key_presses_this_piece += 1
 
 
 func _record_piece_snapshot(

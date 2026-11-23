@@ -52,7 +52,6 @@ var _label_combo_text: Label
 var _combo_text_tween: Tween
 var pending_attacks: Array = []
 
-var _data_collector: PlayerDataCollector
 var _structure_evaluator: Node
 var _last_lines_cleared_this_lock: int = 0
 var _last_damage_this_lock: int = 0
@@ -378,9 +377,6 @@ func _update_texts() -> void:
 			label_opponent_name.text = NetworkManager.opponent_name
 
 func _process(delta: float) -> void:
-	# 输入在渲染帧处理，避免物理帧带来的额外延迟（与 TETR.IO 一致的响应）
-	if _data_collector and _data_collector.is_active() and not game_over and not paused:
-		_count_key_presses()
 	process_logic(delta)
 	if not game_over and not paused:
 		_update_multiplayer_garbage(delta)
@@ -660,14 +656,6 @@ func _start_data_collection() -> void:
 		"versus",
 		1
 	)
-
-
-func _count_key_presses() -> void:
-	if _data_collector == null:
-		return
-	for action in ["move_left", "move_right", "soft_drop", "hard_drop", "rotate_cw", "rotate_ccw", "rotate_180", "hold"]:
-		if Input.is_action_just_pressed(action):
-			_data_collector.key_presses_this_piece += 1
 
 
 func _record_piece_snapshot(

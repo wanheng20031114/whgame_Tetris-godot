@@ -151,11 +151,9 @@ func would_block_next_spawn(type: PieceData.Type, rotation: PieceData.RotationSt
 	var rise := 0 if cleared else mini(ready_garbage, total_rows)
 	return find_spawn_row(next_type, spawn_col, projected, cleared, rise) < 0
 
-## 救场或踢墙超过井口预留空间时，显示更高的棋盘行，保持方块原有大小。
-func frame_active_piece(type: PieceData.Type, rotation: PieceData.RotationState, row: int) -> void:
-	var top := buffer_rows
-	for offset: Vector2 in PieceData.SHAPES[type][rotation]:
-		top = mini(top, row + int(offset.y) + shown_buffer_rows)
+## 四种朝向的上边界都在锚点上一行以内。按整个旋转范围取景，原地转动时井口也保持原位。
+func frame_active_piece(row: int) -> void:
+	var top := mini(buffer_rows, row - 1 + shown_buffer_rows)
 	if top != view_top_row:
 		view_top_row = top
 		queue_redraw()

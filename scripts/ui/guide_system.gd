@@ -7,6 +7,11 @@ const BASICS_PAGE_SCENE := preload("res://scenes/ui/guide/basics_page.tscn")
 const CHAPTER_PAGE_SCENE := preload("res://scenes/ui/guide/chapter_page.tscn")
 const SIMULATION_PAGE_SCENE := preload("res://scenes/ui/guide/simulation_page.tscn")
 
+## 棋盘获得焦点时先匹配玩家的游戏键位，再匹配导航键。
+const SIMULATION_ACTIONS: Array[StringName] = [
+	&"move_left", &"move_right", &"soft_drop", &"hard_drop", &"rotate_cw", &"rotate_ccw", &"rotate_180",
+	&"ui_left", &"ui_right", &"ui_down", &"ui_accept", &"ui_cancel",
+]
 
 ## 攻击力表（对战标准）
 const ATTACK_TABLE: Array = [
@@ -83,36 +88,23 @@ func _notification(what: int) -> void:
 
 
 func _input(event: InputEvent) -> void:
-	if not in_simulation:
-		return
-	if event.is_action_pressed("ui_cancel"):
-		if board_view:
-			board_view.focused = false
-			if board_view is Control:
-				(board_view as Control).release_focus()
-				get_viewport().set_input_as_handled()
-		return
-	# 只有棋盘聚焦时才接受输入
-	if board_view and not board_view.focused:
+	if not in_simulation or not board_view.has_focus():
 		return
 
-	if event.is_action_pressed("move_left") or event.is_action_pressed("ui_left"):
-		_sim_move(-1, 0)
-	elif event.is_action_pressed("move_right") or event.is_action_pressed("ui_right"):
-		_sim_move(1, 0)
-	elif event.is_action_pressed("soft_drop") or event.is_action_pressed("ui_down"):
-		_sim_move(0, 1)
-	elif event.is_action_pressed("hard_drop") or event.is_action_pressed("ui_accept"):
-		_sim_hard_drop()
-	elif event.is_action_pressed("rotate_cw"):
-		_sim_rotate(1)
-	elif event.is_action_pressed("rotate_ccw"):
-		_sim_rotate(-1)
-	elif event.is_action_pressed("rotate_180"):
-		_sim_rotate(2)
-	else:
+	for action in SIMULATION_ACTIONS:
+		if not event.is_action_pressed(action):
+			continue
+		match action:
+			&"move_left", &"ui_left": _sim_move(-1, 0)
+			&"move_right", &"ui_right": _sim_move(1, 0)
+			&"soft_drop", &"ui_down": _sim_move(0, 1)
+			&"hard_drop", &"ui_accept": _sim_hard_drop()
+			&"rotate_cw": _sim_rotate(1)
+			&"rotate_ccw": _sim_rotate(-1)
+			&"rotate_180": _sim_rotate(2)
+			&"ui_cancel": board_view.release_focus()
+		get_viewport().set_input_as_handled()
 		return
-	get_viewport().set_input_as_handled()
 
 
 func _build_chapters() -> void:
@@ -779,15 +771,7 @@ func _reset_simulation() -> void:
 
 	_update_objective()
 	_refresh_sim_view()
-	_focus_sim_board()
-
-
-func _focus_sim_board() -> void:
-	if board_view == null:
-		return
-	board_view.focused = true
-	if board_view is Control:
-		(board_view as Control).call_deferred("grab_focus")
+	board_view.grab_focus()
 
 
 func _update_objective() -> void:
