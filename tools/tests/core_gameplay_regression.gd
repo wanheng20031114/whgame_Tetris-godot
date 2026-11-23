@@ -25,7 +25,9 @@ func _game(path: String, player_count: int = 3) -> Node:
 
 func _check_spawn_geometry(game: TetrisCore) -> void:
 	var board: Board = game.board
-	var next: Piece = game.next_displays[0]
+	await get_tree().process_frame
+	await get_tree().process_frame
+	var next: PiecePreview = game.next_displays[0]
 	for type in BagRandomizer.ALL_TYPES:
 		var fits := game._activate_piece(type)
 		for cell: Vector2 in PieceData.SHAPES[type][PieceData.RotationState.SPAWN]:
@@ -35,7 +37,7 @@ func _check_spawn_geometry(game: TetrisCore) -> void:
 	var active: Piece = game.current_piece
 	var clip := active.get_parent() as Control
 	var headroom := Rect2(board.global_position - Vector2(0, board.shown_buffer_rows * board.cell_size), Vector2(board.columns, board.shown_buffer_rows) * board.cell_size)
-	_check(clip.get_global_rect().encloses(headroom) and is_equal_approx(active.global_position.y, next.global_position.y), game.name + " shows the spawn on the same horizontal line as NEXT")
+	_check(clip.get_global_rect().encloses(headroom) and is_equal_approx(active.global_position.y, next.get_global_rect().get_center().y), game.name + " shows the spawn on the same horizontal line as NEXT")
 	board.grid[board.buffer_rows][game.spawn_col] = Color.GRAY
 	game._activate_piece(PieceData.Type.O)
 	_check(game._try_move(-1, 0) and game._try_move(-1, 0) and game._try_move(0, 1), game.name + " can slide over a rim-high stack before entering the well")
@@ -153,7 +155,7 @@ func _run() -> void:
 	_check(not guide.lock_piece()["spin"], "Guide excludes O-piece spins")
 
 	var game = _game("res://scenes/game.tscn")
-	_check_spawn_geometry(game)
+	await _check_spawn_geometry(game)
 	_check(game.has_node("SfxMove") and game.has_node("AttackFXLayer"), "Single-player scene supplies native audio and attack-layer nodes")
 	game._activate_piece(PieceData.Type.T)
 	game.cur_row = game.board.total_rows - 10
@@ -184,7 +186,7 @@ func _run() -> void:
 	game.free()
 	_check_lethal_landings()
 	var versus = _game("res://scenes/multiplayer_game.tscn")
-	_check_spawn_geometry(versus)
+	await _check_spawn_geometry(versus)
 	_check(versus.has_node("SfxMove") and versus.has_node("AttackFXLayer"), "Versus scene supplies native audio and attack-layer nodes")
 	var impacts := [0]
 	var attack := AttackFX.fire(versus, Vector2.ZERO, Vector2(100, 100), 3, Color.WHITE, NAN, func(): impacts[0] += 1, 0.08)
@@ -196,7 +198,7 @@ func _run() -> void:
 	versus.free()
 
 	var royale = _game("res://scenes/tetris33_game.tscn")
-	_check_spawn_geometry(royale)
+	await _check_spawn_geometry(royale)
 	_check(royale.has_node("SfxMove") and royale.has_node("AttackFXLayer"), "Tetris33 scene supplies native audio and attack-layer nodes")
 	royale._on_local_game_over()
 	royale._sample_timer = 0.2

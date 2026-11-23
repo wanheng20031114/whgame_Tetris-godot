@@ -1,5 +1,7 @@
 [gd_scene format=3]
 
+[ext_resource type="PackedScene" path="res://scenes/ui/piece_preview.tscn" id="preview_slot"]
+
 [node name="TimelineRow" type="PanelContainer"]
 custom_minimum_size = Vector2(0, 30)
 size_flags_horizontal = 3
@@ -20,6 +22,11 @@ theme_override_constants/separation = 6
 custom_minimum_size = Vector2(4, 20)
 layout_mode = 2
 mouse_filter = 2
+
+[node name="PieceIcon" parent="Content/Fields" instance=ExtResource("preview_slot")]
+custom_minimum_size = Vector2(26, 18)
+layout_mode = 2
+max_cell_size = 6.0
 
 [node name="Step" type="Label" parent="Content/Fields"]
 custom_minimum_size = Vector2(48, 0)

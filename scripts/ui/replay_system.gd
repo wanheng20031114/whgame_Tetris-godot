@@ -32,21 +32,6 @@ const PIECE_NAME_TYPE: Dictionary = {
 	"I": 0, "O": 1, "T": 2, "S": 3, "Z": 4, "J": 5, "L": 6
 }
 
-# 方块迷你形状（rotation 0）用于预览绘制
-const MINI_SHAPES: Dictionary = {
-	"I": [[1,1,1,1]],
-	"O": [[1,1],[1,1]],
-	"T": [[0,1,0],[1,1,1]],
-	"S": [[0,1,1],[1,1,0]],
-	"Z": [[1,1,0],[0,1,1]],
-	"L": [[0,0,1],[1,1,1]],
-	"J": [[1,0,0],[1,1,1]]
-}
-
-const MINI_CELL: int = 18  # 预览方块格子大小
-const TIMELINE_PIECE_CELL: int = 6
-const TIMELINE_PIECE_ROW_H: int = 18
-
 # cold-clear 兼容形状表（visible 坐标系，y 向下）
 # 从 libtetris gen_cells! 宏精确转换：North=(x,-y), East=(-y,-x), South=(-x,y), West=(y,x)
 const CC_SHAPES: Dictionary = {
@@ -106,6 +91,10 @@ const CC_SHAPES: Dictionary = {
 @onready var step_slider: HSlider = %StepSlider
 @onready var step_nav: HBoxContainer = %StepNav
 @onready var replay_board: ReplayBoardSurface = %ReplayBoard
+@onready var board_overlays: Node2D = %BoardOverlays
+@onready var replay_previews: Node2D = %ReplayPreviews
+@onready var replay_hold: PiecePreview = %ReplayHold
+@onready var replay_next: VBoxContainer = %ReplayNext
 @onready var timeline_list: VBoxContainer = %TimelineList
 @onready var session_list_popup: PanelContainer = %SessionListPopup
 @onready var session_scroll: ScrollContainer = %SessionScroll
@@ -341,6 +330,9 @@ var _metric_tiles: Array = []
 
 ## 切换主题时刷新代码生成的配色
 func _style_layout_panels() -> void:
+	%ReplayHoldLabel.add_theme_color_override("font_color", UITheme.color("accent"))
+	%ReplayNextLabel.add_theme_color_override("font_color", UITheme.color("accent"))
+	%EmptyHold.add_theme_color_override("font_color", UITheme.color("faint"))
 	for panel: PanelContainer in [%LeftPanel, %CenterPanel, %RightPanel, %PlaybackPanel]:
 		var style: StyleBoxFlat = panel.get_theme_stylebox("panel")
 		style.bg_color = UITheme.color("surface")
@@ -768,6 +760,7 @@ func _load_session(file_name: String) -> void:
 		step_slider.max_value = 0
 		_clear_board_overlays()
 		replay_board.set_board([], [])
+		_update_previews({})
 		for label in [piece_type_label, position_label, clear_type_label, lines_label,
 			damage_label, combo_label, time_label, holes_label, bumpiness_label,
 			height_label, ai_score_label]:
@@ -1080,8 +1073,8 @@ func _update_step_label() -> void:
 
 
 func _clear_board_overlays() -> void:
-	for child in replay_board.get_children():
-		replay_board.remove_child(child)
+	for child in board_overlays.get_children():
+		board_overlays.remove_child(child)
 		child.queue_free()
 
 
@@ -1106,8 +1099,7 @@ func _render_step(index: int) -> void:
 	_center_board()
 
 	# 绘制 Hold 和 Next 预览
-	_draw_hold_piece(snap)
-	_draw_next_pieces(snap)
+	_update_previews(snap)
 
 
 func _update_data_panel(index: int) -> void:
@@ -1288,9 +1280,7 @@ func _create_timeline_row(index: int, snap: Dictionary, piece_name: String, elap
 	var row_color := _timeline_row_color(index)
 	_set_timeline_row_style(row, row_color, index == _current_step)
 	var fields: HBoxContainer = row.get_node("Content/Fields")
-	var icon := _create_timeline_piece_icon(piece_name)
-	fields.add_child(icon)
-	fields.move_child(icon, 1)
+	_set_preview_piece(fields.get_node("PieceIcon"), piece_name)
 	var cidx: int = PIECE_NAME_COLOR.get(piece_name, 0)
 	(fields.get_node("Indicator") as ColorRect).color = CELL_COLORS[cidx]
 	var texts := {"Step": "#%04d" % (index + 1), "Piece": piece_name, "Score": _timeline_ai_text(index), "Time": _timeline_time_text(elapsed_ms)}
@@ -1422,90 +1412,19 @@ func _center_board() -> void:
 	replay_board.position = (container.size - drawing_bounds.size * fit) * 0.5 - drawing_bounds.position * fit
 
 
-func _draw_hold_piece(snap: Dictionary) -> void:
-	var hold_name: String = str(snap.get("hold_piece", ""))
-	var hold_x: float = -(MINI_CELL * 4 + 25)
-	var y_offset: float = 10.0
-
-	# "HOLD" 标签
-	var lbl := Label.new()
-	lbl.text = tr("TXT_HOLD")
-	lbl.add_theme_color_override("font_color", UITheme.color("accent"))
-	lbl.add_theme_font_size_override("font_size", 12)
-	lbl.position = Vector2(hold_x, y_offset - 5)
-	replay_board.add_child(lbl)
-	y_offset += 20.0
-
-	if hold_name != "" and MINI_SHAPES.has(hold_name):
-		_draw_mini_piece(hold_name, Vector2(hold_x, y_offset))
-	else:
-		var dash := Label.new()
-		dash.text = "—"
-		dash.add_theme_color_override("font_color", UITheme.color("faint"))
-		dash.position = Vector2(hold_x + 10, y_offset)
-		replay_board.add_child(dash)
-
-
-func _draw_next_pieces(snap: Dictionary) -> void:
+func _update_previews(snap: Dictionary) -> void:
+	replay_previews.visible = not _snapshots.is_empty()
+	_set_preview_piece(replay_hold, snap.get("hold_piece", ""))
+	%EmptyHold.visible = replay_hold.piece_type < 0
 	var next_names: Array = snap.get("next_pieces", [])
-	var board_right_x: float = BOARD_COLS * CELL_SIZE + 20.0
-	var y_offset: float = 10.0
-
-	# "NEXT" 标签
-	var lbl := Label.new()
-	lbl.text = tr("TXT_NEXT")
-	lbl.add_theme_color_override("font_color", UITheme.color("accent"))
-	lbl.add_theme_font_size_override("font_size", 12)
-	lbl.position = Vector2(board_right_x, y_offset - 5)
-	replay_board.add_child(lbl)
-	y_offset += 20.0
-
-	for idx in range(mini(next_names.size(), 5)):
-		var pname: String = str(next_names[idx])
-		_draw_mini_piece(pname, Vector2(board_right_x, y_offset))
-		y_offset += MINI_CELL * 3 + 8
+	for i in replay_next.get_child_count():
+		_set_preview_piece(replay_next.get_child(i), next_names[i] if i < next_names.size() else "")
 
 
-func _draw_mini_piece(piece_name: String, origin: Vector2) -> void:
-	var shape: Array = MINI_SHAPES.get(piece_name, [[1]])
-	var cidx: int = PIECE_NAME_COLOR.get(piece_name, 0)
-	var col: Color = CELL_COLORS[cidx] if cidx < CELL_COLORS.size() else Color.WHITE
-
-	replay_board.add_preview(shape, origin, col)
-
-
-func _create_timeline_piece_icon(piece_name: String) -> Control:
-	var box := Control.new()
-	box.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	box.custom_minimum_size = Vector2(TIMELINE_PIECE_CELL * 4 + 2, TIMELINE_PIECE_ROW_H)
-
-	var shape: Array = MINI_SHAPES.get(piece_name, [])
-	if shape.is_empty():
-		return box
-
-	var rows: int = shape.size()
-	var cols: int = (shape[0] as Array).size() if rows > 0 else 0
-	var piece_w: float = cols * TIMELINE_PIECE_CELL
-	var piece_h: float = rows * TIMELINE_PIECE_CELL
-	var off_x: float = maxi(0, int((box.custom_minimum_size.x - piece_w) * 0.5))
-	var off_y: float = maxi(0, int((box.custom_minimum_size.y - piece_h) * 0.5))
-
-	var cidx: int = PIECE_NAME_COLOR.get(piece_name, 0)
-	var col: Color = CELL_COLORS[cidx] if cidx < CELL_COLORS.size() else Color(0.85, 0.85, 0.85)
-
-	for r in range(rows):
-		var row_data: Array = shape[r]
-		for c in range(row_data.size()):
-			if int(row_data[c]) == 0:
-				continue
-			var rect := ColorRect.new()
-			rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			rect.size = Vector2(TIMELINE_PIECE_CELL - 1, TIMELINE_PIECE_CELL - 1)
-			rect.position = Vector2(off_x + c * TIMELINE_PIECE_CELL, off_y + r * TIMELINE_PIECE_CELL)
-			rect.color = col
-			box.add_child(rect)
-
-	return box
+func _set_preview_piece(slot: PiecePreview, piece_name: String) -> void:
+	var type: int = PIECE_NAME_TYPE.get(piece_name, -1)
+	var color_index: int = PIECE_NAME_COLOR.get(piece_name, 0)
+	slot.set_piece(type, CELL_COLORS[color_index])
 
 
 func _draw_locked_piece_highlight(snap: Dictionary, step_index: int) -> void:
@@ -1558,7 +1477,7 @@ func _add_highlight_border(col: int, row: int, border_col: Color) -> void:
 	sb.border_color = border_col
 	panel.add_theme_stylebox_override("panel", sb)
 
-	replay_board.add_child(panel)
+	board_overlays.add_child(panel)
 
 
 func _add_piece_glow_outline(cells: Array[Vector2i], glow_col: Color) -> void:
@@ -1621,7 +1540,7 @@ func _add_glow_strip(pos: Vector2, strip_size: Vector2, glow_col: Color, alpha: 
 	strip.position = pos
 	strip.size = strip_size
 	strip.color = Color(glow_col.r, glow_col.g, glow_col.b, clampf(alpha, 0.0, 1.0))
-	replay_board.add_child(strip)
+	board_overlays.add_child(strip)
 
 
 # ==============================================================================
@@ -1693,7 +1612,7 @@ func _draw_ai_plan_button(snap: Dictionary, step_index: int) -> void:
 	btn.add_theme_stylebox_override("focus", sb_normal)
 	btn.mouse_filter = Control.MOUSE_FILTER_STOP
 	btn.pressed.connect(_toggle_ai_plan.bind(step_index))
-	replay_board.add_child(btn)
+	board_overlays.add_child(btn)
 
 func _toggle_ai_plan(step_index: int) -> void:
 	if _showing_ai_plan:
@@ -1839,8 +1758,7 @@ func _render_ai_plan_progressive(step_index: int) -> void:
 		_draw_retreat_button(step_index, ghost_min_x, ghost_min_y)
 	_center_board()
 	var snap: Dictionary = _snapshots[step_index]
-	_draw_hold_piece(snap)
-	_draw_next_pieces(snap)
+	_update_previews(snap)
 
 func _draw_single_ghost_piece(plan_step: Dictionary, step_number: int) -> Dictionary:
 	var result: Dictionary = {"max_x": -1, "min_x": BOARD_COLS, "min_y": BOARD_ROWS}
@@ -1917,7 +1835,7 @@ func _draw_next_step_button(step_index: int, ghost_max_x: int = -1, ghost_min_y:
 	btn.add_theme_stylebox_override("focus", sb_n)
 	btn.mouse_filter = Control.MOUSE_FILTER_STOP
 	btn.pressed.connect(_advance_ai_plan.bind(step_index))
-	replay_board.add_child(btn)
+	board_overlays.add_child(btn)
 
 func _draw_retreat_button(step_index: int, ghost_min_x: int = BOARD_COLS, ghost_min_y: int = 10) -> void:
 	var btn_w: float = 28.0
@@ -1957,7 +1875,7 @@ func _draw_retreat_button(step_index: int, ghost_min_x: int = BOARD_COLS, ghost_
 	btn.add_theme_stylebox_override("focus", sb_n)
 	btn.mouse_filter = Control.MOUSE_FILTER_STOP
 	btn.pressed.connect(_retreat_ai_plan.bind(step_index))
-	replay_board.add_child(btn)
+	board_overlays.add_child(btn)
 
 func _draw_ghost_cell(col: int, row: int, piece_col: Color) -> void:
 	var panel := Panel.new()
@@ -1972,7 +1890,7 @@ func _draw_ghost_cell(col: int, row: int, piece_col: Color) -> void:
 	sb.border_width_bottom = 3
 	sb.border_color = Color(piece_col.r, piece_col.g, piece_col.b, 0.70)
 	panel.add_theme_stylebox_override("panel", sb)
-	replay_board.add_child(panel)
+	board_overlays.add_child(panel)
 
 func _draw_step_badge(cells: Array[Vector2i], number: int, piece_col: Color, min_row: int) -> void:
 	var sum_x: float = 0.0
@@ -1993,7 +1911,7 @@ func _draw_step_badge(cells: Array[Vector2i], number: int, piece_col: Color, min
 	sb.corner_radius_bottom_left = 10
 	sb.corner_radius_bottom_right = 10
 	badge_panel.add_theme_stylebox_override("panel", sb)
-	replay_board.add_child(badge_panel)
+	board_overlays.add_child(badge_panel)
 	var lbl := Label.new()
 	lbl.text = str(number)
 	lbl.add_theme_font_size_override("font_size", 16)
@@ -2005,4 +1923,4 @@ func _draw_step_badge(cells: Array[Vector2i], number: int, piece_col: Color, min
 	lbl.position = Vector2(badge_x, badge_y - 3.0)
 	lbl.size = Vector2(badge_size, badge_size)
 	lbl.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	replay_board.add_child(lbl)
+	board_overlays.add_child(lbl)

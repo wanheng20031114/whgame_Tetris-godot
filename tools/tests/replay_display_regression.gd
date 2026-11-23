@@ -39,7 +39,7 @@ func _run() -> void:
 	_check(replay.ai_score_label.text == tr("TXT_NA"), "Unknown detail label never claims AI BEST")
 	replay._render_step(0)
 	var highlights := 0
-	for child in replay.replay_board.get_children():
+	for child in replay.board_overlays.get_children():
 		if child is Panel:
 			highlights += 1
 	_check(highlights == 0, "A piece locked in the spawn buffer is not highlighted on the bottom row")

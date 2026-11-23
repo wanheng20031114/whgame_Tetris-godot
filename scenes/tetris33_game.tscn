@@ -9,6 +9,8 @@
 [ext_resource type="Script" uid="uid://coo3rsgbl1jgw" path="res://scripts/core/structure_evaluator_node.gd" id="7_eval"]
 [ext_resource type="PackedScene" path="res://scenes/ui/ui_background.tscn" id="ui_bg_scene"]
 [ext_resource type="PackedScene" path="res://scenes/ui/landing_preview_toggle.tscn" id="landing_preview"]
+[ext_resource type="PackedScene" path="res://scenes/ui/piece_preview.tscn" id="preview_slot"]
+[ext_resource type="PackedScene" path="res://scenes/ui/next_piece_queue.tscn" id="preview_queue"]
 [ext_resource type="AudioStream" path="res://audio/move_scrape.wav" id="audio_move"]
 
 [node name="Tetris33Game" type="Node2D" unique_id=895119185]
@@ -280,11 +282,15 @@ offset_bottom = 27.0
 theme_override_font_sizes/font_size = 14
 text = "HOLD"
 
-[node name="HoldPiece" parent="HoldPanel" unique_id=1349367057 instance=ExtResource("4_piece")]
+[node name="HoldPiece" parent="HoldPanel" unique_id=1349367057 instance=ExtResource("preview_slot")]
 unique_name_in_owner = true
-visible = false
-position = Vector2(23, 62)
-cell_size = 16.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 4.0
+offset_top = 27.0
+offset_right = -4.0
+offset_bottom = -6.0
+max_cell_size = 16.0
 
 [node name="NextPanel" type="Panel" parent="." unique_id=736782794]
 offset_left = 796.0
@@ -303,29 +309,15 @@ offset_bottom = 27.0
 theme_override_font_sizes/font_size = 14
 text = "NEXT"
 
-[node name="NextPieces" type="Node2D" parent="NextPanel" unique_id=1970256760]
+[node name="NextPieces" parent="NextPanel" unique_id=1970256760 instance=ExtResource("preview_queue")]
 unique_name_in_owner = true
-position = Vector2(28, 56)
-metadata/_edit_group_ = true
-
-[node name="Next0" parent="NextPanel/NextPieces" unique_id=1915219592 instance=ExtResource("4_piece")]
-cell_size = 16.0
-
-[node name="Next1" parent="NextPanel/NextPieces" unique_id=72509048 instance=ExtResource("4_piece")]
-position = Vector2(0, 72)
-cell_size = 16.0
-
-[node name="Next2" parent="NextPanel/NextPieces" unique_id=657381075 instance=ExtResource("4_piece")]
-position = Vector2(0, 144)
-cell_size = 16.0
-
-[node name="Next3" parent="NextPanel/NextPieces" unique_id=425220114 instance=ExtResource("4_piece")]
-position = Vector2(0, 216)
-cell_size = 16.0
-
-[node name="Next4" parent="NextPanel/NextPieces" unique_id=1533972155 instance=ExtResource("4_piece")]
-position = Vector2(0, 288)
-cell_size = 16.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 12.0
+offset_top = 40.0
+offset_right = -12.0
+offset_bottom = -62.0
+theme_override_constants/separation = 40
 
 [node name="PlayerGarbageBar" parent="." unique_id=1315742237 instance=ExtResource("5_gbar")]
 unique_name_in_owner = true

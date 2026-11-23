@@ -1,0 +1,8 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/piece_preview.gd" id="1_preview"]
+
+[node name="PiecePreview" type="Control"]
+size_flags_vertical = 3
+mouse_filter = 2
+script = ExtResource("1_preview")

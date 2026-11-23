@@ -168,8 +168,10 @@ func _test_replay() -> void:
 	for row in replay.replay_board._cells:
 		for cell in row:
 			occupied += int(cell != 0)
-	check(occupied == 0 and replay.replay_board.get_child_count() == 0, "empty replay clears prior board and overlays")
-	check(replay.replay_board._previews.is_empty(), "empty replay clears hold and next previews")
+	check(occupied == 0 and replay.board_overlays.get_child_count() == 0, "empty replay clears prior board and overlays")
+	check(not replay.replay_previews.visible and replay.replay_hold.piece_type < 0, "empty replay clears hold and hides preview columns")
+	for slot: PiecePreview in replay.replay_next.get_children():
+		check(slot.piece_type < 0, "empty replay clears queued piece")
 	check(replay.step_label.text == tr("TXT_STEP_FORMAT") % [0, 0], "empty replay displays zero of zero steps")
 	check(not replay._analysis_active, "cached analysis fixtures never start a background analyzer")
 	replay.hide()

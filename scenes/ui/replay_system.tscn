@@ -8,6 +8,8 @@
 [ext_resource type="PackedScene" path="res://scenes/ui/replay_overview.tscn" id="overview"]
 [ext_resource type="Script" path="res://scripts/ui/replay_timeline_graph.gd" id="timeline_graph"]
 [ext_resource type="Script" path="res://scripts/ui/replay_board_surface.gd" id="board_surface"]
+[ext_resource type="PackedScene" path="res://scenes/ui/piece_preview.tscn" id="preview_slot"]
+[ext_resource type="PackedScene" path="res://scenes/ui/next_piece_queue.tscn" id="preview_queue"]
 [ext_resource type="PackedScene" path="res://scenes/ui/ayao_assistant.tscn" id="assistant"]
 
 [sub_resource type="StyleBoxFlat" id="ReplayPanel"]
@@ -245,6 +247,56 @@ size_flags_horizontal = 3
 [node name="ReplayBoard" type="Node2D" parent="VBoxMain/MainContent/CenterPanel/CenterVBox/BoardContainer" unique_id=821938914]
 unique_name_in_owner = true
 script = ExtResource("board_surface")
+
+[node name="ReplayPreviews" type="Node2D" parent="VBoxMain/MainContent/CenterPanel/CenterVBox/BoardContainer/ReplayBoard"]
+unique_name_in_owner = true
+visible = false
+
+[node name="ReplayHoldLabel" type="Label" parent="VBoxMain/MainContent/CenterPanel/CenterVBox/BoardContainer/ReplayBoard/ReplayPreviews"]
+unique_name_in_owner = true
+offset_left = -92.0
+offset_top = 5.0
+offset_right = -20.0
+offset_bottom = 26.0
+theme_override_font_sizes/font_size = 12
+text = "TXT_HOLD"
+horizontal_alignment = 1
+
+[node name="ReplayHold" parent="VBoxMain/MainContent/CenterPanel/CenterVBox/BoardContainer/ReplayBoard/ReplayPreviews" instance=ExtResource("preview_slot")]
+unique_name_in_owner = true
+offset_left = -92.0
+offset_top = 30.0
+offset_right = -20.0
+offset_bottom = 66.0
+
+[node name="EmptyHold" type="Label" parent="VBoxMain/MainContent/CenterPanel/CenterVBox/BoardContainer/ReplayBoard/ReplayPreviews/ReplayHold"]
+unique_name_in_owner = true
+anchor_right = 1.0
+anchor_bottom = 1.0
+text = "—"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="ReplayNextLabel" type="Label" parent="VBoxMain/MainContent/CenterPanel/CenterVBox/BoardContainer/ReplayBoard/ReplayPreviews"]
+unique_name_in_owner = true
+offset_left = 320.0
+offset_top = 5.0
+offset_right = 392.0
+offset_bottom = 26.0
+theme_override_font_sizes/font_size = 12
+text = "TXT_NEXT"
+horizontal_alignment = 1
+
+[node name="ReplayNext" parent="VBoxMain/MainContent/CenterPanel/CenterVBox/BoardContainer/ReplayBoard/ReplayPreviews" instance=ExtResource("preview_queue")]
+unique_name_in_owner = true
+offset_left = 320.0
+offset_top = 30.0
+offset_right = 392.0
+offset_bottom = 314.0
+theme_override_constants/separation = 26
+
+[node name="BoardOverlays" type="Node2D" parent="VBoxMain/MainContent/CenterPanel/CenterVBox/BoardContainer/ReplayBoard"]
+unique_name_in_owner = true
 
 [node name="PlaybackPanel" type="PanelContainer" parent="VBoxMain"]
 unique_name_in_owner = true

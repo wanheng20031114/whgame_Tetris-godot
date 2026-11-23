@@ -124,7 +124,7 @@ func _run() -> void:
 		replay._go_to_step(index)
 		await process_frame
 		check(replay._get_recommendation(index).is_empty(), description + "no usable multi-step plan")
-		check(_count_plan_buttons(replay.replay_board) == 0, description + "unavailable plan has no question button")
+		check(_count_plan_buttons(replay.board_overlays) == 0, description + "unavailable plan has no question button")
 		check(replay._format_best_move(replay._get_ai_detail(index)) != "best: -", description + "single-move recommendation remains available")
 		replay._toggle_ai_plan(index)
 		check(not replay._showing_ai_plan and replay._ai_plan_reveal_count == 0, description + "toggle cannot enter unavailable plan")
@@ -133,12 +133,12 @@ func _run() -> void:
 		replay._render_ai_plan_progressive(index)
 		await process_frame
 		check(not replay._showing_ai_plan and replay._ai_plan_reveal_count == 0, description + "render preserves replay mode")
-		check(replay._current_step == index and _count_plan_buttons(replay.replay_board) == 0, description + "ordinary replay stays on selected step")
+		check(replay._current_step == index and _count_plan_buttons(replay.board_overlays) == 0, description + "ordinary replay stays on selected step")
 
 	replay._go_to_step(0)
 	await process_frame
 	check(not replay._get_recommendation(0).is_empty(), "first step has valid real plan")
-	check(_count_plan_buttons(replay.replay_board) == 1, "valid plan exposes question button")
+	check(_count_plan_buttons(replay.board_overlays) == 1, "valid plan exposes question button")
 	replay._toggle_ai_plan(0)
 	await process_frame
 	check(replay._showing_ai_plan and replay._ai_plan_reveal_count == 1, "valid plan opens at first placement")
@@ -155,7 +155,7 @@ func _run() -> void:
 	await process_frame
 	check(not replay._showing_ai_plan and replay._ai_plan_reveal_count == 0, "plan exits to ordinary replay")
 	check(replay._ai_plan_simulated_board.is_empty() and replay._ai_plan_board_history.is_empty(), "plan exit clears transient simulation")
-	check(replay._current_step == 0 and _count_plan_buttons(replay.replay_board) == 1, "exit restores first-step replay and available plan")
+	check(replay._current_step == 0 and _count_plan_buttons(replay.board_overlays) == 1, "exit restores first-step replay and available plan")
 	check(not replay._analysis_active and replay._analysis_pid == -1, "plan interactions never start analyzer")
 	replay.free()
 	await process_frame

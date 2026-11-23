@@ -43,8 +43,8 @@ const RESULT_INPUT_LOCK_MSEC: int = 800
 @onready var board = get_node_or_null("%Board")
 @onready var current_piece = get_node_or_null("%CurrentPiece")
 @onready var ghost_piece = get_node_or_null("%GhostPiece")
-@onready var hold_piece = get_node_or_null("%HoldPiece")
-@onready var next_container = get_node_or_null("%NextPieces")
+@onready var hold_piece: PiecePreview = %HoldPiece
+@onready var next_container: VBoxContainer = %NextPieces
 @onready var lock_timer = get_node_or_null("%LockDelayTimer")
 
 # ==============================================================================
@@ -77,7 +77,7 @@ var lowest_row: int = 0
 var gravity_timer: float = 0.0
 var last_was_rotation: bool = false
 var last_kick_index: int = 0
-var next_displays: Array = []
+var next_displays: Array[PiecePreview] = []
 var lock_sound_played_for_current_lock: bool = false
 var last_rotation_was_180: bool = false
 var last_spin_mini: bool = false ## 最近一次锁定判定出的 Spin 是否为 Mini
@@ -118,9 +118,7 @@ func _ready() -> void:
 	lock_timer.wait_time = lock_delay_seconds
 
 	# 收集预览节点
-	for child in next_container.get_children():
-		if child is Piece:
-			next_displays.append(child)
+	next_displays.assign(next_container.get_children())
 
 	lock_timer.timeout.connect(_on_lock_timer_timeout)
 	ghost_piece.hide()
@@ -580,16 +578,12 @@ func _update_ghost(enabled: bool) -> void:
 	ghost_piece.global_position = board.to_global(board.cell_position(cur_col, ghost_row))
 
 func _update_hold_display() -> void:
-	if held_type >= 0:
-		hold_piece.initialize(held_type as PieceData.Type)
-		hold_piece.visible = true
-	else:
-		hold_piece.visible = false
+	hold_piece.set_piece(held_type)
 
 func _update_next_display() -> void:
 	var upcoming: Array = bag.peek(next_displays.size())
-	for i in range(mini(upcoming.size(), next_displays.size())):
-		next_displays[i].initialize(upcoming[i])
+	for i in next_displays.size():
+		next_displays[i].set_piece(upcoming[i])
 
 ## 危险程度：堆叠高度 + 待入场垃圾。剩余空间 <= 7 行开始提示，<= 3 行达到满值。
 func _update_danger_warning_state() -> void:

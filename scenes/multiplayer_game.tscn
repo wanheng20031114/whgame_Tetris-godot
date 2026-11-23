@@ -9,6 +9,8 @@
 [ext_resource type="Script" path="res://scripts/core/structure_evaluator_node.gd" id="6_eval"]
 [ext_resource type="PackedScene" path="res://scenes/ui/ui_background.tscn" id="ui_bg_scene"]
 [ext_resource type="PackedScene" path="res://scenes/ui/landing_preview_toggle.tscn" id="landing_preview"]
+[ext_resource type="PackedScene" path="res://scenes/ui/piece_preview.tscn" id="preview_slot"]
+[ext_resource type="PackedScene" path="res://scenes/ui/next_piece_queue.tscn" id="preview_queue"]
 [ext_resource type="AudioStream" path="res://audio/move_scrape.wav" id="audio_move"]
 
 [node name="MultiplayerGame" type="Node2D" unique_id=184268838]
@@ -49,11 +51,14 @@ theme_type_variation = &"EyebrowLabel"
 theme_override_font_sizes/font_size = 14
 text = "HOLD"
 
-[node name="HoldPiece" parent="HoldPanel" unique_id=1349367057 instance=ExtResource("3_piece")]
+[node name="HoldPiece" parent="HoldPanel" unique_id=1349367057 instance=ExtResource("preview_slot")]
 unique_name_in_owner = true
-visible = false
-position = Vector2(45, 60)
-cell_size = 21.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 12.0
+offset_top = 34.0
+offset_right = -12.0
+offset_bottom = -12.0
 
 [node name="NextPanel" type="Panel" parent="." unique_id=305796386]
 offset_left = 510.0
@@ -72,29 +77,14 @@ theme_type_variation = &"EyebrowLabel"
 theme_override_font_sizes/font_size = 14
 text = "NEXT"
 
-[node name="NextPieces" type="Node2D" parent="NextPanel" unique_id=1970256760]
+[node name="NextPieces" parent="NextPanel" unique_id=1970256760 instance=ExtResource("preview_queue")]
 unique_name_in_owner = true
-position = Vector2(47, 64)
-metadata/_edit_group_ = true
-
-[node name="Next0" parent="NextPanel/NextPieces" unique_id=4438424 instance=ExtResource("3_piece")]
-cell_size = 21.0
-
-[node name="Next1" parent="NextPanel/NextPieces" unique_id=1824956665 instance=ExtResource("3_piece")]
-position = Vector2(0, 75)
-cell_size = 21.0
-
-[node name="Next2" parent="NextPanel/NextPieces" unique_id=639138723 instance=ExtResource("3_piece")]
-position = Vector2(0, 150)
-cell_size = 21.0
-
-[node name="Next3" parent="NextPanel/NextPieces" unique_id=1796608289 instance=ExtResource("3_piece")]
-position = Vector2(0, 225)
-cell_size = 21.0
-
-[node name="Next4" parent="NextPanel/NextPieces" unique_id=1597930846 instance=ExtResource("3_piece")]
-position = Vector2(0, 300)
-cell_size = 21.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 12.0
+offset_top = 43.0
+offset_right = -12.0
+offset_bottom = -25.0
 
 [node name="LockDelayTimer" type="Timer" parent="." unique_id=375409371]
 unique_name_in_owner = true

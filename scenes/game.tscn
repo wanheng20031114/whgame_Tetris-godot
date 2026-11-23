@@ -13,6 +13,8 @@
 [ext_resource type="Script" uid="uid://coo3rsgbl1jgw" path="res://scripts/core/structure_evaluator_node.gd" id="12_dinhu"]
 [ext_resource type="PackedScene" path="res://scenes/ui/ui_background.tscn" id="ui_bg_scene"]
 [ext_resource type="PackedScene" path="res://scenes/ui/landing_preview_toggle.tscn" id="landing_preview"]
+[ext_resource type="PackedScene" path="res://scenes/ui/piece_preview.tscn" id="preview_slot"]
+[ext_resource type="PackedScene" path="res://scenes/ui/next_piece_queue.tscn" id="preview_queue"]
 [ext_resource type="AudioStream" path="res://audio/move_scrape.wav" id="audio_move"]
 
 [ext_resource type="AudioStream" path="res://audio/bgm.ogg" id="audio_bgm"]
@@ -46,6 +48,15 @@ theme_type_variation = &"EyebrowLabel"
 theme_override_font_sizes/font_size = 14
 text = "HOLD"
 
+[node name="HoldPiece" parent="HoldPanel" unique_id=1258247589 instance=ExtResource("preview_slot")]
+unique_name_in_owner = true
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 12.0
+offset_top = 34.0
+offset_right = -12.0
+offset_bottom = -12.0
+
 [node name="NextPanel" type="Panel" parent="." unique_id=1153896425]
 offset_left = 820.0
 offset_top = 8.0
@@ -56,12 +67,21 @@ metadata/_edit_group_ = true
 [node name="NextLabel" type="Label" parent="NextPanel" unique_id=1805511751]
 layout_mode = 0
 offset_left = 18.0
-offset_top = 12.0
+offset_top = 8.0
 offset_right = 51.0
 offset_bottom = 28.0
 theme_type_variation = &"EyebrowLabel"
 theme_override_font_sizes/font_size = 14
 text = "NEXT"
+
+[node name="NextPieces" parent="NextPanel" unique_id=171416509 instance=ExtResource("preview_queue")]
+unique_name_in_owner = true
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 12.0
+offset_top = 34.0
+offset_right = -12.0
+offset_bottom = -34.0
 
 [node name="Board" type="Node2D" parent="." unique_id=1867912927]
 unique_name_in_owner = true
@@ -86,41 +106,6 @@ cell_size = 29.0
 unique_name_in_owner = true
 script = ExtResource("3_piece")
 cell_size = 29.0
-
-[node name="HoldPiece" type="Node2D" parent="." unique_id=1258247589]
-unique_name_in_owner = true
-visible = false
-position = Vector2(365, 140)
-script = ExtResource("3_piece")
-cell_size = 21.0
-
-[node name="NextPieces" type="Node2D" parent="." unique_id=171416509]
-unique_name_in_owner = true
-position = Vector2(870, 63)
-
-[node name="Next0" type="Node2D" parent="NextPieces" unique_id=2031649321]
-script = ExtResource("3_piece")
-cell_size = 21.0
-
-[node name="Next1" type="Node2D" parent="NextPieces" unique_id=826379213]
-position = Vector2(0, 75)
-script = ExtResource("3_piece")
-cell_size = 21.0
-
-[node name="Next2" type="Node2D" parent="NextPieces" unique_id=1910981022]
-position = Vector2(0, 150)
-script = ExtResource("3_piece")
-cell_size = 21.0
-
-[node name="Next3" type="Node2D" parent="NextPieces" unique_id=380792517]
-position = Vector2(0, 225)
-script = ExtResource("3_piece")
-cell_size = 21.0
-
-[node name="Next4" type="Node2D" parent="NextPieces" unique_id=2139651493]
-position = Vector2(0, 300)
-script = ExtResource("3_piece")
-cell_size = 21.0
 
 [node name="HUD" type="CanvasLayer" parent="." unique_id=329423042]
 
