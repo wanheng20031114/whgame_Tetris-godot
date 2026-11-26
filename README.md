@@ -2,6 +2,10 @@
 
 [日本語](#日本語) | [简体中文](#简体中文) | [English](#english)
 
+[TETRIS v1.4.4 · Windows x64 (ZIP)](https://github.com/wanheng20031114/whgame_Tetris-godot/releases/download/v1.4.4/TETRIS-v1.4.4-Windows-x64.zip)
+
+SHA-256 `fb2f96af4d537997553f7d457f8ffc6833645f55f37fbacb6a82ca98bb6a2178`
+
 ---
 
 ## 日本語
